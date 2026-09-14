@@ -1,0 +1,146 @@
+name: release
+
+# Tag-driven release pipeline — GITHUB-HOSTED (ubuntu-latest), copied from
+# scitex-app's release contract and trimmed of the scitex-app-specific
+# "verify skills docs are in the wheel" block (scitex-sdk ships no _skills).
+#
+# Operator flow:  git tag v0.1.0 && git push origin v0.1.0
+#   1. test    — pytest (the facade identity tests). Must pass or nothing publishes.
+#   2. build   — wheel + sdist.
+#   3. publish — PyPI via trusted publishing (pypa/gh-action-pypi-publish).
+#   4. release — GitHub Release with CHANGELOG notes.
+#
+# TRUSTED PUBLISHING matches on (repository, workflow FILENAME, environment).
+# This file must keep its name (pypi-p...-tag.yml) and the publish job must keep
+# `environment: pypi`, or the PyPI trust config for scitex-sdk will not match.
+# The operator registers the PyPI project + trusted publisher for
+# (scitex-ai/scitex-sdk, pypi-p...-tag.yml, pypi) BEFORE the first tag is pushed.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag to publish (e.g. v0.1.0) — must already exist on the repo'
+        required: true
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            v="${GITHUB_REF#refs/tags/}"
+          else
+            v="${{ inputs.version }}"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ver.outputs.version }}
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # The facade installs both halves (scitex-app, scitex-ui) as
+          # dependencies, plus pytest. There is no [all] extra / dev group in
+          # this thin package, so a plain pip install is correct here.
+          pip install -e . pytest
+      - name: Run tests
+        run: pytest tests/
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            v="${GITHUB_REF#refs/tags/}"
+          else
+            v="${{ inputs.version }}"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ver.outputs.version }}
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build wheel + sdist
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+          # fail-loud: an empty dist/ must stop the pipeline here.
+          ls -1 dist/*.whl dist/*.tar.gz >/dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/scitex-sdk
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Publish to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  release:
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build.outputs.version }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+          VERSION="${VERSION#v}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\\[" v "\\\\]" {p=1; next}
+            p && /^## \[/ {exit}
+            p
+          ' CHANGELOG.md > release-notes.md || true
+          if [ ! -s release-notes.md ]; then
+            echo "Release v${VERSION}. See CHANGELOG.md for details." > release-notes.md
+          fi
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ needs.build.outputs.version }}" \
+            --title "${{ needs.build.outputs.version }}" \
+            --notes-file release-notes.md \
+            dist/*
