@@ -12,6 +12,8 @@ scitex-sdk gradually after this facade releases; the original distributions
 stay as thin compat shims until every consumer has migrated.
 """
 
+from __future__ import annotations
+
 from scitex_sdk import app, ui  # noqa: F401
 
 __all__ = ["app", "ui"]

@@ -9,6 +9,23 @@ dependencies = [
     "scitex-ui>=0.20.3",
 ]
 
+[project.optional-dependencies]
+# The `[all]` umbrella (operator policy: `pip install pkg[all]` pulls
+# everything public). Self-references the `[dev]` extra so the two stay
+# in sync — the shape scitex-dev / scitex-scholar ship (PS-221).
+all = [
+    "scitex-sdk[dev]",
+]
+# Contributor install (`pip install -e ".[dev]"`) runs the full suite:
+# facade peers (tests import them unguarded, PS-210) plus audit tooling.
+dev = [
+    "scitex-app[all]>=0.24.0",
+    "scitex-ui[cli]>=0.20.3",
+    "scitex-ui[mcp]>=0.20.3",
+    "pytest>=7.0",
+    "scitex-dev>=0.11.5",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -18,3 +35,9 @@ packages = ["src/scitex_sdk"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.scitex_dev]
+# Facade package: no CLI surface and no end-to-end story of its own, so the
+# smoke/e2e test layers (PS-211/PS-212) are opted out rather than faked.
+no_cli = true
+no_e2e = true
