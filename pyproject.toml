@@ -1,6 +1,6 @@
 [project]
 name = "scitex-sdk"
-version = "0.1.0"
+version = "0.2.0"
 description = "SciTeX SDK — one project for the app contract (scitex_sdk.app) + UI shell (scitex_sdk.ui). Step 1: thin facade re-exporting scitex-app + scitex-ui; implementation consolidates gradually."
 readme = "README.md"
 requires-python = ">=3.10"
