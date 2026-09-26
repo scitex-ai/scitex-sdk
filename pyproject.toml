@@ -5,9 +5,13 @@ description = "SciTeX SDK — one project for the app contract (scitex_sdk.app) 
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "click>=8.0.0",
     "scitex-app>=0.24.0",
     "scitex-ui>=0.20.3",
 ]
+
+[project.scripts]
+scitex-sdk = "scitex_sdk.cli:main"
 
 [build-system]
 requires = ["hatchling"]

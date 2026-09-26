@@ -1,0 +1,133 @@
+{% extends "scitex_app/app_shell.html" %}
+
+{% block scitex_app_content %}
+<div class="stx-creator">
+  <h1>Create a SciTeX app</h1>
+  <p>Pick a starter, name the app, and scaffold it. Then validate it here
+    before dev-installing or publishing it to SciTeX Cloud.</p>
+
+  <section aria-label="New app from starter">
+    <h2>1. New app from starter</h2>
+    <div id="stx-starters">
+      {% for s in starters %}
+      <label>
+        <input type="radio" name="starter" value="{{ s.key }}"{% if s.key == default_starter %} checked{% endif %}>
+        <strong><i class="{{ s.icon }}"></i> {{ s.label }}</strong>
+        <span>{{ s.hint }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <div>
+      <label>App name <input id="stx-label" name="label" type="text" maxlength="90" placeholder="My analysis app"></label>
+    </div>
+    <div>
+      <label>Description <textarea id="stx-description" name="description" rows="3" placeholder="What should the app do?"></textarea></label>
+    </div>
+    <div>
+      <label>Target directory (optional, defaults to ./&lt;name-slug&gt;)
+        <input id="stx-target" name="target_dir" type="text" placeholder=""></label>
+    </div>
+    <div>
+      <button id="stx-create" type="button">Scaffold app</button>
+      <button id="stx-check-input" type="button">Validate input</button>
+    </div>
+    <div id="stx-create-result" role="status" aria-live="polite"></div>
+  </section>
+
+  <section aria-label="Validate an app">
+    <h2>2. Validate an app</h2>
+    <p>Point at the package directory — the one containing
+      <code>manifest.json</code> (for a fresh scaffold that is
+      <code>&lt;project&gt;/&lt;module&gt;_app/</code>).</p>
+    <div>
+      <label>App directory <input id="stx-appdir" name="app_dir" type="text" placeholder="/path/to/my_app/my_app_app"></label>
+      <button id="stx-validate" type="button">Validate</button>
+    </div>
+    <div id="stx-validate-result" role="status" aria-live="polite"></div>
+  </section>
+
+  <section aria-label="Publish or dev-install">
+    <h2>3. Dev-install / publish</h2>
+    <div>
+      <label>Server <input id="stx-server" name="server_url" type="text" value="http://127.0.0.1:8000"></label>
+    </div>
+    <div>
+      <label>API token <input id="stx-token" name="token" type="password" placeholder="or SCITEX_API_TOKEN"></label>
+    </div>
+    <div>
+      <button id="stx-dev-install" type="button">Dev-install</button>
+      <button id="stx-publish" type="button">Publish</button>
+    </div>
+    <div id="stx-cloud-result" role="status" aria-live="polite"></div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  async function post(path, body, outId) {
+    const out = document.getElementById(outId);
+    out.textContent = "Working…";
+    let resp;
+    try {
+      resp = await fetch(path, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      out.textContent = "Request failed: " + err;
+      return null;
+    }
+    const data = await resp.json();
+    const lines = [];
+    if (data.success === true) {
+      lines.push("Done.");
+      if (data.project_dir) lines.push("Project: " + data.project_dir);
+      if (data.files) lines.push(data.files.length + " file(s) scaffolded.");
+      if (data.pr_url) lines.push("PR: " + data.pr_url);
+      if (data.module_name) lines.push("Module: " + data.module_name);
+    } else if (data.ok === true) {
+      lines.push("Input is valid.");
+    } else {
+      for (const e of (data.errors || ["Unknown error"])) lines.push("✗ " + e);
+    }
+    for (const w of (data.warnings || [])) lines.push("! " + w);
+    out.textContent = lines.join("\n");
+    return data;
+  }
+  function val(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : "";
+  }
+  function starter() {
+    const el = document.querySelector('input[name="starter"]:checked');
+    return el ? el.value : "";
+  }
+  document.getElementById("stx-check-input").addEventListener("click", function () {
+    post("api/validate-input",
+      {label: val("stx-label"), description: val("stx-description"), starter: starter()},
+      "stx-create-result");
+  });
+  document.getElementById("stx-create").addEventListener("click", function () {
+    post("api/create",
+      {label: val("stx-label"), description: val("stx-description"),
+       starter: starter(), target_dir: val("stx-target")},
+      "stx-create-result");
+  });
+  document.getElementById("stx-validate").addEventListener("click", function () {
+    post("api/validate-app", {app_dir: val("stx-appdir")}, "stx-validate-result");
+  });
+  document.getElementById("stx-dev-install").addEventListener("click", function () {
+    post("api/dev-install",
+      {app_dir: val("stx-appdir"), server_url: val("stx-server"), token: val("stx-token")},
+      "stx-cloud-result");
+  });
+  document.getElementById("stx-publish").addEventListener("click", function () {
+    post("api/publish",
+      {app_dir: val("stx-appdir"), server_url: val("stx-server"), token: val("stx-token")},
+      "stx-cloud-result");
+  });
+})();
+</script>
+{% endblock %}

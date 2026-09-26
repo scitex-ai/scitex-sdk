@@ -1,0 +1,31 @@
+{
+  "name": "app_creator_app",
+  "slug": "create-app",
+  "label": "App Creator",
+  "pip_package": "scitex-sdk",
+  "icon": "fas fa-plus",
+  "subtitle": "Scaffold a new SciTeX app from a starter",
+  "about": "The appmaker scaffolding wizard as a web UI: pick a starter, name the app, scaffold it locally, then validate, dev-install, or publish it — the engine calls go to scitex-app's appmaker until the implementation consolidates into the SDK.",
+  "description": "SciTeX App Creator serves the appmaker engine (scaffold, validate, dev-install, publish) as a browser wizard. New app from starter (label, description, starter card), inline validation feedback, and publish/dev-install hooks against a SciTeX Cloud server. Served from the SDK via `scitex-sdk gui serve`; scitex-hub mounts this same Django app for its create-app tile.",
+  "author": "scitex-ai",
+  "license": "AGPL-3.0-only",
+  "capabilities": [
+    "Scaffold a new app from a starter (label, description, starter card)",
+    "Validate a scaffolded app and show errors plus advisory notices",
+    "Dev-install an app to a SciTeX Cloud server for immediate testing",
+    "Submit an app for review and publication"
+  ],
+  "allowed_extensions": [],
+  "wip": false,
+  "standalone": true,
+  "standalone_command": "scitex-sdk gui serve",
+  "standalone_port": 31301,
+  "frontend_type": "server-rendered",
+  "embedded_package": true,
+  "dependencies": {
+    "python": ["scitex-sdk", "scitex-app", "django", "scitex-ui"]
+  },
+  "mount_policy": {
+    "login_required": true
+  }
+}
