@@ -37,3 +37,33 @@ as the original — a copy or reimplementation fails the suite.
 The static/TS/CSS assets live in `scitex_ui` today (Django's
 AppDirectoriesFinder resolves them by the `scitex_ui` app label); they move
 with the implementation step, not the facade.
+
+## App Creator wizard
+
+`scitex_sdk.creator` is the first implementation that lives in the SDK
+rather than behind the facade (new code, not moved code): the appmaker
+scaffolding wizard as a web UI, served by the SDK for both standalone
+use and host mounting.
+
+```bash
+scitex-sdk gui serve    # wizard at http://127.0.0.1:31301/ (blocking)
+scitex-sdk gui open     # auto-serve (if needed) + open a browser
+scitex-sdk gui status   # running / not-running (+ --json)
+scitex-sdk gui stop --yes
+```
+
+The wizard covers: new app from starter (label / description /
+starter card: data entry, dashboard, log viewer, blank), inline
+validation feedback, `api/validate-app` on an existing app dir, and
+publish / dev-install hooks against a SciTeX Cloud server. The engine
+(scaffold, validate, publish, dev-install) is still imported from
+`scitex-app`'s appmaker and consolidates here gradually.
+
+Hosts mount the same Django app generically:
+
+```python
+path("create-app/", include("scitex_sdk.creator.urls"))
+```
+
+(`manifest.json` slug `create-app`, port `31301` — the first 3130X
+overflow slot; 3129X is full per scitex-dev's reserved-port scheme.)
