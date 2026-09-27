@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 """URL patterns for the SciTeX App Creator wizard.
 
-scitex-hub mounts this module at ``path("create-app/", include(...))``
-(or an iframe-friendly equivalent); the standalone server
-(``scitex-sdk gui serve``) serves it at the root via
-``ROOT_URLCONF = "scitex_sdk.creator.urls"``.
+scitex-hub mounts this module at ``path("apps/new/", include(...))``;
+the standalone server (``scitex-sdk gui serve``) serves it at the root
+via ``ROOT_URLCONF = "scitex_sdk.creator.urls"``.
 
 Namespaced via ``app_name`` so the hub's ``{% url %}`` lookups never
 collide with another app's route names. Client fetch URLs are RELATIVE
