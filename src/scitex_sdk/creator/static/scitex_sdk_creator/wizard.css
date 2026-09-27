@@ -1,0 +1,189 @@
+/* SciTeX App Creator wizard — scoped to .stx-creator so the host shell
+   (hub dark theme or standalone) is never fought, only completed.
+   Dark-first with light-scheme fallback via color-scheme. */
+
+.stx-creator {
+  color-scheme: dark light;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 8px 20px 48px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.stx-creator h1 {
+  font-size: 24px;
+  margin: 12px 0 4px;
+}
+
+.stx-creator > p {
+  opacity: 0.75;
+  margin: 0 0 20px;
+  max-width: 68ch;
+}
+
+/* One step = one card. */
+.stx-creator section {
+  border: 1px solid color-mix(in srgb, currentcolor 18%, transparent);
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin: 0 0 18px;
+  background: color-mix(in srgb, currentcolor 3%, transparent);
+}
+
+.stx-creator section h2 {
+  font-size: 16px;
+  margin: 0 0 4px;
+}
+
+.stx-creator section > p {
+  opacity: 0.75;
+  margin: 0 0 14px;
+  max-width: 72ch;
+}
+
+/* Starter radio-cards. */
+.stx-starters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 12px 0 4px;
+}
+
+.stx-starter {
+  display: block;
+  border: 1px solid color-mix(in srgb, currentcolor 20%, transparent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.stx-starter:has(input:checked) {
+  border-color: #3fb950;
+  box-shadow: 0 0 0 1px #3fb950;
+}
+
+.stx-starter input {
+  margin-right: 6px;
+  accent-color: #3fb950;
+}
+
+.stx-starter strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.stx-starter span {
+  opacity: 0.7;
+  font-size: 13px;
+}
+
+/* Label column + flexible field column. */
+.stx-field {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 4px 14px;
+  align-items: start;
+  margin: 12px 0;
+}
+
+.stx-field > label {
+  text-align: right;
+  padding-top: 8px;
+  font-weight: 600;
+}
+
+.stx-field .stx-control {
+  min-width: 0;
+}
+
+.stx-field .stx-help {
+  grid-column: 2;
+  opacity: 0.65;
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+.stx-creator input[type="text"],
+.stx-creator input[type="password"],
+.stx-creator textarea {
+  width: 100%;
+  max-width: 560px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font: inherit;
+  border: 1px solid color-mix(in srgb, currentcolor 25%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, currentcolor 6%, transparent);
+  color: inherit;
+}
+
+.stx-creator textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+/* Actions: primary first, even gaps, breathing room. */
+.stx-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.stx-creator button {
+  font: inherit;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, currentcolor 25%, transparent);
+  background: color-mix(in srgb, currentcolor 8%, transparent);
+  color: inherit;
+  cursor: pointer;
+}
+
+.stx-creator button:hover {
+  border-color: color-mix(in srgb, currentcolor 45%, transparent);
+}
+
+.stx-creator button.stx-primary {
+  background: #1f6feb;
+  border-color: #1f6feb;
+  color: #fff;
+  font-weight: 600;
+}
+
+.stx-creator button.stx-primary:hover {
+  background: #388bfd;
+}
+
+/* Result consoles: visible feedback, not a bare div. */
+.stx-result {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  min-height: 20px;
+  background: color-mix(in srgb, currentcolor 5%, transparent);
+  border: 1px solid color-mix(in srgb, currentcolor 14%, transparent);
+}
+
+.stx-result:empty {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .stx-field {
+    grid-template-columns: 1fr;
+  }
+
+  .stx-field > label {
+    text-align: left;
+    padding-top: 0;
+  }
+
+  .stx-field .stx-help {
+    grid-column: 1;
+  }
+}
