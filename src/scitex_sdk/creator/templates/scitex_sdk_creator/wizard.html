@@ -1,6 +1,8 @@
 {% extends "scitex_app/app_shell.html" %}
+{% load static %}
 
 {% block scitex_app_content %}
+<link rel="stylesheet" href="{% static 'scitex_sdk_creator/wizard.css' %}">
 <div class="stx-creator">
   <h1>Create a SciTeX app</h1>
   <p>Pick a starter, name the app, and scaffold it. Then validate it here
@@ -8,57 +10,78 @@
 
   <section aria-label="New app from starter">
     <h2>1. New app from starter</h2>
-    <div id="stx-starters">
+    <div class="stx-starters" id="stx-starters" role="radiogroup" aria-label="Starter template">
       {% for s in starters %}
-      <label>
+      <label class="stx-starter">
         <input type="radio" name="starter" value="{{ s.key }}"{% if s.key == default_starter %} checked{% endif %}>
         <strong><i class="{{ s.icon }}"></i> {{ s.label }}</strong>
         <span>{{ s.hint }}</span>
       </label>
       {% endfor %}
     </div>
-    <div>
-      <label>App name <input id="stx-label" name="label" type="text" maxlength="90" placeholder="My analysis app"></label>
+    <div class="stx-field">
+      <label for="stx-label">App name</label>
+      <div class="stx-control">
+        <input id="stx-label" name="label" type="text" maxlength="90" placeholder="My analysis app">
+      </div>
     </div>
-    <div>
-      <label>Description <textarea id="stx-description" name="description" rows="3" placeholder="What should the app do?"></textarea></label>
+    <div class="stx-field">
+      <label for="stx-description">Description</label>
+      <div class="stx-control">
+        <textarea id="stx-description" name="description" rows="5" placeholder="What should the app do?"></textarea>
+      </div>
     </div>
-    <div>
-      <label>Target directory (optional, defaults to ./&lt;name-slug&gt;)
-        <input id="stx-target" name="target_dir" type="text" placeholder=""></label>
+    <div class="stx-field">
+      <label for="stx-target">Target directory</label>
+      <div class="stx-control">
+        <input id="stx-target" name="target_dir" type="text" placeholder="">
+      </div>
+      <p class="stx-help">Optional. Defaults to ./&lt;name-slug&gt;.</p>
     </div>
-    <div>
-      <button id="stx-create" type="button">Scaffold app</button>
-      <button id="stx-check-input" type="button">Validate input</button>
+    <div class="stx-actions">
+      <button id="stx-create" type="button" class="stx-primary">Scaffold app</button>
+      <button id="stx-check-input" type="button">Check inputs</button>
     </div>
-    <div id="stx-create-result" role="status" aria-live="polite"></div>
+    <div class="stx-result" id="stx-create-result" role="status" aria-live="polite"></div>
   </section>
 
   <section aria-label="Validate an app">
-    <h2>2. Validate an app</h2>
+    <h2>2. Validate a built app</h2>
     <p>Point at the package directory — the one containing
       <code>manifest.json</code> (for a fresh scaffold that is
       <code>&lt;project&gt;/&lt;module&gt;_app/</code>).</p>
-    <div>
-      <label>App directory <input id="stx-appdir" name="app_dir" type="text" placeholder="/path/to/my_app/my_app_app"></label>
-      <button id="stx-validate" type="button">Validate</button>
+    <div class="stx-field">
+      <label for="stx-appdir">App directory</label>
+      <div class="stx-control">
+        <input id="stx-appdir" name="app_dir" type="text" placeholder="/path/to/my_app/my_app_app">
+      </div>
     </div>
-    <div id="stx-validate-result" role="status" aria-live="polite"></div>
+    <div class="stx-actions">
+      <button id="stx-validate" type="button" class="stx-primary">Validate</button>
+    </div>
+    <div class="stx-result" id="stx-validate-result" role="status" aria-live="polite"></div>
   </section>
 
   <section aria-label="Publish or dev-install">
     <h2>3. Dev-install / publish</h2>
-    <div>
-      <label>Server <input id="stx-server" name="server_url" type="text" value="http://127.0.0.1:8000"></label>
+    <div class="stx-field">
+      <label for="stx-server">Server</label>
+      <div class="stx-control">
+        <input id="stx-server" name="server_url" type="text" value="http://127.0.0.1:8000">
+      </div>
     </div>
-    <div>
-      <label>API token <input id="stx-token" name="token" type="password" placeholder="or SCITEX_API_TOKEN"></label>
+    <div class="stx-field">
+      <label for="stx-token">API token</label>
+      <div class="stx-control">
+        <input id="stx-token" name="token" type="password" placeholder="Paste a token, or leave empty">
+      </div>
+      <p class="stx-help">Leave empty to use the SCITEX_API_TOKEN environment variable.</p>
     </div>
-    <div>
-      <button id="stx-dev-install" type="button">Dev-install</button>
+    <div class="stx-actions">
+      <button id="stx-dev-install" type="button" class="stx-primary">Dev-install</button>
       <button id="stx-publish" type="button">Publish</button>
     </div>
-    <div id="stx-cloud-result" role="status" aria-live="polite"></div>
+    <div class="stx-result" id="stx-cloud-result" role="status" aria-live="polite"></div>
   </section>
 </div>
 
