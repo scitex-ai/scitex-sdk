@@ -1,8 +1,10 @@
+build/
+.coverage
+dist/
+*.egg-info/
+*.pyc
 __pycache__/
 *.py[cod]
-.venv/
-*.egg-info/
-dist/
-build/
+*.pyo
 .pytest_cache/
-.coverage
+.venv/
