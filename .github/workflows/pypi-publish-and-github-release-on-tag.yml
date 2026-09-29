@@ -1,6 +1,6 @@
 name: release
 
-# Tag-driven release pipeline — GITHUB-HOSTED (ubuntu-latest), copied from
+# Tag-driven release pipeline — SELF-HOSTED (scitex-ci pool), copied from
 # scitex-app's release contract and trimmed of the scitex-app-specific
 # "verify skills docs are in the wheel" block (scitex-sdk ships no _skills).
 #
@@ -28,7 +28,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, scitex-ci]
     strategy:
       fail-fast: false
       matrix:
@@ -63,7 +63,7 @@ jobs:
 
   build:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, scitex-ci]
     outputs:
       version: ${{ steps.ver.outputs.version }}
     steps:
@@ -97,7 +97,7 @@ jobs:
 
   publish:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, scitex-ci]
     environment:
       name: pypi
       url: https://pypi.org/p/scitex-sdk
@@ -113,7 +113,7 @@ jobs:
 
   release:
     needs: [build, publish]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, scitex-ci]
     permissions:
       contents: write
     steps:
