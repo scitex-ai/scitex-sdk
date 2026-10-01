@@ -125,13 +125,20 @@ jobs:
           "$py" -m pip install --upgrade pip
           "$py" -m pip install "$wheel[all]"
           "$py" -m pip check
-          "$py" - <<'PYTHON'
-          from importlib.metadata import distributions
-          names = {dist.metadata["Name"].lower().replace("_", "-") for dist in distributions()}
-          legacy = names & {"scitex-app", "scitex-ui"}
-          if legacy:
-              raise SystemExit("Retired distributions remain in all-extra dependencies: " + ", ".join(sorted(legacy)))
-          PYTHON
+          # SDK direct ownership remains mandatory. Transitive legacy owners
+          # are observable during sequential bootstrap, never retirement proof.
+          "$py" scripts/ownership_gate.py --mode bootstrap-observation \
+            --graph sdk-all --output "$RUNNER_TEMP/sdk-bootstrap-ownership.json"
+          printf '%s\n' '### Dependency retirement remains incomplete' \
+            'Normal SDK [all] resolution and pip check passed; inspect the ownership report.' \
+            'Repository archival is administrative state, not dependency/migration evidence.' \
+            'The separate retirement workflow must pass every registered consumer graph.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdk-bootstrap-ownership
+          path: ${{ runner.temp }}/sdk-bootstrap-ownership.json
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: dist

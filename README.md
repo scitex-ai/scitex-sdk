@@ -31,4 +31,7 @@ not a claim that a release, deployment or repository archival has happened.
 Migration changes imports to `scitex_sdk.app/ui` and resource prefixes to
 `scitex_sdk/app/` and `scitex_sdk/ui/`. Existing Django database labels,
 template block names and App/UI environment settings retain their identity.
-Old App/UI repositories will be public archives after consumer migration.
+The predecessor [App](https://github.com/scitex-ai/scitex-app) and
+[UI](https://github.com/scitex-ai/scitex-ui) repositories are public archives.
+Consumer migration and published dependency retirement remain separate gates;
+see [the release sequence](docs/RELEASE_BOOTSTRAP.md).

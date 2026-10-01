@@ -1,0 +1,168 @@
+{
+  "schema": 1,
+  "status": "DEPENDENCY RETIREMENT NOT READY: canonical release floors require genuine published version/source registration",
+  "scope": "Every audited active consumer: isolated normal published runtime/GUI groups plus packaged executable imports; owning source/native frontend/GUI and artifact provenance are separate mandatory gates",
+  "graphs": [
+    {
+      "name": "sdk-all",
+      "distribution": "scitex-sdk",
+      "extras": [
+        "all"
+      ],
+      "minimum_canonical_version": "0.3.0",
+      "canonical_source_commit": "9bf0851cbe0a5ab90b334c235fc08b7d0d4a4ebb",
+      "sdk_requirement": "owner",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution"
+    },
+    {
+      "name": "figrecipe-gui",
+      "distribution": "figrecipe",
+      "extras": [
+        "gui"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "b74e47e3b2ea9966e721c074349aac93b5cafc7d",
+      "sdk_requirement": "active",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution"
+    },
+    {
+      "name": "writer-gui",
+      "distribution": "scitex-writer",
+      "extras": [],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution",
+      "contract": "Writer base declares Django plus SDK>=0.3.0; no nonexistent gui extra. Native GUI/compile tests remain separate."
+    },
+    {
+      "name": "hub-gui",
+      "distribution": "scitex-hub",
+      "extras": [],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution"
+    },
+    {
+      "name": "stats-server",
+      "distribution": "scitex-stats",
+      "extras": [
+        "server"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "a7d4e871a2966c4a907947f9f0f925280f3a8911",
+      "sdk_requirement": "active",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution"
+    },
+    {
+      "name": "scholar-all",
+      "distribution": "scitex-scholar",
+      "extras": [
+        "all"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "45889be162a2b06fd942ebec2b7af85cdf4157fe",
+      "sdk_requirement": "active",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution"
+    },
+    {
+      "name": "storage-gui",
+      "distribution": "scitex-storage",
+      "extras": [
+        "gui"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "ff25ecd77d3717ecd31067e3067a9ce6fab604c2",
+      "sdk_requirement": "active",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution"
+    },
+    {
+      "name": "cards-web",
+      "distribution": "scitex-cards",
+      "extras": [
+        "web"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "cb3e5a8161a826e76a3d4611d1b6e029fd2449f0",
+      "sdk_requirement": "active",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution"
+    },
+    {
+      "name": "sac-gui",
+      "distribution": "scitex-agent-container",
+      "extras": [
+        "gui"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "26f3806fc642e63c558574e3e346f2bda76438cd",
+      "sdk_requirement": "active",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution"
+    },
+    {
+      "name": "umbrella-app-ui",
+      "distribution": "scitex",
+      "extras": [
+        "app",
+        "ui",
+        "scholar-gui",
+        "writer"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "89f7b39b6c777bb5c352a1131f1ae6d8ea3af33b",
+      "sdk_requirement": "active",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution"
+    },
+    {
+      "name": "business-core",
+      "distribution": "scitex-business",
+      "extras": [],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "5342bae3538e3aac77e830b335e60f51ab9510f6",
+      "sdk_requirement": "active",
+      "registration": "First genuine canonical release; no invented version or latest-version substitution"
+    },
+    {
+      "name": "template-core",
+      "distribution": "scitex-template",
+      "extras": [],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "f679acead1155b8f1e24afad9076d525b44e4f7f",
+      "sdk_requirement": "none",
+      "contract": "Generator emits SDK>=0.3.0 scaffolds; package itself does not require SDK. Native generated Python/React scaffold tests mandatory."
+    },
+    {
+      "name": "dev-all",
+      "distribution": "scitex-dev",
+      "extras": [
+        "all",
+        "dev"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "7a8d15c130ca8b71e52d782c718bf6ccccbcfa68",
+      "sdk_requirement": "none",
+      "contract": "Registry/project owner; candidate now includes canonical project-get follow-up at remote PR833 head. Genuine Dev>=0.62 prerequisite and normal native release tests required. No invented direct SDK floor."
+    },
+    {
+      "name": "config-core",
+      "distribution": "scitex-config",
+      "extras": [],
+      "minimum_canonical_version": "0.3.6",
+      "canonical_source_commit": "52a0efec330b49b260cc85b19ce36234d2b9b73c",
+      "sdk_requirement": "none",
+      "contract": "Retained SCITEX_APP/UI env names/local directories; no active retired Python module/distribution edge. Owning metadata classification reviewed without namespace substitution."
+    },
+    {
+      "name": "clew-gui",
+      "distribution": "scitex-clew",
+      "extras": [
+        "gui"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": "160cfab563e9ef75606db548886af7f28497aecf",
+      "sdk_requirement": "active",
+      "contract": "Actual canonical GUI draft162 at exact immutable head; candidate source version 0.21.0 is unpublished and not a registered genuine release floor."
+    }
+  ],
+  "repository_archive": "App/UI already archived by root; repository archival does not establish clean dependency graphs"
+}
