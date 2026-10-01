@@ -10,7 +10,11 @@ Django app configuration, manifest, URLs, views, templates and assets. Hub
 discovers and mounts that app and supplies authenticated user, project,
 storage and job capabilities. Hub must not implement leaf domain operations
 or choose a substitute project when authorization fails. Project selection
-is not authorization, and client-controlled IDs do not grant storage access.
+is not authorization, and client-controlled IDs do not grant storage access. An optional
+provider `canonical_project_id(request, selector)` may translate a legacy
+selector; SDK accepts the result only when it is in this request's accessible
+project list. Storage and persistence receive the canonical ID, and denied
+aliases never fall back to a stored project.
 
 `scitex_sdk.host` supplies the shared access errors, authorized project and
 private store capability records, and host-provider resolution helpers.

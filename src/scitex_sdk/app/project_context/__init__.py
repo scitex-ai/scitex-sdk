@@ -264,7 +264,18 @@ def resolve_active_project(
         )
 
     if explicit:
-        if explicit not in accessible:
+        try:
+            from scitex_sdk.ui.project_scope import canonical_project_selector
+
+            selected = canonical_project_selector(
+                request, resolved_provider, explicit, accessible
+            )
+        except Exception as exc:  # noqa: BLE001 - host provider boundary
+            return ProjectResolution(
+                state=STATE_UNAVAILABLE,
+                reason=f"the project provider failed to normalize the selection: {exc}",
+            )
+        if selected is None:
             return ProjectResolution(
                 state=STATE_DENIED,
                 reason=(
@@ -275,6 +286,7 @@ def resolve_active_project(
                     "would confirm another user's project exists."
                 ),
             )
+        explicit = selected
         # An explicit project BECOMES the stored one. This is the persistence
         # half of the rule: a link carrying ?project=foo has to survive the
         # next navigation, or "selected once and carried across every leaf app"
@@ -460,9 +472,7 @@ def _standalone_provider_class():
         """Every non-hidden folder under the standalone working directory."""
 
         def __init__(self) -> None:
-            super().__init__(
-                root=os.environ.get("SCITEX_WORKING_DIR") or os.getcwd()
-            )
+            super().__init__(root=os.environ.get("SCITEX_WORKING_DIR") or os.getcwd())
 
     return StandaloneProjectProvider
 

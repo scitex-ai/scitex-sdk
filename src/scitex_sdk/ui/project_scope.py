@@ -25,11 +25,15 @@ picker without knowing who serves the projects::
 ``{% scitex_project_provider_meta %}`` advertises the URL to client code
 (``hostProjectProvider()`` in TS). A provider may also define
 ``project_id(project) -> str`` so a template can pass its project object.
+An optional ``canonical_project_id(request, selector)`` maps a legacy selector
+to a listed canonical ID. SDK always checks the returned ID against this
+request's access list before remembering or returning it.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Collection
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional, Protocol, runtime_checkable
@@ -42,6 +46,7 @@ __all__ = [
     "LocalProjectProvider",
     "ProjectEntry",
     "ProjectProvider",
+    "canonical_project_selector",
     "host_project_provider",
     "host_project_provider_url",
     "project_id_for",
@@ -82,16 +87,38 @@ class ProjectProvider(Protocol):
         """Store ``project_id`` as the last visited project."""
 
 
+def canonical_project_selector(
+    request: Any, provider: ProjectProvider, selector: str, accessible: Collection[str]
+) -> str | None:
+    """Return only a listed ID, optionally using a host's selector alias.
+
+    Canonical IDs retain their existing behavior. Alias normalization is an
+    optional host capability, never an authorization grant or a fallback to
+    the stored project. Both the original and normalized IDs are checked
+    against the current request's access list.
+    """
+    if not isinstance(selector, str) or not selector:
+        return None
+    if selector in accessible:
+        return selector
+    normalize = getattr(provider, "canonical_project_id", None)
+    if normalize is None:
+        return None
+    canonical = normalize(request, selector)
+    return canonical if isinstance(canonical, str) and canonical in accessible else None
+
+
 def resolve_project(
     request: Any, provider: ProjectProvider, explicit: Optional[str] = None
 ) -> Optional[str]:
     """The project id the app should open; see the module docstring for precedence."""
     accessible = {entry.id for entry in provider.list_projects(request)}
     if explicit:
-        if explicit not in accessible:
+        selected = canonical_project_selector(request, provider, explicit, accessible)
+        if selected is None:
             return None
-        provider.remember(request, explicit)
-        return explicit
+        provider.remember(request, selected)
+        return selected
     stored = provider.last_visited(request)
     return stored if stored in accessible else None
 
@@ -111,7 +138,11 @@ class LocalProjectProvider:
         if not self.root.is_dir():
             return []
         folders = sorted(
-            (p for p in self.root.iterdir() if p.is_dir() and not p.name.startswith(".")),
+            (
+                p
+                for p in self.root.iterdir()
+                if p.is_dir() and not p.name.startswith(".")
+            ),
             key=lambda p: p.name.lower(),
         )
         return [ProjectEntry(id=p.name, name=p.name, detail=str(p)) for p in folders]
@@ -192,9 +223,10 @@ def project_listing_view(
                 project_id = json.loads(request.body or b"{}").get("id")
             except (ValueError, AttributeError):
                 project_id = None
-            if resolve_project(request, chosen, explicit=project_id) is None:
+            selected = resolve_project(request, chosen, explicit=project_id)
+            if selected is None:
                 return JsonResponse({"error": "project not accessible"}, status=403)
-            return JsonResponse({"current": project_id})
+            return JsonResponse({"current": selected})
         return HttpResponseNotAllowed(["GET", "POST"])
 
     return view
