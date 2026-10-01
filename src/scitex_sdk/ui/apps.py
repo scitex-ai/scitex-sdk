@@ -1,18 +1,10 @@
 #!/usr/bin/env python3
-"""Django app configuration for scitex-ui.
+"""Django registration for the SDK-owned UI component.
 
-``ScitexUiConfig.ready()`` auto-wires the element inspector (the Alt+I
-visual-debugging overlay) into the host project's settings, so every
-scitex GUI app that lists ``scitex_ui`` in ``INSTALLED_APPS`` gets it in
-develop/staging **without** hand-wiring middleware or a context processor.
-
-This closes the copy-paste settings drift that silently left some apps
-(scitex-writer, figrecipe) without Alt+I while others (scitex-todo) had it:
-the shared shell already pulls in the inspector partial with ``{% include %}``,
-but the
-partial no-ops unless the flag is produced by the context processor or the
-middleware — a hidden, easy-to-forget per-app opt-in. Auto-wiring makes the
-opt-in the default and template-independent.
+Install scitex_sdk.ui in INSTALLED_APPS. Its persisted app label remains
+scitex_ui. ScitexUiConfig.ready() wires the development element inspector and
+feature context processors; middleware gates their visibility at runtime.
+SCITEX_UI_AUTOWIRE_INSPECTOR=False explicitly disables automatic registration.
 """
 
 from django.apps import AppConfig

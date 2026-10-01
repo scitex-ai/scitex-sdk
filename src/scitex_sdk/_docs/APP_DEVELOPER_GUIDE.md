@@ -12,6 +12,12 @@ storage and job capabilities. Hub must not implement leaf domain operations
 or choose a substitute project when authorization fails. Project selection
 is not authorization, and client-controlled IDs do not grant storage access.
 
+`scitex_sdk.host` supplies the shared access errors, authorized project and
+private store capability records, and host-provider resolution helpers.
+`scitex_sdk.local` supplies explicitly configured single-user standalone
+providers. Neither module certifies PostgreSQL tenant isolation or supplies
+an ambient database connection when a provider is absent.
+
 Use the same leaf URL/view implementation for standalone and Hub plugin
 modes. Standalone chooses an explicit local project root; a hosted app uses
 only the capabilities supplied by its host. Keep write permission checks,

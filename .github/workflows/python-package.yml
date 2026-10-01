@@ -39,7 +39,9 @@ jobs:
       - name: Set owned test state directories
         run: |
           printf '%s\n' "SCITEX_DIR=$RUNNER_TEMP/scitex-sdk-tests" \
-            "PYTHONPYCACHEPREFIX=$RUNNER_TEMP/scitex-sdk-pycache" >> "$GITHUB_ENV"
+            "PYTHONPYCACHEPREFIX=$RUNNER_TEMP/scitex-sdk-pycache" \
+            "PIP_CACHE_DIR=$RUNNER_TEMP/scitex-sdk-pip" \
+            "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Install contributor and runtime dependencies
         run: |
           python -m pip install --upgrade pip

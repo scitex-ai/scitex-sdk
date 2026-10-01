@@ -1,41 +1,14 @@
-# File: scitex_sdk/app/project_context.py
+# File: scitex_sdk/app/project_context/__init__.py
 
-"""The leaf-facing project-context API: one selected project, carried to every app.
+"""Leaf project context, using the SDK UI provider protocol.
 
-SSOT: scitex-hub PR 923, ``docs/product/PRIVATE_BETA_LOGIN_TO_WOW.md``.
+The host supplies the projects an authenticated user may access. This module
+returns explicit ok, none, denied and unavailable states, plus a display-safe
+project descriptor and the stable scitex.project.change command.
 
-    "Project context is selected once and carried across every leaf app."
-    "Canonical project picker is always visible and displays user-facing
-     project names, never internal ``MASTER/`` paths."
-    "Real users never receive a silently created or selected example project."
-    "UI actions map to stable named commands so mouse, touch, keyboard,
-     macros, and agents invoke the same operations."
-
-WHERE THIS SITS. Three packages, three jobs, no overlap:
-
-    scitex-hub    owns user/project AUTHORITY and integration. It knows which
-                  projects a user may access and serves that as the host
-                  provider.
-    scitex-ui     owns the PROVIDER PROTOCOL (``ProjectProvider``,
-                  ``ProjectEntry``, ``resolve_project``) and the picker's
-                  rendering.
-    scitex-sdk app    owns this module: what a LEAF APP is handed, the fail-closed
-                  states around it, and the stable named command that changes
-                  it.
-
-THIS MODULE DOES NOT RE-IMPLEMENT scitex-ui's resolution. ``resolve_project``
-already fixes the precedence (explicit, then last visited, then nothing) and a
-second implementation here would be a forked producer with no link between the
-two — the failure the shell guard in scitex-ui calls a HALF-PAIR. The provider
-is consumed through scitex-ui when it is installed, so the two cannot drift.
-
-WHY A WRAPPER AT ALL, given scitex-ui can resolve. Because a leaf app needs
-three things scitex-ui's view-layer function does not give it: a DISPLAY-SAFE
-descriptor, a state it can render an honest empty/denied/unavailable arm from,
-and a named command. ``resolve_project`` returns an id or ``None``; ``None``
-covers "nothing selected", "not yours", and "no provider" alike, and a leaf
-that renders all three as the same blank page ships the silent-failure defect
-the product rules forbid.
+An explicit project wins over last visited, then nothing is selected. A denied
+explicit project never falls back; unavailable providers never invent a
+workspace. App and UI implementations ship in the same SDK distribution.
 """
 
 from __future__ import annotations
@@ -218,7 +191,7 @@ def _host_provider() -> tuple[_ProjectProvider | None, str]:
     try:
         from scitex_sdk.ui.project_scope import host_project_provider
     except ImportError:
-        return None, "scitex-ui is not installed, so no provider can be resolved"
+        return None, "SDK UI could not be imported, so no provider can be resolved"
     try:
         provider = host_project_provider()
     except Exception as exc:  # noqa: BLE001 - host provider boundary is untrusted
