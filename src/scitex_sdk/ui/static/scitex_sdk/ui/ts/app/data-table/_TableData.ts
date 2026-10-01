@@ -16,8 +16,6 @@ export class TableData {
     private currentData: Dataset | null = null;
     private firstRowIsHeader: boolean = true;
     private firstColIsIndex: boolean = false;
-    private defaultRows: number = TABLE_CONSTANTS.DEFAULT_ROWS;
-    private defaultCols: number = TABLE_CONSTANTS.DEFAULT_COLS;
     private maxRows: number = TABLE_CONSTANTS.MAX_ROWS;
     private maxCols: number = TABLE_CONSTANTS.MAX_COLS;
 

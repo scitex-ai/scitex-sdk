@@ -66,7 +66,6 @@ export function initializeTreeHandlers(
   searchUIHandler.render();
 
   const contextMenuActionHandler = new ContextMenuActionHandler(
-    config,
     selectionHandler,
     clipboardHandler,
     undoRedoHandler,
@@ -86,7 +85,6 @@ export function initializeTreeHandlers(
   );
 
   const workspaceKeyboardHandler = new WorkspaceKeyboardHandler(
-    config,
     container,
     stateManager,
     selectionHandler,

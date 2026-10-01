@@ -165,10 +165,11 @@ export class CommandRegistry {
    * agents ignore the boolean (a click is consumed by definition), while the
    * Keymap uses it to gate preventDefault (conditional consumption).
    */
-  run(id: string, caller?: CallerInfo, payload?: unknown): boolean {
+  run(id: string, caller?: CallerInfo, payload?: unknown): boolean;
+  run(id: string, ...dispatch: [CallerInfo?, unknown?]): boolean {
     const def = this.commands.get(id);
     if (!def || !this.isActive(def)) return false;
-    const consumed = def.action(payload);
+    const consumed = def.action(dispatch[1]);
     return consumed !== false;
   }
 }

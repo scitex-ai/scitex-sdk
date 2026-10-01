@@ -16,7 +16,8 @@ capabilities. See the [app/UI contract](src/scitex_sdk/_docs/APP_DEVELOPER_GUIDE
 and [workflow skill](src/scitex_sdk/_skills/scitex-sdk/SKILL.md).
 
 ```bash
-pip install 'scitex-sdk[gui,chat,mcp,cli]'
+# From this consolidation checkout; SDK 0.3.0 is not published yet.
+pip install -e '.[gui,chat,mcp,cli]'
 scitex-sdk app --help
 scitex-sdk ui --help
 scitex-sdk gui serve

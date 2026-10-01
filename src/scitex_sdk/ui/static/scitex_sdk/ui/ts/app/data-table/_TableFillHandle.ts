@@ -61,7 +61,7 @@ export class TableFillHandle {
             if (newFillRow !== fillRow || newFillCol !== fillCol) {
                 fillRow = newFillRow;
                 fillCol = newFillCol;
-                this.showFillPreview(startRow, endRow, startCol, endCol, fillRow, fillCol);
+                this.showFillPreview(endRow, endCol, fillRow, fillCol);
             }
         };
 
@@ -88,9 +88,7 @@ export class TableFillHandle {
      * Show fill preview
      */
     private showFillPreview(
-        startRow: number,
         endRow: number,
-        startCol: number,
         endCol: number,
         fillRow: number,
         fillCol: number

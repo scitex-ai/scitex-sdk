@@ -20,14 +20,12 @@ import { ClipboardHandler } from "./_handlers/ClipboardHandler";
 import { ContextMenuHandler } from "./_handlers/ContextMenuHandler";
 import { UndoRedoHandler } from "./_handlers/UndoRedoHandler";
 import { SearchHandler } from "./_handlers/SearchHandler";
-import type { WorkspaceKeyboardHandler } from "./_handlers/WorkspaceKeyboardHandler";
 import type { ContextMenuActionHandler } from "./_handlers/ContextMenuActionHandler";
 import { TreeFileOperations } from "./_handlers/TreeFileOperations";
 import { TreeDataLoader } from "./_handlers/TreeDataLoader";
 import { BreadcrumbHandler } from "./_handlers/BreadcrumbHandler";
 import { showTreeMessage } from "./_handlers/TreeMessageHandler";
 import { type GitSummary } from "./_handlers/GitStatusHandler";
-import type { SearchUIHandler } from "./_handlers/SearchUIHandler";
 import { initializeTreeHandlers } from "./_handlers/TreeInitHandler";
 
 export class WorkspaceFilesTree {
@@ -50,9 +48,7 @@ export class WorkspaceFilesTree {
   private contextMenuHandler: ContextMenuHandler;
   private undoRedoHandler: UndoRedoHandler;
   private searchHandler: SearchHandler;
-  private workspaceKeyboardHandler: WorkspaceKeyboardHandler | null = null;
   private contextMenuActionHandler: ContextMenuActionHandler | null = null;
-  private searchUIHandler: SearchUIHandler | null = null;
   private fileOperations: TreeFileOperations;
   private dataLoader: TreeDataLoader;
   private treeData: TreeItem[] = [];
@@ -92,7 +88,6 @@ export class WorkspaceFilesTree {
       (msg, type) => this.showMessage(msg, type),
     );
     this.eventHandlers = new EventHandlers(
-      this.config,
       this.stateManager,
       (p) => this.fileActions.toggleFolder(p),
       (p, e) => this.handleFileClick(p, e),
@@ -119,7 +114,7 @@ export class WorkspaceFilesTree {
       () => this.container,
       () => this.rerender(),
       () => this.treeData,
-      (p) => this.selectionHandler.updateClasses(p),
+      () => this.selectionHandler.updateClasses(),
     );
     this.undoRedoHandler = new UndoRedoHandler(
       this.config,
@@ -149,7 +144,6 @@ export class WorkspaceFilesTree {
     this.contextMenuHandler = new ContextMenuHandler(
       (a, p) => this.contextMenuActionHandler?.handle(a, p),
       () => this.clipboardHandler.hasClipboard(),
-      (p) => this.isItemDirectory(p),
       () => this.undoRedoHandler.canUndo(),
       () => this.undoRedoHandler.canRedo(),
       () => this.selectionHandler.getSelectedPaths().length,
@@ -230,8 +224,6 @@ export class WorkspaceFilesTree {
       },
     );
     this.contextMenuActionHandler = result.contextMenuActionHandler;
-    this.searchUIHandler = result.searchUIHandler;
-    this.workspaceKeyboardHandler = result.workspaceKeyboardHandler;
     const cached = this.dataLoader.getCached();
     if (cached) {
       this.treeData = cached.treeData;
@@ -265,16 +257,11 @@ export class WorkspaceFilesTree {
         this.lastTreeHash = hash;
         this.treeData = result.treeData;
         this.gitSummary = result.gitSummary;
-        const isFirstLoad = this.dataLoader.applyDefaultExpansion(
-          this.treeData,
-        );
+        this.dataLoader.applyDefaultExpansion(this.treeData);
         this.render();
         const newTreeEl = this.container?.querySelector(".wft-tree");
         if (newTreeEl && scrollTop > 0) newTreeEl.scrollTop = scrollTop;
-        await this.pathNavigator.autoExpandFocusPath(
-          this.config.mode,
-          isFirstLoad,
-        );
+        await this.pathNavigator.autoExpandFocusPath(this.config.mode);
         this.attachEventListeners();
         this.selectionHandler.updateAllSelectionClasses();
         this.clipboardHandler.reapplyClasses();
@@ -310,7 +297,7 @@ export class WorkspaceFilesTree {
       ? this.searchHandler.getMatchInfo(data)
       : { matches: new Set<string>(), ancestors: new Set<string>() };
     this.renderer.setSearchInfo(info.matches, info.ancestors);
-    this.contentEl().innerHTML = this.renderer.render(data, this.gitSummary);
+    this.contentEl().innerHTML = this.renderer.render(data);
     this.breadcrumb?.render(this.container, this.currentRoot);
   }
 
@@ -337,7 +324,6 @@ export class WorkspaceFilesTree {
     this.dragDropHandlers.attachDragDropListeners(this.container);
     if (!this.keyboardHandlers) {
       this.keyboardHandlers = new KeyboardHandlers(
-        this.config,
         this.stateManager,
         this.container,
         (p) => this.fileActions.toggleFolder(p),

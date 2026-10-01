@@ -3,7 +3,6 @@
  * Ported from scitex-cloud (identical event handling, no API deps)
  */
 
-import type { TreeConfig } from "../types";
 import type { TreeStateManager } from "../_TreeState";
 
 const RUNNABLE_EXTS = [".py", ".sh", ".js"];
@@ -14,7 +13,6 @@ export class EventHandlers {
   private lastSelectedPath: string | null = null;
 
   constructor(
-    private config: TreeConfig,
     private stateManager: TreeStateManager,
     private onToggleFolder: (path: string) => void,
     private onSelectFile: (path: string, event?: MouseEvent) => void,

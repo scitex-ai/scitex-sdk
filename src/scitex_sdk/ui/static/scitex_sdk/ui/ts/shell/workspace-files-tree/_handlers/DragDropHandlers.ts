@@ -10,10 +10,6 @@ import { FileUpload } from "./FileUpload";
 import { DragState } from "./DragState";
 
 export class DragDropHandlers {
-  private showMessage: (
-    message: string,
-    type: "success" | "error" | "info",
-  ) => void;
   private getSelectedPaths: () => string[];
   private isItemSelected: (path: string) => boolean;
   private fileOps: FileOperations;
@@ -21,14 +17,12 @@ export class DragDropHandlers {
   private dragState: DragState;
 
   constructor(
-    private config: TreeConfig,
-    private refresh: () => Promise<void>,
+    config: TreeConfig,
+    refresh: () => Promise<void>,
     showMessage?: (message: string, type: "success" | "error" | "info") => void,
     getSelectedPaths?: () => string[],
     isItemSelected?: (path: string) => boolean,
   ) {
-    this.showMessage =
-      showMessage || ((msg, type) => console.log(`[DragDrop] ${type}: ${msg}`));
     this.getSelectedPaths = getSelectedPaths || (() => []);
     this.isItemSelected = isItemSelected || (() => false);
     this.fileOps = new FileOperations(config, refresh, showMessage);

@@ -44,7 +44,6 @@ interface IndexedItem {
 
 export class Combobox extends BaseComponent<ComboboxConfig> {
   private triggerEl: HTMLElement;
-  private menuEl: HTMLElement | null = null;
   private inputEl: HTMLInputElement | null = null;
   private listEl: HTMLElement | null = null;
   private open = false;
@@ -172,7 +171,6 @@ export class Combobox extends BaseComponent<ComboboxConfig> {
     this.listEl = list;
 
     this.container.appendChild(menu);
-    this.menuEl = menu;
 
     this.applyFilter("");
     this.highlightedIndex = this.filtered.length ? 0 : -1;

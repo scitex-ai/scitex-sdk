@@ -9,7 +9,7 @@
  * - F2 to toggle edit mode
  */
 
-import { Dataset, DataRow } from "./types";
+import { Dataset } from "./types";
 
 export interface TableEditingCallbacks {
   getCurrentData: () => Dataset | null;

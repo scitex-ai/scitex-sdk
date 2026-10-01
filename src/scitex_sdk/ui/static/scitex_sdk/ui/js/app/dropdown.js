@@ -1,4 +1,6 @@
-// src/scitex_ui/static/scitex_ui/ts/_base/BaseComponent.ts
+/* AUTO-GENERATED from ts/app/dropdown/index.ts via esbuild — do not edit by hand. Rebuild: npm run build:ui -- --only js/app/dropdown.js */
+
+// ts/_base/BaseComponent.ts
 var BaseComponent = class {
   container;
   config;
@@ -24,7 +26,7 @@ var BaseComponent = class {
   }
 };
 
-// src/scitex_ui/static/scitex_ui/ts/_base/fuzzy.ts
+// ts/_base/fuzzy.ts
 function fuzzyMatch(query, hay) {
   if (!query) return true;
   let i = 0;
@@ -36,12 +38,11 @@ function fuzzyMatch(query, hay) {
   return true;
 }
 
-// src/scitex_ui/static/scitex_ui/ts/app/dropdown/_Dropdown.ts
+// ts/app/dropdown/_Dropdown.ts
 var CLS = "stx-app-dropdown";
 var DEFAULT_FILTER_THRESHOLD = 8;
 var Dropdown = class extends BaseComponent {
   triggerEl;
-  menuEl = null;
   open = false;
   query = "";
   outsideClickHandler;
@@ -125,7 +126,6 @@ var Dropdown = class extends BaseComponent {
       empty.textContent = this.config.emptyText ?? "No matches";
       menu.appendChild(empty);
       this.container.appendChild(menu);
-      this.menuEl = menu;
       return;
     }
     for (const item of items) {
@@ -157,7 +157,6 @@ var Dropdown = class extends BaseComponent {
       menu.appendChild(li);
     }
     this.container.appendChild(menu);
-    this.menuEl = menu;
   }
   buildFilter() {
     const input = document.createElement("input");

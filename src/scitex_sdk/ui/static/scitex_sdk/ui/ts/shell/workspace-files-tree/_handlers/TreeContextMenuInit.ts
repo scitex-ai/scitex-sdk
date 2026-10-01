@@ -17,17 +17,11 @@ export function initContextMenu(
         item.classList.contains("wft-folder") ||
         item.classList.contains("wft-root") ||
         path === "";
-      const gitStatusCode = item.getAttribute("data-git-status");
-      const gitStaged = item.getAttribute("data-git-staged") === "true";
-      const gitStatus = gitStatusCode
-        ? { status: gitStatusCode, staged: gitStaged }
-        : undefined;
       contextMenuHandler.show(
         e.clientX,
         e.clientY,
         path || "",
         isDir,
-        gitStatus,
       );
     } else {
       const treeArea = target.closest(".wft-tree, .workspace-files-tree");
@@ -47,6 +41,6 @@ export function initContextMenu(
   }
   document.addEventListener("repo-monitor:contextmenu", ((e: CustomEvent) => {
     const { path, x, y } = e.detail;
-    contextMenuHandler.show(x, y, path, false, undefined);
+    contextMenuHandler.show(x, y, path, false);
   }) as EventListener);
 }

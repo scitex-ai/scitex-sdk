@@ -2,7 +2,6 @@
  * Context Menu Action Handler - Ported from scitex-cloud (no API deps)
  */
 
-import type { TreeConfig } from "../types";
 import type { SelectionHandler } from "./SelectionHandler";
 import type { ClipboardHandler } from "./ClipboardHandler";
 import type { UndoRedoHandler } from "./UndoRedoHandler";
@@ -23,7 +22,6 @@ export interface ContextMenuActionCallbacks {
 
 export class ContextMenuActionHandler {
   constructor(
-    private config: TreeConfig,
     private selectionHandler: SelectionHandler,
     private clipboardHandler: ClipboardHandler,
     private undoRedoHandler: UndoRedoHandler,

@@ -13,7 +13,6 @@ import { Dataset, DataRow, TABLE_CONSTANTS } from './types';
 
 export class TableColumnRow {
     // Table dimensions
-    private readonly ROW_HEIGHT: number = TABLE_CONSTANTS.ROW_HEIGHT;
     private readonly COL_WIDTH: number = TABLE_CONSTANTS.COL_WIDTH;
     private maxRows: number = TABLE_CONSTANTS.MAX_ROWS;
     private maxCols: number = TABLE_CONSTANTS.MAX_COLS;

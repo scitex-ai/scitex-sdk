@@ -3,14 +3,12 @@
  * Ported from scitex-cloud (no API deps)
  */
 
-import type { TreeConfig } from "../types";
 import type { TreeStateManager } from "../_TreeState";
 
 export class KeyboardHandlers {
   private anchorPath: string | null = null;
 
   constructor(
-    private config: TreeConfig,
     private stateManager: TreeStateManager,
     private container: HTMLElement,
     private onToggleFolder: (path: string) => void,

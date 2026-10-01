@@ -10,7 +10,7 @@ import type {
   TerminalConnectionAdapter,
   TerminalConfig,
 } from "./terminal/types";
-import type { ChatAdapter, ChatConfig } from "./chat/types";
+import type { ChatAdapter } from "./chat/types";
 import type { ViewerAdapter, ViewerConfig } from "./viewer/types";
 
 export interface ShellConfig {

@@ -47,10 +47,12 @@ export class TableSelection {
     // Container selector
     private containerSelector: string = '.data-table-container';
 
+    // Keep the accepted status callback slot for existing consumers.
     constructor(
-        private getCellAt: (row: number, col: number) => HTMLElement | null,
-        private statusBarCallback?: (message: string) => void
-    ) {}
+        getCellAt: (row: number, col: number) => HTMLElement | null,
+        statusBarCallback?: (message: string) => void
+    );
+    constructor(private getCellAt: (row: number, col: number) => HTMLElement | null) {}
 
     // ========================================
     // PUBLIC API - Configuration

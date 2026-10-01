@@ -22,7 +22,6 @@ import {
   LANGUAGE_MAP,
   type ViewerAdapter,
   type ViewerConfig,
-  type OpenFile,
   type TabInfo,
 } from "./types";
 

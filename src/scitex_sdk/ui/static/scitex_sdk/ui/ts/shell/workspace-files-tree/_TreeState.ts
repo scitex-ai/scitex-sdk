@@ -28,12 +28,10 @@ const EMPTY_FOCUS_MAP = (): Record<string, string | null> => ({
 export class TreeStateManager {
   private projectKey: string;
   private sharedKey: string;
-  private mode: WorkspaceMode;
   private state: TreeState;
   private listeners: Set<(state: TreeState) => void> = new Set();
 
   constructor(username: string, slug: string, mode: WorkspaceMode = "all") {
-    this.mode = mode;
     this.projectKey = `${STORAGE_KEY_PREFIX}${username}_${slug}_${mode}`;
     this.sharedKey = `${STORAGE_KEY_PREFIX}${username}_${slug}_shared`;
     this.state = this.loadState();

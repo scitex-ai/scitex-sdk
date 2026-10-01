@@ -1,7 +1,7 @@
 /**
  * Workspace Keyboard Handler - Ported from scitex-cloud (no API deps)
  */
-import type { TreeConfig, TreeItem } from "../types";
+import type { TreeItem } from "../types";
 import type { TreeStateManager } from "../_TreeState";
 import type { SelectionHandler } from "./SelectionHandler";
 import type { ClipboardHandler } from "./ClipboardHandler";
@@ -24,7 +24,6 @@ export class WorkspaceKeyboardHandler {
   private boundHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(
-    private config: TreeConfig,
     private container: HTMLElement,
     private stateManager: TreeStateManager,
     private selectionHandler: SelectionHandler,

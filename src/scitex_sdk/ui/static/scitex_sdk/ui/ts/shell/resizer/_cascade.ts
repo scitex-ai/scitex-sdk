@@ -6,7 +6,6 @@
  * resizers (isInApp=false).
  */
 
-const COLLAPSE_WIDTH = 40;
 const MIN_MODULE_WIDTH = 40;
 
 /** Calculate the maximum width a panel can grow to */

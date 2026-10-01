@@ -116,7 +116,6 @@ function findAdjacentPanel(
 
 /** Collapse a panel programmatically */
 function collapsePanel(
-  storagePrefix: string,
   config: PanelConfig,
   panel: HTMLElement,
   axis: AxisConfig,
@@ -327,7 +326,6 @@ export function initResizer(storagePrefix: string, config: PanelConfig): void {
 
       if (propNewSize < COLLAPSE_SIZE) {
         collapsePanel(
-          storagePrefix,
           propagationTarget.config,
           propagationTarget.panel,
           axis,
@@ -379,7 +377,7 @@ export function initResizer(storagePrefix: string, config: PanelConfig): void {
     // Smart collapse: if dragged below threshold, collapse and propagate
     if (newSize < COLLAPSE_SIZE) {
       primaryCollapsed = true;
-      collapsePanel(storagePrefix, config, targetPanel, axis);
+      collapsePanel(config, targetPanel, axis);
 
       const dragDir =
         config.resizeDirection === "left" ? "shrink-left" : "shrink-right";
@@ -428,7 +426,7 @@ export function initResizer(storagePrefix: string, config: PanelConfig): void {
     const finalSize = axis.size(effectiveTarget);
 
     if (finalSize <= config.minWidth + 10) {
-      collapsePanel(storagePrefix, config, targetPanel, axis);
+      collapsePanel(config, targetPanel, axis);
     } else {
       saveWidth(storagePrefix, config, finalSize);
     }

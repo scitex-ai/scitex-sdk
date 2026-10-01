@@ -42,8 +42,8 @@ export class DataTableManager {
     constructor(
         config?: DataTableConfig | string | ((message: string) => void),
         private statusBarCallback?: (message: string) => void,
-        private updateColumnDropdownsCallback?: () => void,
-        private updateRulersAreaTransformCallback?: () => void
+        updateColumnDropdownsCallback?: () => void,
+        updateRulersAreaTransformCallback?: () => void
     ) {
         // Handle legacy constructor signatures:
         // 1. No args or undefined config: use default container
@@ -56,8 +56,8 @@ export class DataTableManager {
             // Legacy figrecipe_app pattern: (statusBarCallback, updateColumnDropdownsCallback, updateRulersAreaTransformCallback)
             this.containerSelector = '.data-table-container';
             this.statusBarCallback = config;
-            // Note: statusBarCallback, updateColumnDropdownsCallback, updateRulersAreaTransformCallback
-            // are already set by constructor parameter binding
+            // Module callbacks are forwarded below; the manager stores only
+            // the effective status callback.
         } else if (typeof config === 'string') {
             this.containerSelector = config;
         } else {
@@ -198,9 +198,10 @@ export class DataTableManager {
     /**
      * Load data from 2D array (e.g., from gallery CSV)
      * @param data 2D array where first row can be headers
-     * @param firstRowIsHeader Whether first row contains column headers
+     * @param firstRowIsHeader Compatibility argument; CSV import determines headers.
      */
-    public loadFromArray(data: string[][], firstRowIsHeader: boolean = true): void {
+    public loadFromArray(data: string[][], firstRowIsHeader?: boolean): void;
+    public loadFromArray(data: string[][]): void {
         if (!data || data.length === 0) {
             console.warn('[DataTableManager] Empty data array provided');
             return;

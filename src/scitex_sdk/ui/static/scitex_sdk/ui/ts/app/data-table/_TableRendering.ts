@@ -18,11 +18,10 @@
  * - TableColumnTruncation.ts - smart column width adjustment
  */
 
-import { Dataset, DataRow, TABLE_CONSTANTS } from "./types";
+import { Dataset, TABLE_CONSTANTS } from "./types";
 import {
   setupVirtualScrolling as doSetupVirtualScrolling,
   updateVisibleRange as doUpdateVisibleRange,
-  updateTableBody as doUpdateTableBody,
   VirtualScrollCallbacks,
 } from "./_TableVirtualScroll";
 import { setupSmartColumnTruncation as doSetupSmartColumnTruncation } from "./_TableColumnTruncation";
@@ -36,10 +35,7 @@ export class TableRendering {
   private virtualScrollEnabled: boolean = true;
   private visibleRowStart: number = 0;
   private visibleRowEnd: number = 50; // Initial visible rows
-  private visibleColStart: number = 0;
-  private visibleColEnd: number = 32; // Show all 32 columns initially
   private readonly BUFFER_ROWS: number = 10; // Extra rows to render above/below viewport
-  private scrollRAFId: number | null = null; // For requestAnimationFrame debouncing
   private lastScrollTop: number = 0;
 
   // Column width management
@@ -57,11 +53,14 @@ export class TableRendering {
   // Resize observer for smart column truncation
   private resizeObserver: ResizeObserver | null = null;
 
+  // Preserve the public constructor's accepted callback slots. Virtual
+  // scrolling and column sizing are handled by their dedicated modules.
   constructor(
-    private getCurrentData: () => Dataset | null,
-    private statusBarCallback?: (message: string) => void,
-    private updateRulersAreaTransformCallback?: () => void,
-  ) {}
+    getCurrentData: () => Dataset | null,
+    statusBarCallback?: (message: string) => void,
+    updateRulersAreaTransformCallback?: () => void,
+  );
+  constructor(private getCurrentData: () => Dataset | null) {}
 
   /**
    * Set container selector
@@ -166,7 +165,7 @@ export class TableRendering {
 
     // Generate dynamic CSS for column widths
     let dynamicCSS = '<style id="data-table-dynamic-widths">';
-    currentData.columns.forEach((col, colIndex) => {
+    currentData.columns.forEach((...[, colIndex]) => {
       const columnWidth = this.columnWidths.get(colIndex) || this.COL_WIDTH;
       dynamicCSS += `
                 .data-table th[data-col="${colIndex}"],

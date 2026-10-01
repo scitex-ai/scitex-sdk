@@ -26,7 +26,6 @@ const DEFAULT_FILTER_THRESHOLD = 8;
 
 export class Dropdown extends BaseComponent<DropdownConfig> {
   private triggerEl: HTMLElement;
-  private menuEl: HTMLElement | null = null;
   private open = false;
   private query = "";
   private outsideClickHandler: (e: MouseEvent) => void;
@@ -143,7 +142,6 @@ export class Dropdown extends BaseComponent<DropdownConfig> {
       empty.textContent = this.config.emptyText ?? "No matches";
       menu.appendChild(empty);
       this.container.appendChild(menu);
-      this.menuEl = menu;
       return;
     }
 
@@ -182,7 +180,6 @@ export class Dropdown extends BaseComponent<DropdownConfig> {
     }
 
     this.container.appendChild(menu);
-    this.menuEl = menu;
   }
 
   private buildFilter(): HTMLInputElement {

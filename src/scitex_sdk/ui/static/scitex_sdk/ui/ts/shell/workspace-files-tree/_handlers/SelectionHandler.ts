@@ -241,7 +241,7 @@ export class SelectionHandler {
     });
   }
 
-  updateClasses(selectedPath: string): void {
+  updateClasses(): void {
     this.updateAllSelectionClasses();
   }
   getSelectedPaths(): string[] {

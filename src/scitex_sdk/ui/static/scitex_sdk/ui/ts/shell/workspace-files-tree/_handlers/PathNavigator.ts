@@ -10,7 +10,7 @@ export class PathNavigator {
     private containerFn: () => HTMLElement | null,
     private rerenderFn: () => void,
     private getTreeDataFn: () => TreeItem[],
-    private updateSelectionClassesFn: (path: string) => void,
+    private updateSelectionClassesFn: () => void,
   ) {}
 
   getParentPaths(path: string): string[] {
@@ -29,7 +29,7 @@ export class PathNavigator {
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
       this.stateManager.setSelected(path);
-      this.updateSelectionClassesFn(path);
+      this.updateSelectionClassesFn();
     }
   }
 
@@ -42,7 +42,7 @@ export class PathNavigator {
     this.stateManager.expand(targetPath);
     if (collapseOthersAtLevel) {
       const parentPath = parentPaths[parentPaths.length - 1] || "";
-      this.getSiblingDirectories(targetPath, parentPath).forEach((sp) => {
+      this.getSiblingDirectories(parentPath).forEach((sp) => {
         if (sp !== targetPath) this.stateManager.collapse(sp);
       });
     }
@@ -54,10 +54,7 @@ export class PathNavigator {
     if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  async autoExpandFocusPath(
-    mode: WorkspaceMode,
-    isFirstLoad: boolean = false,
-  ): Promise<void> {
+  async autoExpandFocusPath(mode: WorkspaceMode): Promise<void> {
     const focusPath = this.stateManager.getFocusPath(mode);
     if (!focusPath) return;
     this.getParentPaths(focusPath).forEach((p) => this.stateManager.expand(p));
@@ -86,10 +83,7 @@ export class PathNavigator {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  private getSiblingDirectories(
-    targetPath: string,
-    parentPath: string,
-  ): string[] {
+  private getSiblingDirectories(parentPath: string): string[] {
     const siblings: string[] = [];
     const searchInItems = (items: TreeItem[]): void => {
       for (const item of items) {

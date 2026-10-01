@@ -78,10 +78,13 @@ export class TreeRenderer {
     );
   }
 
+  // Keep the accepted public call form; summaries are used by the tree's
+  // context menu, while each item's git_status supplies its rendered badge.
   render(
     items: TreeItem[],
     gitSummary?: { staged: number; modified: number; untracked: number },
-  ): string {
+  ): string;
+  render(items: TreeItem[]): string {
     const filteredItems = this.filter.filterTree(items);
     const sortedItems = this.sortTree(filteredItems);
     let html = `<div class="wft-tree">`;
@@ -108,7 +111,7 @@ export class TreeRenderer {
       if (item.type === "directory") {
         html += this.renderFolder(item, basePadding, level);
       } else {
-        html += this.renderFile(item, basePadding, level);
+        html += this.renderFile(item, basePadding);
       }
     }
     return html;
@@ -168,7 +171,7 @@ export class TreeRenderer {
     return html;
   }
 
-  private renderFile(item: TreeItem, indent: number, level: number): string {
+  private renderFile(item: TreeItem, indent: number): string {
     const isDisabled = this.filter.isDisabled(item);
     const isInactive = this.filter.isInactive(item);
     const isSelected = this.stateManager.getSelected() === item.path;

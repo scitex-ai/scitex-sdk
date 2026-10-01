@@ -27,13 +27,11 @@ export interface GitCounts {
 export class ContextMenuHandler {
   private menuElement: HTMLDivElement | null = null;
   private currentPath: string | null = null;
-  private currentGitStatus: GitStatus | null = null;
   private showTimestamp: number = 0;
 
   constructor(
     private onAction: (action: string, path: string) => void,
     private hasClipboard: () => boolean,
-    private isDirectory: (path: string) => boolean,
     private canUndo: () => boolean = () => false,
     private canRedo: () => boolean = () => false,
     private getSelectedCount: () => number = () => 0,
@@ -56,11 +54,9 @@ export class ContextMenuHandler {
     y: number,
     path: string,
     isDir: boolean,
-    gitStatus?: GitStatus,
   ): void {
     this.hide();
     this.currentPath = path;
-    this.currentGitStatus = gitStatus || null;
     this.showTimestamp = Date.now();
     const selCount = this.isInSelection(path) ? this.getSelectedCount() : 1;
     const items = this.getMenuItems(isDir, path === "", selCount);
@@ -79,7 +75,7 @@ export class ContextMenuHandler {
   }
 
   showForRoot(x: number, y: number): void {
-    this.show(x, y, "", true, undefined);
+    this.show(x, y, "", true);
   }
 
   hide(): void {

@@ -37,12 +37,6 @@ export interface SessionMessage {
 
 export class SessionsPanel {
   currentSessionId: number | null = null;
-  private sessions: Array<{
-    id: number;
-    title: string;
-    updated_at: string;
-    message_count?: number;
-  }> = [];
   private listEl: HTMLElement | null = null;
   private chatCounter = 0;
   private contextMenu: HTMLElement | null = null;
@@ -96,7 +90,6 @@ export class SessionsPanel {
     if (!this.adapter) return;
     try {
       const sessions = await this.adapter.listSessions();
-      this.sessions = sessions;
       // Auto-select first session if none is active
       if (!this.currentSessionId && sessions.length > 0) {
         this.currentSessionId = sessions[0].id;

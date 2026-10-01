@@ -5,7 +5,7 @@
  * The shell file tree never hardcodes API endpoints.
  */
 
-import type { FileNode, FileBrowserConfig } from "../../app/file-browser/types";
+import type { FileNode } from "../../app/file-browser/types";
 
 export type { FileNode };
 
