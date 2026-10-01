@@ -1,0 +1,170 @@
+/* =============================================================================
+ * SciTeX App — Media Viewer (image, PDF, diagram display)
+ * =============================================================================
+ * Prefix: stx-app-media-viewer
+ * Requires: shell/theme.css
+ * ============================================================================= */
+
+.stx-app-media-viewer {
+  flex-direction: column;
+  height: 100%;
+  background: var(--workspace-bg-primary, #ffffff);
+}
+
+/* --- Toolbar --- */
+
+.stx-app-media-viewer__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--workspace-bg-secondary, #f5f5f5);
+  border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.stx-app-media-viewer__toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary, #4a4a4a);
+  overflow: hidden;
+}
+
+.stx-app-media-viewer__toolbar-left span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stx-app-media-viewer__toolbar-right {
+  display: flex;
+  gap: 4px;
+}
+
+.stx-app-media-viewer__btn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  color: var(--text-muted, #777777);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.stx-app-media-viewer__btn:hover {
+  background: var(--workspace-bg-hover, rgba(0, 0, 0, 0.04));
+  color: var(--text-primary, #333333);
+}
+
+/* --- Image --- */
+
+.stx-app-media-viewer__image-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.stx-app-media-viewer__image-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--workspace-bg-tertiary, #e8e8e8);
+}
+
+.stx-app-media-viewer__image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.1s ease;
+}
+
+/* --- PDF --- */
+
+.stx-app-media-viewer__pdf-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.stx-app-media-viewer__pdf-frame {
+  flex: 1;
+  border: none;
+  width: 100%;
+}
+
+/* --- Binary --- */
+
+.stx-app-media-viewer__binary-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  color: var(--text-muted, #777777);
+}
+
+.stx-app-media-viewer__binary-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.stx-app-media-viewer__binary-info {
+  font-size: 12px;
+}
+
+.stx-app-media-viewer__download-btn {
+  margin-top: 16px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--stx-app-accent, var(--workspace-icon-primary, #059669));
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.stx-app-media-viewer__download-btn:hover {
+  opacity: 0.9;
+}
+
+/* --- Diagram --- */
+
+.stx-app-media-viewer__diagram-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.stx-app-media-viewer__diagram-content {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.stx-app-media-viewer__diagram-source {
+  font-family: monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  color: var(--text-primary, #333333);
+}
+
+/* --- Shared --- */
+
+.stx-app-media-viewer__loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted, #777777);
+  font-size: 13px;
+}
+
+.stx-app-media-viewer__error {
+  padding: 24px;
+  text-align: center;
+  color: var(--status-error, #a67373);
+  font-size: 13px;
+}

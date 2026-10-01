@@ -1,0 +1,97 @@
+/* Drawer — off-canvas panel with a scrim.
+ *
+ * Harvested from scitex-cards' chat.html (`#agents` / `#scrim`). Two changes
+ * of substance:
+ *
+ * 1. The source scoped the ENTIRE drawer inside `@media (max-width: 720px)`,
+ *    so the component only existed at phone width. That is a decision for the
+ *    consuming layout, not for the component — a drawer is equally valid as a
+ *    desktop side panel. The breakpoint lives in the app's stylesheet now;
+ *    these rules apply wherever the class is used.
+ *
+ * 2. The closed panel was hidden with `transform: translateX(-105%)` alone.
+ *    A transform moves pixels and nothing else: the panel stayed in the tab
+ *    order and the accessibility tree, so focus walked into an invisible
+ *    drawer. The behaviour layer sets `inert`; this stylesheet makes that
+ *    visible-state honest with `visibility` so the closed panel is also
+ *    removed from hit-testing.
+ */
+
+.stx-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: var(--stx-drawer-z, 20);
+
+  width: var(--stx-drawer-width, min(78vw, 300px));
+  max-width: 100%;
+
+  background: var(--bg-surface, #161b22);
+  box-shadow: 0 0 18px rgb(0 0 0 / 50%);
+
+  /* Hidden AND uninteractive when closed. `visibility` is what stops a
+     pointer from hitting the off-screen panel; `inert` (set by the module)
+     is what stops the keyboard. Both are needed — neither implies the other. */
+  visibility: hidden;
+  transition:
+    transform 180ms ease,
+    visibility 0s linear 180ms;
+}
+
+.stx-drawer[data-side="left"] {
+  left: 0;
+  transform: translateX(-105%);
+  box-shadow: 4px 0 18px rgb(0 0 0 / 50%);
+}
+
+.stx-drawer[data-side="right"] {
+  right: 0;
+  transform: translateX(105%);
+  box-shadow: -4px 0 18px rgb(0 0 0 / 50%);
+}
+
+.stx-drawer--open {
+  visibility: visible;
+  /* Cancel the delay so the panel is visible for the whole slide IN, and only
+     delayed on the way out. */
+  transition:
+    transform 180ms ease,
+    visibility 0s;
+}
+
+.stx-drawer[data-side="left"].stx-drawer--open,
+.stx-drawer[data-side="right"].stx-drawer--open {
+  transform: translateX(0);
+}
+
+.stx-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--stx-drawer-scrim-z, 15);
+
+  background: var(--stx-drawer-scrim-bg, rgb(0 0 0 / 45%));
+
+  /* The source used display:none/block, which cannot transition. Opacity plus
+     pointer-events fades correctly and is still fully inert when closed. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.stx-drawer-scrim--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Applied to <body> while a scroll-locking drawer is open. Without it, a drag
+   over the open drawer scrolls the page underneath on a phone. */
+.stx-drawer-scroll-locked {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stx-drawer,
+  .stx-drawer-scrim {
+    transition: none;
+  }
+}

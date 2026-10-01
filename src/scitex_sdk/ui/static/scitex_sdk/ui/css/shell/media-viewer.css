@@ -1,0 +1,508 @@
+/* ========================================================================
+   MEDIA VIEWER STYLES FOR CODE WORKSPACE
+   ======================================================================== */
+
+/* Common media viewer container */
+.media-viewer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--workspace-bg-primary);
+}
+
+.media-viewer-content {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========================================
+   PDF VIEWER
+   ======================================== */
+
+.pdf-viewer {
+  width: 100%;
+  height: 100%;
+}
+
+.pdf-viewer iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.pdf-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.pdf-placeholder i {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.pdf-download-link {
+  color: var(--status-info, #3b82f6);
+  text-decoration: none;
+  padding: 8px 16px;
+  border: 1px solid var(--status-info, #3b82f6);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.pdf-download-link:hover {
+  background: var(--status-info, #3b82f6);
+  color: var(--text-inverse);
+}
+
+/* ========================================
+   IMAGE VIEWER
+   ======================================== */
+
+.image-viewer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--workspace-bg-secondary);
+}
+
+.image-viewer img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.image-viewer.zoom-enabled img {
+  cursor: zoom-in;
+}
+
+.image-viewer.zoomed img {
+  cursor: zoom-out;
+  max-width: none;
+  max-height: none;
+}
+
+.image-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--status-error, #dc3545);
+}
+
+.image-error i {
+  font-size: 48px;
+  opacity: 0.7;
+}
+
+/* ========================================
+   CSV/DATA TABLE VIEWER
+   ======================================== */
+
+.csv-viewer,
+.media-viewer-csv-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--workspace-bg-primary);
+}
+
+.csv-viewer-toolbar,
+.media-viewer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--workspace-bg-secondary);
+  border-bottom: 1px solid var(--workspace-border-subtle);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.csv-viewer-info {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.csv-viewer-actions,
+.media-viewer-csv-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.csv-viewer-actions button,
+.csv-control-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--workspace-border-default);
+  background: var(--workspace-bg-tertiary);
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.csv-viewer-actions button:hover,
+.csv-control-btn:hover {
+  background: var(--workspace-bg-secondary);
+  border-color: var(--status-success, #4a9b7e);
+  color: var(--status-success, #4a9b7e);
+}
+
+.csv-control-btn i {
+  font-size: 11px;
+}
+
+/* Media viewer toolbar buttons (download, open in new tab) */
+.media-viewer-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid var(--workspace-border-default);
+  background: var(--workspace-bg-tertiary);
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-viewer-btn:hover {
+  background: var(--workspace-bg-secondary);
+  border-color: var(--status-info, #3b82f6);
+  color: var(--status-info, #3b82f6);
+}
+
+.media-viewer-btn i {
+  font-size: 12px;
+}
+
+.media-viewer-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+}
+
+.media-viewer-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.media-viewer-icon {
+  color: var(--text-muted);
+}
+
+.media-viewer-filename {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: var(--workspace-border-subtle);
+  margin: 0 4px;
+}
+
+.csv-viewer-table,
+.media-viewer-csv-container {
+  flex: 1;
+  overflow: auto;
+}
+
+/* CSV Table in Media Viewer */
+.csv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.csv-table th,
+.csv-table td {
+  border: 1px solid var(--workspace-border-subtle);
+  padding: 6px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* Light theme - softer borders */
+[data-theme="light"] .csv-table th,
+[data-theme="light"] .csv-table td {
+  border-color: var(--workspace-border-subtle);
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .csv-table th {
+  background: var(--bg-muted);
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .csv-table td {
+  background: var(--bg-surface);
+}
+
+[data-theme="light"] .csv-table tbody tr:hover td {
+  background: var(--bg-muted);
+}
+
+/* Dark theme */
+[data-theme="dark"] .csv-table th,
+[data-theme="dark"] .csv-table td {
+  border-color: var(--workspace-border-subtle);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .csv-table th {
+  background: var(--workspace-bg-secondary);
+}
+
+[data-theme="dark"] .csv-table td {
+  background: var(--workspace-bg-primary);
+}
+
+[data-theme="dark"] .csv-table tbody tr:hover td {
+  background: rgba(74, 155, 126, 0.1);
+}
+
+/* Dark theme is default for code workspace - these ensure consistency */
+.media-viewer-csv-wrapper .data-table th,
+.media-viewer-csv-wrapper .data-table td {
+  border-color: var(--workspace-border-subtle);
+  color: var(--text-primary);
+  background: var(--workspace-bg-primary);
+}
+
+.media-viewer-csv-wrapper .data-table th {
+  background: var(--workspace-bg-secondary);
+}
+
+.media-viewer-csv-wrapper .data-table .row-number,
+.media-viewer-csv-wrapper .data-table .row-number-header {
+  background: var(--workspace-bg-secondary);
+  color: var(--text-muted);
+}
+
+/* Override data-table styles for dark theme in code workspace */
+[data-theme="dark"] .csv-viewer {
+  background: var(--workspace-bg-primary);
+}
+
+[data-theme="dark"] .csv-viewer .data-table th,
+[data-theme="dark"] .csv-viewer .data-table td {
+  border-color: var(--workspace-border-subtle);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .csv-viewer .data-table th {
+  background: var(--workspace-bg-secondary);
+}
+
+[data-theme="dark"] .csv-viewer .data-table .row-number,
+[data-theme="dark"] .csv-viewer .data-table .row-number-header {
+  background: var(--workspace-bg-secondary);
+}
+
+[data-theme="dark"] .csv-viewer-toolbar {
+  background: var(--workspace-bg-secondary);
+  border-color: var(--workspace-border-subtle);
+}
+
+/* ========================================
+   LOADING STATES
+   ======================================== */
+
+.media-viewer-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  color: var(--text-muted);
+}
+
+.media-viewer-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--workspace-border-default);
+  border-top-color: var(--status-success, #4a9b7e);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ========================================
+   STATUS BAR INTEGRATION
+   ======================================== */
+
+.media-viewer-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: var(--workspace-bg-secondary);
+  border-top: 1px solid var(--workspace-border-subtle);
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.media-viewer-status .file-type {
+  padding: 2px 6px;
+  background: var(--workspace-bg-tertiary);
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.media-viewer-status .file-size {
+  margin-left: auto;
+}
+
+/* ========================================
+   MERMAID DIAGRAM VIEWER
+   ======================================== */
+
+.media-viewer-mermaid-wrapper,
+.mermaid-viewer-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.media-viewer-mermaid-content {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* Mermaid SVG output — center and cap max width */
+.mermaid-viewer-wrapper .mermaid,
+.media-viewer-mermaid-content .mermaid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mermaid-viewer-wrapper .mermaid svg,
+.media-viewer-mermaid-content .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ========================================
+   PLACEHOLDER (empty / error states)
+   ======================================== */
+
+.media-viewer-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.media-viewer-placeholder i {
+  font-size: 36px;
+  opacity: 0.6;
+}
+
+.media-viewer-placeholder p {
+  font-size: 13px;
+  max-width: 360px;
+  line-height: 1.5;
+}
+
+/* ========================================
+   BINARY FILE PLACEHOLDER
+   ======================================== */
+
+.media-viewer-binary-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-viewer-binary-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.media-viewer-binary-icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.media-viewer-binary-filename {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.media-viewer-binary-info {
+  font-size: 13px;
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+.media-viewer-download-btn {
+  margin-top: 8px;
+  padding: 8px 20px;
+  background: var(--status-info, #3b82f6);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.15s ease;
+}
+
+.media-viewer-download-btn:hover {
+  opacity: 0.85;
+}

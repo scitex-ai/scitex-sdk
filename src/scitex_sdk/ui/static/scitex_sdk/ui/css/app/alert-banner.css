@@ -1,0 +1,99 @@
+/* AlertBanner — dismissible alert / error banner (stx-app-alert-banner). */
+
+.stx-app-alert-banner {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001; /* above ConfirmModal (1000) */
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: calc(100% - 32px);
+  max-width: 720px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--workspace-border-default, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  background: var(--workspace-bg-primary, #ffffff);
+  color: var(--text-primary, #333333);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  line-height: 1.4;
+  animation: stx-app-alert-banner-in 0.15s ease-out;
+}
+
+@keyframes stx-app-alert-banner-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.stx-app-alert-banner__icon {
+  flex: 0 0 auto;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.stx-app-alert-banner__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stx-app-alert-banner__title {
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.stx-app-alert-banner__message {
+  word-break: break-word;
+}
+
+.stx-app-alert-banner__close {
+  flex: 0 0 auto;
+  padding: 0 2px;
+  border: none;
+  background: none;
+  color: var(--text-muted, #777777);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stx-app-alert-banner__close:hover {
+  color: var(--text-primary, #333333);
+}
+
+/* Severity accents — coloured left border + icon. */
+.stx-app-alert-banner--error {
+  border-left: 4px solid #e5484d;
+}
+.stx-app-alert-banner--warning {
+  border-left: 4px solid #f5a623;
+}
+.stx-app-alert-banner--info {
+  border-left: 4px solid #4a90d9;
+}
+.stx-app-alert-banner--success {
+  border-left: 4px solid #46a758;
+}
+
+.stx-app-alert-banner--error .stx-app-alert-banner__icon {
+  color: #e5484d;
+}
+.stx-app-alert-banner--warning .stx-app-alert-banner__icon {
+  color: #f5a623;
+}
+.stx-app-alert-banner--info .stx-app-alert-banner__icon {
+  color: #4a90d9;
+}
+.stx-app-alert-banner--success .stx-app-alert-banner__icon {
+  color: #46a758;
+}

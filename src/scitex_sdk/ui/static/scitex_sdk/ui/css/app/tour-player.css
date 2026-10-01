@@ -1,0 +1,129 @@
+/* =============================================================================
+ * Tour player — the bilingual tour video primitive
+ * =============================================================================
+ * Card: ui-shared-brand-dock-tour-primitives-20260917 (slice 3, second half)
+ * SSOT: scitex-hub PR 923 §8
+ *
+ *   "Stable IDs/data attributes, not translated labels, locate controls."
+ *   "The player can switch audio/subtitle language without losing position."
+ *   "Produce desktop first, then 390 px where the app supports the flow."
+ *
+ * The hooks live in the markup (`data-stx-player-act`), the labels do not — and
+ * the control row WRAPS rather than overflowing, because a phone is where a
+ * shared tour is most likely to be watched at all. Every control is a 44px
+ * target (§4's rule, and the row is the only thing thumbs hit).
+ *
+ * The player owns its control row (`video.controls = false`) precisely so the
+ * recording pipeline has stable hooks to drive instead of native browser chrome
+ * it cannot address.
+ * ============================================================================= */
+
+.stx-tour-player {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 4px);
+  max-width: 100%;
+  color: var(--text-primary, #333);
+  background: var(--bg-surface, #f8f7f5);
+  border: 1px solid var(--border-muted, #c0c0c0);
+  border-radius: var(--radius-md, 4px);
+  overflow: hidden;
+}
+
+.stx-tour-player__video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  background: #000;
+}
+
+.stx-tour-player__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs, 4px);
+  padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px) var(--spacing-sm, 8px);
+}
+
+.stx-tour-player__control {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-default, #999);
+  border-radius: var(--radius-md, 4px);
+  background: var(--bg-surface, #f8f7f5);
+  color: var(--text-primary, #333);
+  font: inherit;
+  cursor: pointer;
+}
+
+.stx-tour-player__control:hover {
+  background: var(--bg-muted, #f3f2f0);
+}
+
+.stx-tour-player__control:focus-visible {
+  outline: 2px solid var(--color-primary, #1a2a40);
+  outline-offset: 2px;
+}
+
+/* Captions on is a state worth seeing at a glance, and it is a toggle the
+   viewer set deliberately. */
+.stx-tour-player__control[aria-pressed="true"] {
+  border-color: var(--color-primary, #1a2a40);
+  background: var(--color-primary, #1a2a40);
+  color: var(--color-on-primary, #fff);
+}
+
+.stx-tour-player__chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs, 4px);
+  padding: 0 var(--spacing-sm, 8px) var(--spacing-sm, 8px);
+}
+
+.stx-tour-player__chapter {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm, 3px);
+  background: transparent;
+  color: var(--text-secondary, #4a4a4a);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.stx-tour-player__chapter[aria-current="true"] {
+  color: var(--color-primary, #1a2a40);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.stx-tour-player__chapter:focus-visible {
+  outline: 2px solid var(--color-primary, #1a2a40);
+  outline-offset: 2px;
+}
+
+/* A media element is motion by definition; what this removes is the chrome
+   ANIMATING around it (hover fades, focus transitions) for a viewer who asked
+   the system for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .stx-tour-player__control,
+  .stx-tour-player__chapter {
+    transition: none;
+  }
+}
+
+/* Phones: the video takes the width it has, and the control row keeps wrapping
+   rather than pushing the page sideways (§8's 390px pass). */
+@media (max-width: 600px) {
+  .stx-tour-player__video {
+    max-height: 40vh;
+  }
+
+  .stx-tour-player__control {
+    padding: 0 10px;
+  }
+}

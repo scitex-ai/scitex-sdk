@@ -1,0 +1,156 @@
+/* =============================================================================
+ * SciTeX App — Canonical App Header
+ * =============================================================================
+ * Prefix: stx-app-header
+ * Requires: primitives/colors.css, shell/theme.css
+ *
+ * THE ONE header template, shared by every project-scoped app:
+ *
+ *     [ leaf title ] [ v<version> ] [ project selector ] ...... [ actions ]
+ *
+ * A leaf does NOT ship its own header chrome. FigRecipe shipped one before this
+ * existed (its `.stx-app-header` rows were leaf-local and restyled per app);
+ * the canonical row, the title, the badge, the actions spacer and the phone
+ * behaviour all live HERE so two apps cannot disagree about any of them.
+ *
+ * THE ACTION CONTROLS ARE PART OF THE CONTRACT. The host declares them in the
+ * shell-props payload (`actions[]`, scitex-app PR #199) and this row renders
+ * them; each one names a command or an href, so keyboard, touch and mouse
+ * resolve ONE id rather than three hand-wired handlers.
+ *
+ * THE PROJECT SELECTOR IS NOT STYLED HERE. `.stx-app-header__slot--project-selector`
+ * is defined once, in css/app/project-selector.css, and pinned by
+ * tests/develop/test_project_selector_contract.py. That slot's `margin-right:
+ * auto` is what pushes the actions to the right edge — so `__actions` must NOT
+ * also take a left auto-margin, which would split the free space between them
+ * and drift the selector toward the centre. The slot's `order: 1` is the other
+ * half of the same arrangement and needs `__actions` at a HIGHER order; with the
+ * actions left at the default 0 the row inverts. The pair is asserted as a
+ * RELATION (test_app_header_contract.py), so neither half can move alone.
+ *
+ * RESPONSIVE TOKENS: --stx-touch-target-min / --stx-safe-inset-* are declared in
+ * shell/theme.css, which a page loading ONLY app.css does not include. The
+ * fallbacks below are therefore the same static values, and
+ * test_app_header_contract.py FAILS if theme.css's value and the fallback here
+ * ever diverge — so the copy can drift in neither direction silently.
+ * ============================================================================= */
+
+.stx-app-header {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding-block: 4px;
+  padding-inline: calc(12px + var(--stx-safe-inset-left, env(safe-area-inset-left, 0px)))
+    calc(12px + var(--stx-safe-inset-right, env(safe-area-inset-right, 0px)));
+  background: var(--workspace-bg-secondary, transparent);
+  border-bottom: 1px solid var(--workspace-border-subtle, transparent);
+  color: var(--text-primary, inherit);
+  flex-shrink: 0;
+}
+
+.stx-app-header__title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  /* min-width:0 is what lets the ellipsis actually trigger inside a flex row:
+     without it the item refuses to shrink below its content and overflows. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stx-app-header__version {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-secondary, #6a6a6a);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* An unknown version renders as ABSENT, never as a placeholder. Stated as a
+   rule (not left to the UA default) so a later `display` on this element cannot
+   silently resurrect an empty badge. */
+.stx-app-header__version[hidden] {
+  display: none;
+}
+
+/* ORDER 2 IS LOAD-BEARING, not decoration, and it is half of a PAIR: the
+   project-selector slot takes order 1 (project-selector.css), so the two
+   declarations together produce the row above. If this slot keeps the default
+   order 0 it sorts BEFORE the selector — flexbox sorts by `order` ascending —
+   and the row renders [title][version][actions][selector], the contract
+   inverted. The slot's `margin-right: auto` then sits on the LAST item, so the
+   slack is absorbed to its own right and nothing reaches the right edge either.
+
+   Measured in chromium (card
+   scitex-ui-header-actions-render-left-of-the-project-selector-20260921), with
+   a FILLED actions slot, header 1200px: without this declaration actions sit at
+   x=106 and the slot at x=157 with everything bunched left; with it they sit at
+   x=1145, flush to the 12px inline padding. Three existing guards passed while
+   the row was inverted, because each asserted a literal (`order` present,
+   `order: 1`, "margin-right: auto" present) rather than the relation, so
+   tests/develop/test_app_header_contract.py now asserts the RELATION and this
+   pair cannot drift apart again. */
+.stx-app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  order: 2;
+}
+
+/* One action control, rendered from the shell-props payload (`actions[]`) or
+   appended by the app. Both a <button> (a command) and an <a> (an href) land
+   on this class, so a control looks the same whichever route it takes, and the
+   header's generic phone rule below gives it the touch minimum. */
+.stx-app-header__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary, #6a6a6a);
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.stx-app-header__action:hover {
+  color: var(--text-primary, #222);
+  background: var(--workspace-bg-hover, rgba(0, 0, 0, 0.06));
+}
+
+.stx-app-header__action:focus-visible {
+  outline: 2px solid var(--color-primary, #4a6fa5);
+  outline-offset: 2px;
+}
+
+/* ── Phones ──────────────────────────────────────────────────────────────
+ * 600px, the same boundary the canonical slot uses (project-selector.css), so
+ * the header row and the selector wrap as ONE decision rather than two.
+ * The header wraps to two rows: title + version, then the full-width selector.
+ * Every interactive control in the header is at least the shared touch minimum,
+ * INCLUDING the selector's trigger — via this generic rule, so the header needs
+ * no second selector for it.
+ */
+@media (max-width: 600px), (pointer: coarse) {
+  .stx-app-header {
+    flex-wrap: wrap;
+    min-height: 52px;
+    row-gap: 4px;
+  }
+
+  .stx-app-header :is(button, a, [role="button"]) {
+    min-height: var(--stx-touch-target-min, 44px);
+    min-width: var(--stx-touch-target-min, 44px);
+  }
+}

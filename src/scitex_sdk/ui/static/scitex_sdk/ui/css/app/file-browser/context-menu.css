@@ -1,0 +1,94 @@
+/**
+ * File Browser — Context Menu
+ * Ported verbatim from scitex-cloud stx-app-file-tree/context-menu.css
+ */
+
+.stx-app-file-tree__context-menu {
+  background: var(--color-canvas-overlay, #2d333b);
+  border: 1px solid var(--workspace-border-default, rgba(110, 118, 129, 0.3));
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 10000;
+  font-size: 12px;
+}
+
+.stx-app-file-tree__context-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--color-fg-default, #e6edf3);
+  transition: background-color 0.1s ease;
+}
+
+.stx-app-file-tree__context-item:hover {
+  background: var(--color-accent-subtle, rgba(47, 129, 247, 0.15));
+}
+
+.stx-app-file-tree__context-item.disabled {
+  color: var(--color-fg-muted, #768390);
+  cursor: not-allowed;
+}
+
+.stx-app-file-tree__context-item.disabled:hover {
+  background: transparent;
+}
+
+.stx-app-file-tree__context-icon {
+  width: 20px;
+  text-align: center;
+  margin-right: 8px;
+  color: var(--color-fg-muted, #768390);
+}
+
+.stx-app-file-tree__context-item:hover .stx-app-file-tree__context-icon {
+  color: var(--color-accent-fg, #58a6ff);
+}
+
+.stx-app-file-tree__context-label {
+  flex: 1;
+}
+
+.stx-app-file-tree__context-shortcut {
+  color: var(--color-fg-muted, #768390);
+  font-size: 11px;
+  margin-left: 16px;
+}
+
+.stx-app-file-tree__context-separator {
+  height: 1px;
+  background: var(--workspace-border-default, rgba(110, 118, 129, 0.3));
+  margin: 4px 8px;
+}
+
+/* Icon colors for specific actions */
+.stx-app-file-tree__context-item.context-new-file .stx-app-file-tree__context-icon {
+  color: var(--color-accent-fg, #58a6ff);
+}
+
+.stx-app-file-tree__context-item.context-new-folder .stx-app-file-tree__context-icon {
+  color: var(--color-success-fg, #3fb950);
+}
+
+.stx-app-file-tree__context-item.context-rename .stx-app-file-tree__context-icon {
+  color: var(--color-attention-fg, #d29922);
+}
+
+.stx-app-file-tree__context-item.context-duplicate .stx-app-file-tree__context-icon {
+  color: var(--color-done-fg, #a371f7);
+}
+
+.stx-app-file-tree__context-item.context-delete .stx-app-file-tree__context-icon {
+  color: var(--color-danger-fg, #f85149);
+}
+
+/* Hover states — maintain icon colors */
+.stx-app-file-tree__context-item.context-new-file:hover .stx-app-file-tree__context-icon,
+.stx-app-file-tree__context-item.context-new-folder:hover .stx-app-file-tree__context-icon,
+.stx-app-file-tree__context-item.context-rename:hover .stx-app-file-tree__context-icon,
+.stx-app-file-tree__context-item.context-duplicate:hover .stx-app-file-tree__context-icon,
+.stx-app-file-tree__context-item.context-delete:hover .stx-app-file-tree__context-icon {
+  /* Keep the same color on hover */
+}

@@ -1,0 +1,14 @@
+/* =============================================================================
+ * SciTeX Shell — AI Panel (Console/Chat)
+ * Ported from scitex-cloud global-ai-chat CSS.
+ * =============================================================================
+ * Orchestrator — imports modular sub-files.
+ * ============================================================================= */
+
+@import url("ai-panel/01-panel-layout.css");
+@import url("ai-panel/02-mode-toggle.css");
+@import url("ai-panel/03-chat-messages.css");
+@import url("ai-panel/04-chat-input.css");
+@import url("ai-panel/05-console-mode.css");
+@import url("ai-panel/06-console-tabs.css");
+@import url("ai-panel/07-sessions.css");

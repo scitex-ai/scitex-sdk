@@ -1,0 +1,18 @@
+{% load static %}{% comment %}
+Shared SciTeX tab branding, usable WITHOUT the shell.
+
+    {% include "scitex_sdk/ui/_branding_head.html" %}
+
+Emits the favicon link. Renders the shared SciTeX brand mark by default, or
+`favicon_href` when the view supplies one.
+
+WHY THIS EXISTS SEPARATELY FROM standalone_shell.html: 0.7.0 put the favicon
+in the shell's <head>, which coupled BRANDING to the SHELL when branding is
+the more general concern. Only 4 of 6 consuming GUIs extend the shell
+(writer, figrecipe, cards, storage); scholar and hub own their own layout, so
+the branding never reached them and no upgrade would have fixed it. A GUI
+should be able to take the shared mark without adopting the workspace layout.
+
+The shell includes this partial rather than duplicating the markup, so there
+is one source for what SciTeX tab branding is.
+{% endcomment %}<link rel="icon" href="{% if favicon_href %}{{ favicon_href }}{% else %}{% static 'scitex_sdk/ui/img/scitex-favicon.svg' %}{% endif %}" />

@@ -1,0 +1,27 @@
+/* =============================================================================
+ * SciTeX App — Tooltip (auto-positioned)
+ * =============================================================================
+ * Prefix: stx-app-tooltip
+ * ============================================================================= */
+
+.stx-app-tooltip {
+  position: absolute;
+  display: none;
+  padding: 4px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #ffffff;
+  background: #333333;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  max-width: 300px;
+}
+
+[data-theme="dark"] .stx-app-tooltip {
+  background: #e0e0e0;
+  color: #1e1e2e;
+}

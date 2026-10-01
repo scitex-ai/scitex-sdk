@@ -1,0 +1,163 @@
+/* =============================================================================
+ * AI Panel: chat sessions bar
+ * Ported from scitex-cloud global-ai-chat/12-sessions.css
+ * ============================================================================= */
+
+.stx-shell-ai-sessions-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border-default, #30363d);
+  background: var(--bg-tertiary, var(--workspace-bg-tertiary, #0d1117));
+  flex-shrink: 0;
+  overflow: hidden;
+  min-height: 32px;
+}
+
+/* New chat button */
+.stx-shell-ai-new-chat {
+  flex-shrink: 0;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-default, #30363d);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted, #8b949e);
+  cursor: pointer;
+  font-size: 0.6875rem;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  white-space: nowrap;
+}
+
+.stx-shell-ai-new-chat:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+/* Sessions list — horizontal scroll */
+.stx-shell-ai-sessions-list {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: none;
+}
+
+.stx-shell-ai-sessions-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* Individual session chip */
+.stx-shell-ai-session-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted, #8b949e);
+  font-size: 0.6875rem;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 140px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  flex-shrink: 0;
+}
+
+.stx-shell-ai-session-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.stx-shell-ai-session-item.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--accent-primary, #3b82f6);
+  color: var(--text-primary);
+}
+
+.stx-shell-ai-session-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Delete button on session chip (visible on hover) */
+.stx-shell-ai-session-del {
+  display: none;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #8b949e);
+  cursor: pointer;
+  font-size: 0.5625rem;
+  line-height: 1;
+}
+
+.stx-shell-ai-session-item:hover .stx-shell-ai-session-del {
+  display: inline-flex;
+}
+
+.stx-shell-ai-session-del:hover {
+  color: #cf222e;
+}
+
+/* ── Inline rename input (replaces the chip title while editing) ──────────
+ * chat/_sessions-panel.ts swaps the title span for this <input>. Unstyled it
+ * rendered as a raw browser field, which is wider and taller than the chip it
+ * replaced and pushed the row out of the sessions bar. */
+.stx-shell-ai-session-rename {
+  min-width: 0;
+  max-width: 140px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid var(--workspace-border-subtle, rgba(110, 118, 129, 0.3));
+  border-radius: 3px;
+  background: var(--workspace-bg-elevated, transparent);
+  color: var(--text-primary, inherit);
+  font: inherit;
+  font-size: 0.6875rem;
+}
+
+/* ── The sessions context menu ────────────────────────────────────────────
+ * position: FIXED is load-bearing, not decoration: the component appends the
+ * menu to document.body and positions it from e.clientX/clientY, which are
+ * VIEWPORT coordinates. Absolute positioning would offset it by the scroll of
+ * the panel it was opened from.
+ * --z-dropdown (primitives/z-index.css) because a body-level menu must clear
+ * the panel chrome it was opened from. */
+.stx-shell-ai-context-menu {
+  position: fixed;
+  z-index: var(--z-dropdown, 1000);
+  min-width: 160px;
+  padding: 0.25rem 0;
+  border: 1px solid var(--workspace-border-subtle, rgba(110, 118, 129, 0.3));
+  border-radius: 4px;
+  background: var(--workspace-bg-elevated, var(--bg-surface, #fff));
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.25));
+  color: var(--text-primary, inherit);
+}
+
+/* A menu item is a div with an icon and a label (not a <button>), so the
+   cursor and the hover background are what make it read as actionable. */
+.stx-shell-ai-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--text-primary, inherit);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.stx-shell-ai-context-menu-item:hover {
+  background: var(--workspace-bg-hover, rgba(177, 186, 196, 0.08));
+}

@@ -1,0 +1,70 @@
+/* =============================================================================
+ * SciTeX App — Toggle Switch
+ * =============================================================================
+ * Prefix: stx-app-toggle
+ * Requires: shell/theme.css
+ * ============================================================================= */
+
+.stx-app-toggle {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.stx-app-toggle__input {
+  display: none;
+}
+
+.stx-app-toggle__slider {
+  display: block;
+  width: 40px;
+  height: 22px;
+  background: rgba(110, 118, 129, 0.4);
+  border-radius: 11px;
+  position: relative;
+  transition: background 200ms ease;
+}
+
+.stx-app-toggle__slider::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 200ms ease;
+}
+
+.stx-app-toggle__input:checked + .stx-app-toggle__slider {
+  background: var(--text-link, #58a6ff);
+}
+
+.stx-app-toggle__input:checked + .stx-app-toggle__slider::after {
+  transform: translateX(18px);
+}
+
+/* Disabled state */
+.stx-app-toggle__input:disabled + .stx-app-toggle__slider {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+/* ── Modifier: small ── */
+.stx-app-toggle--sm .stx-app-toggle__slider {
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+}
+
+.stx-app-toggle--sm .stx-app-toggle__slider::after {
+  width: 14px;
+  height: 14px;
+}
+
+.stx-app-toggle--sm
+  .stx-app-toggle__input:checked
+  + .stx-app-toggle__slider::after {
+  transform: translateX(14px);
+}

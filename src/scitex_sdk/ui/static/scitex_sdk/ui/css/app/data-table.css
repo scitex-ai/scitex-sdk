@@ -1,0 +1,301 @@
+/* =============================================================================
+ * SciTeX App — DataTable (full-featured spreadsheet component)
+ * =============================================================================
+ * Ported from scitex-cloud data-table CSS.
+ * Prefix: stx-app-data-table
+ *
+ * Sections:
+ * 1. Container + scroll
+ * 2. Table structure
+ * 3. Header cells
+ * 4. Resize handle
+ * 5. Data cells
+ * 6. Row numbers
+ * 7. Selection states
+ * 8. Editing states
+ * 9. Fill handle
+ * 10. Context menu
+ * ============================================================================= */
+
+/* ---- 1. Container ---- */
+
+.stx-app-data-table {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: "JetBrains Mono", Monaco, Menlo, monospace;
+  font-size: 12px;
+  outline: none;
+}
+
+.stx-app-data-table__scroll {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+/* ---- 2. Table structure ---- */
+
+.stx-app-data-table__table {
+  border-collapse: collapse;
+  white-space: nowrap;
+  table-layout: fixed;
+}
+
+.stx-app-data-table__row--even {
+  background: transparent;
+}
+
+.stx-app-data-table__row--odd {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="dark"] .stx-app-data-table__row--odd {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ---- 3. Header cells ---- */
+
+.stx-app-data-table__header-cell {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 6px 8px;
+  background: var(--workspace-bg-elevated);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 11px;
+  text-align: center;
+  border-bottom: 2px solid var(--workspace-border-default);
+  border-right: 1px solid var(--workspace-border-subtle);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stx-app-data-table__header-cell span {
+  margin-right: 4px;
+}
+
+.stx-app-data-table__header-cell i {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.stx-app-data-table__header-cell:hover {
+  background: var(--workspace-bg-hover);
+}
+
+.stx-app-data-table__header-cell--sorted {
+  color: var(--stx-app-accent, var(--status-success));
+}
+
+/* Column header highlighted when cells in its column are selected */
+.stx-app-data-table__header-cell--highlighted {
+  background: rgba(74, 155, 126, 0.2) !important;
+}
+
+/* ---- 4. Resize handle ---- */
+
+.stx-app-data-table__resize-handle {
+  position: absolute;
+  right: -4px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.stx-app-data-table__resize-handle:hover {
+  background: rgba(74, 155, 126, 0.3);
+}
+
+/* ---- 5. Data cells ---- */
+
+.stx-app-data-table__cell {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--workspace-border-subtle);
+  border-right: 1px solid var(--workspace-border-subtle);
+  color: var(--text-secondary);
+  cursor: cell;
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  position: relative;
+  outline: none;
+}
+
+.stx-app-data-table__cell:hover {
+  background: var(--workspace-bg-hover);
+}
+
+.stx-app-data-table__cell-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- 6. Row numbers ---- */
+
+.stx-app-data-table__row-num {
+  padding: 4px 6px;
+  background: var(--workspace-bg-elevated);
+  color: var(--text-muted);
+  font-size: 10px;
+  text-align: right;
+  border-right: 1px solid var(--workspace-border-default);
+  user-select: none;
+  min-width: 32px;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.stx-app-data-table__row-num--header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  border-bottom: 2px solid var(--workspace-border-default);
+}
+
+.stx-app-data-table__row-num:not(.stx-app-data-table__row-num--header) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.stx-app-data-table__row-num:hover:not(.stx-app-data-table__row-num--header) {
+  background: var(--workspace-bg-hover);
+}
+
+/* Row number highlighted when row is selected */
+.stx-app-data-table__row-num--highlighted {
+  background: rgba(74, 155, 126, 0.2) !important;
+}
+
+/* ---- 7. Selection states ---- */
+
+/* Selected range: cells within currentCells */
+.stx-app-data-table__cell--selected {
+  background-color: rgba(74, 155, 126, 0.08) !important;
+}
+
+[data-theme="dark"] .stx-app-data-table__cell--selected {
+  background-color: rgba(74, 155, 126, 0.15) !important;
+}
+
+/* Current cell: the active input target (shows white/dark bg over selection) */
+.stx-app-data-table__cell--current {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  outline: 2px solid var(--stx-app-accent, var(--status-success));
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+[data-theme="dark"] .stx-app-data-table__cell--current {
+  background-color: rgba(30, 30, 30, 0.95) !important;
+}
+
+/* Fill preview: cells that will be filled on drag release */
+.stx-app-data-table__cell--fill-preview {
+  background-color: rgba(74, 155, 126, 0.15) !important;
+  border: 1px dashed var(--stx-app-accent, var(--status-success)) !important;
+}
+
+/* ---- 8. Editing states ---- */
+
+/* Cell in edit mode */
+.stx-app-data-table__cell--editing {
+  background-color: var(--workspace-bg-primary, #fff) !important;
+  outline: 2px solid var(--stx-app-accent, var(--status-success)) !important;
+  outline-offset: -2px;
+  z-index: 3;
+}
+
+[data-theme="dark"] .stx-app-data-table__cell--editing {
+  background-color: var(--workspace-bg-primary, #1e1e1e) !important;
+}
+
+/* Inline edit input */
+.stx-app-data-table__edit-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  box-sizing: border-box;
+  user-select: text;
+  cursor: text;
+}
+
+/* ---- 9. Fill handle ---- */
+
+.stx-app-data-table__fill-handle {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 8px;
+  height: 8px;
+  background: var(--stx-app-accent, var(--status-success));
+  border: 1px solid white;
+  cursor: crosshair;
+  z-index: 101;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+}
+
+/* ---- 10. Context menu ---- */
+
+.stx-app-data-table__context-menu {
+  background: var(--workspace-bg-elevated, #2d2d2d);
+  border: 1px solid var(--workspace-border-default, #444);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 180px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.stx-app-data-table__context-menu-section {
+  padding: 2px 0;
+}
+
+.stx-app-data-table__context-menu-divider {
+  height: 1px;
+  background: var(--workspace-border-default, #444);
+  margin: 4px 8px;
+}
+
+.stx-app-data-table__context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--text-primary, #e0e0e0);
+  transition: background 0.1s ease;
+}
+
+.stx-app-data-table__context-menu-item:hover {
+  background: var(--workspace-bg-hover, rgba(255, 255, 255, 0.1));
+}
+
+.stx-app-data-table__context-menu-item i {
+  width: 16px;
+  text-align: center;
+  color: var(--text-muted, #888);
+  font-size: 12px;
+}
+
+.stx-app-data-table__context-menu-item span {
+  flex: 1;
+  font-size: 12px;
+}

@@ -1,0 +1,333 @@
+/* =============================================================================
+ * SciTeX App — App Help ("How to use")
+ * =============================================================================
+ * Prefix: stx-app-help
+ * Requires: primitives/spacing.css
+ *
+ * ONE data source (the app's help.json / {% stx_help %} payload) feeds TWO
+ * surfaces:
+ *   - the `?` button + slide-over help panel (always available)
+ *   - the first-open coach-mark tour (highlights each step's `target`)
+ *
+ * The `?` button is a 44px touch target; the panel is a right slide-over on
+ * desktop and a full-width sheet on phones (no horizontal overflow at 390).
+ * The tour bubble is bottom-anchored on phones so it never covers the
+ * highlighted target's label.
+ * ============================================================================= */
+
+.stx-app-help {
+  position: relative;
+  display: inline-block;
+}
+
+/* ── The `?` button ──────────────────────────────────────────────────── */
+
+.stx-app-help__button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--border-default, #999);
+  border-radius: 50%;
+  background: var(--bg-surface, #f8f7f5);
+  color: var(--text-primary, #333);
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.stx-app-help__button:hover {
+  border-color: var(--color-primary, #4a6fa5);
+}
+
+.stx-app-help__button:focus-visible {
+  outline: 2px solid var(--color-primary, #4a6fa5);
+  outline-offset: 2px;
+}
+
+/* ── The `?` help panel (slide-over) ─────────────────────────────────── */
+
+.stx-app-help__panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  width: min(380px, 100vw);
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #222);
+  border-left: 1px solid var(--border-muted, #ddd);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.12));
+  padding: calc(var(--spacing-md, 16px) + env(safe-area-inset-top))
+    var(--spacing-md, 16px)
+    calc(var(--spacing-md, 16px) + env(safe-area-inset-bottom));
+}
+
+.stx-app-help__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm, 8px);
+  margin-bottom: var(--spacing-md, 16px);
+}
+
+.stx-app-help__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.stx-app-help__close {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #555);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stx-app-help__close:focus-visible {
+  outline: 2px solid var(--color-primary, #4a6fa5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.stx-app-help__step {
+  display: flex;
+  gap: var(--spacing-sm, 8px);
+  padding: var(--spacing-sm, 8px) 0;
+  border-bottom: 1px solid var(--border-muted, #eee);
+}
+
+.stx-app-help__step:last-child {
+  border-bottom: none;
+}
+
+.stx-app-help__step-num {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-muted, #e8e7e5);
+  color: var(--text-secondary, #555);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.stx-app-help__step-icon {
+  flex: none;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.stx-app-help__step-text {
+  min-width: 0;
+}
+
+.stx-app-help__step-title {
+  font-weight: 600;
+}
+
+.stx-app-help__step-body {
+  margin-top: 2px;
+  color: var(--text-secondary, #555);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere; /* a long token/URL must not force horizontal scroll */
+}
+
+.stx-app-help__footer {
+  margin-top: var(--spacing-md, 16px);
+}
+
+.stx-app-help__replay {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0 var(--spacing-md, 16px);
+  border: 1px solid var(--border-default, #999);
+  border-radius: var(--radius-md, 4px);
+  background: var(--bg-surface, #f8f7f5);
+  color: var(--text-primary, #333);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ── The first-open coach-mark tour ──────────────────────────────────── */
+
+.stx-app-help__tour {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  background: rgba(0, 0, 0, 0.4);
+  pointer-events: none; /* only the bubble is interactive */
+}
+
+.stx-app-help__tour-highlight {
+  position: fixed;
+  z-index: 1002;
+  border: 2px solid var(--color-primary, #4a6fa5);
+  border-radius: var(--radius-md, 4px);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.stx-app-help__tour-bubble {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--spacing-md, 16px) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 1003;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - var(--spacing-md, 16px) * 2));
+  max-width: 100%;
+  padding: var(--spacing-md, 16px);
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #222);
+  border: 1px solid var(--border-default, #999);
+  border-radius: var(--radius-lg, 8px);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.18));
+  pointer-events: auto;
+}
+
+.stx-app-help__tour-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm, 8px);
+  margin-top: var(--spacing-sm, 8px);
+}
+
+.stx-app-help__count {
+  color: var(--text-muted, #777);
+  font-size: 0.8rem;
+}
+
+.stx-app-help__nav {
+  display: flex;
+  gap: var(--spacing-xs, 4px);
+}
+
+.stx-app-help__nav button {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 0 var(--spacing-md, 12px);
+  border: 1px solid var(--border-default, #999);
+  border-radius: var(--radius-md, 4px);
+  background: var(--bg-surface, #f8f7f5);
+  color: var(--text-primary, #333);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.stx-app-help__nav button[data-act="next"] {
+  background: var(--color-primary, #4a6fa5);
+  border-color: var(--color-primary, #4a6fa5);
+  color: var(--color-on-primary, #fff);
+}
+
+.stx-app-help__nav button:disabled {
+  opacity: var(--disabled-opacity, 0.5);
+  cursor: not-allowed;
+}
+
+.stx-app-help__nav button:focus-visible {
+  outline: 2px solid var(--color-primary, #4a6fa5);
+  outline-offset: 2px;
+}
+
+/* ── Phones: the panel is a full-width sheet, never wider than the page ─ */
+
+@media (max-width: 600px), (pointer: coarse) {
+  .stx-app-help__panel {
+    width: 100vw;
+    border-left: none;
+  }
+
+  .stx-app-help__tour-bubble {
+    width: calc(100vw - var(--spacing-sm, 8px) * 2);
+  }
+}
+
+/* ── First-use choices: Watch tour / Later / Do not show again ─────────────
+   SSOT: scitex-hub PR 923 §8 — "App first use may offer Watch tour, Later, and
+   Do not show again. These preferences are account-level and reversible in
+   Settings."
+
+   Three buttons, three hooks, and the hooks are NOT the labels: the labels are
+   translated and a leaf that targets one answer must not have to match on prose
+   that changes per language. The importances differ too — Watch is the only
+   primary action, Later is neutral, and Do not show again is quiet — because a
+   refusal is not the loudest thing in the room. */
+.stx-app-help__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm, 8px);
+  margin-top: var(--spacing-sm, 8px);
+}
+
+.stx-app-help__choices[hidden] {
+  display: none;
+}
+
+.stx-app-help__choice {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border-default, #999);
+  border-radius: var(--radius-md, 4px);
+  background: var(--bg-surface, #f8f7f5);
+  color: var(--text-primary, #333);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The one primary action. --color-primary / --color-on-primary resolve from
+   shell/theme.css, which declares both since the brand-token slice (they used
+   to resolve only through primitives/colors.css). */
+.stx-app-help__choice--watch {
+  border-color: var(--color-primary, #1a2a40);
+  background: var(--color-primary, #1a2a40);
+  color: var(--color-on-primary, #fff);
+}
+
+/* Neutral: postponing is a legitimate answer, not a lesser one. Stated
+   explicitly so the hook exists in the stylesheet even where it matches the
+   base rule — a leaf targeting `--later` must find something to target. */
+.stx-app-help__choice--later {
+  border-color: var(--border-default, #999);
+  background: var(--bg-surface, #f8f7f5);
+  color: var(--text-primary, #333);
+}
+
+/* Quietest of the three, and deliberately so: the user is declining, which
+   should be easy to do and not compete with the action they came for. */
+.stx-app-help__choice--never {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted, #777);
+  text-decoration: underline;
+}
+
+.stx-app-help__choice:focus-visible {
+  outline: 2px solid var(--color-primary, #1a2a40);
+  outline-offset: 2px;
+}

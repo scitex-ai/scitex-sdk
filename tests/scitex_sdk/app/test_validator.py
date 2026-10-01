@@ -1,0 +1,1440 @@
+#!/usr/bin/env python3
+# Timestamp: 2026-03-21
+# File: tests/test__validator.py
+
+"""Tests for scitex_sdk/app/validator.py — AppValidator class."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+
+from scitex_sdk.app.validator import (
+    AppValidator,
+    ValidationResult,
+    MANIFEST_REQUIRED_FIELDS,
+    VALID_PRIVILEGE_TYPES,
+    VALID_FILESYSTEM_SCOPES,
+    VALID_NETWORK_SCOPES,
+    VALID_API_SCOPES,
+    SHELL_SELECTORS,
+    DANGEROUS_JS_PATTERNS,
+    DEFAULT_MAX_BUNDLE_SIZE,
+)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def write_manifest(path: Path, data: dict) -> None:
+    (path / "manifest.json").write_text(json.dumps(data), encoding="utf-8")
+
+
+def make_valid_manifest(path: Path) -> None:
+    write_manifest(
+        path,
+        {
+            "name": "test_app",
+            "slug": "test-app",
+            "label": "Test App",
+            "pip_package": "test-app",
+            "icon": "fas fa-flask",
+            # REQUIRED since the two required-key lists were converged. This
+            # fixture encoded "a valid manifest" as five keys, which is the
+            # AppValidator half of the divergence baked into the suite: the
+            # tests agreed with the implementation because both were wrong in
+            # the same direction.
+            "license": "MIT",
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tests: ValidationResult dataclass
+# ---------------------------------------------------------------------------
+
+
+class TestValidationResult:
+    def test_initial_state_is_passed_result_passed_is_true(self):
+        # Arrange
+        # Arrange
+        # Act
+        result = ValidationResult()
+        # Act
+        # Assert
+        # Assert
+        assert result.passed is True
+
+    def test_initial_state_is_passed_result_errors_equals_case(self):
+        # Arrange
+        # Arrange
+        # Act
+        result = ValidationResult()
+        # Act
+        # Assert
+        # Assert
+        assert result.errors == []
+
+    def test_initial_state_is_passed_result_warnings_equals_case(self):
+        # Arrange
+        # Arrange
+        # Act
+        result = ValidationResult()
+        # Act
+        # Assert
+        # Assert
+        assert result.warnings == []
+
+
+    def test_add_error_sets_passed_false_result_passed_is_false(self):
+        # Arrange
+        # Arrange
+        result = ValidationResult()
+        # Act
+        result.add_error("something is broken")
+        # Act
+        # Assert
+        # Assert
+        assert result.passed is False
+
+    def test_add_error_sets_passed_false_something_is_broken_in_result_errors(self):
+        # Arrange
+        # Arrange
+        result = ValidationResult()
+        # Act
+        result.add_error("something is broken")
+        # Act
+        # Assert
+        # Assert
+        assert "something is broken" in result.errors
+
+
+    def test_add_warning_does_not_fail_result_passed_is_true(self):
+        # Arrange
+        # Arrange
+        result = ValidationResult()
+        # Act
+        result.add_warning("minor issue")
+        # Act
+        # Assert
+        # Assert
+        assert result.passed is True
+
+    def test_add_warning_does_not_fail_minor_issue_in_result_warnings(self):
+        # Arrange
+        # Arrange
+        result = ValidationResult()
+        # Act
+        result.add_warning("minor issue")
+        # Act
+        # Assert
+        # Assert
+        assert "minor issue" in result.warnings
+
+
+    def test_multiple_errors_accumulate_len_result_errors_is_2(self):
+        # Arrange
+        # Arrange
+        result = ValidationResult()
+        result.add_error("err1")
+        # Act
+        result.add_error("err2")
+        # Act
+        # Assert
+        # Assert
+        assert len(result.errors) == 2
+
+    def test_multiple_errors_accumulate_result_passed_is_false(self):
+        # Arrange
+        # Arrange
+        result = ValidationResult()
+        result.add_error("err1")
+        # Act
+        result.add_error("err2")
+        # Act
+        # Assert
+        # Assert
+        assert result.passed is False
+
+
+
+# ---------------------------------------------------------------------------
+# Tests: validate_manifest
+# ---------------------------------------------------------------------------
+
+
+class TestValidateManifest:
+    def test_valid_manifest_in_root_validator_result_passed_is_true(self, tmp_path):
+        # Arrange
+        # Arrange
+        make_valid_manifest(tmp_path)
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Act
+        # Assert
+        # Assert
+        assert validator._result.passed is True
+
+    def test_valid_manifest_in_root_validator_result_manifest_is_not_none(self, tmp_path):
+        # Arrange
+        # Arrange
+        make_valid_manifest(tmp_path)
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Act
+        # Assert
+        # Assert
+        assert validator._result.manifest is not None
+
+
+    def test_valid_manifest_in_django_subdir(self, tmp_path):
+        # Arrange
+        django_dir = tmp_path / "_django"
+        django_dir.mkdir()
+        make_valid_manifest(django_dir)
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Assert
+        assert validator._result.passed is True
+
+    def test_missing_manifest_adds_error_validator_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Act
+        # Assert
+        # Assert
+        assert validator._result.passed is False
+
+    def test_missing_manifest_adds_error_any_no_manifest_json_in_e_for_e_in_validator_result_errors(self, tmp_path):
+        # Arrange
+        # Arrange
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Act
+        # Assert
+        # Assert
+        assert any("No manifest.json" in e for e in validator._result.errors)
+
+
+    def test_invalid_json_adds_error_validator_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        (tmp_path / "manifest.json").write_text("{broken json", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Act
+        # Assert
+        # Assert
+        assert validator._result.passed is False
+
+    def test_invalid_json_adds_error_any_invalid_json_in_e_for_e_in_validator_result_errors(self, tmp_path):
+        # Arrange
+        # Arrange
+        (tmp_path / "manifest.json").write_text("{broken json", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Act
+        # Assert
+        # Assert
+        assert any("invalid JSON" in e for e in validator._result.errors)
+
+
+    def test_missing_fields_adds_error_validator_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        write_manifest(tmp_path, {"name": "test_app"})
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Act
+        # Assert
+        # Assert
+        assert validator._result.passed is False
+
+    def test_missing_fields_adds_error_any_missing_required_fields_in_e_for_e_in_validator_result_e(self, tmp_path):
+        # Arrange
+        # Arrange
+        write_manifest(tmp_path, {"name": "test_app"})
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Act
+        # Assert
+        # Assert
+        assert any("missing required fields" in e for e in validator._result.errors)
+
+
+    def test_all_required_fields_present(self, tmp_path):
+        # Arrange
+        data = {field: "value" for field in MANIFEST_REQUIRED_FIELDS}
+        write_manifest(tmp_path, data)
+        validator = AppValidator(tmp_path)
+        validator.validate_manifest()
+        # Act
+        errors = [e for e in validator._result.errors if "missing" in e.lower()]
+        # Assert
+        assert errors == []
+
+    def test_non_string_name_adds_error(self, tmp_path):
+        # Arrange
+        write_manifest(
+            tmp_path,
+            {"name": 123, "slug": "x", "label": "x", "pip_package": "x-app", "icon": "x"},
+        )
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Assert
+        assert any("name must be a string" in e for e in validator._result.errors)
+
+    def test_version_key_forbidden_result_passed_is_false(self, tmp_path):
+        # A hand-written 'version' key is forbidden — it drifts from the
+        # installed package; the version derives from 'pip_package'.
+        # Arrange
+        write_manifest(
+            tmp_path,
+            {
+                "name": "x",
+                "slug": "x",
+                "label": "x",
+                "pip_package": "x-app",
+                "icon": "x",
+                "version": "1.0.0",
+            },
+        )
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Assert
+        assert validator._result.passed is False
+
+    def test_version_key_forbidden_adds_error(self, tmp_path):
+        # A hand-written 'version' key emits the forbidden-version error.
+        # Arrange
+        write_manifest(
+            tmp_path,
+            {
+                "name": "x",
+                "slug": "x",
+                "label": "x",
+                "pip_package": "x-app",
+                "icon": "x",
+                "version": "1.0.0",
+            },
+        )
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Assert
+        assert any(
+            "must NOT declare 'version'" in e for e in validator._result.errors
+        )
+
+    def test_missing_pip_package_result_passed_is_false(self, tmp_path):
+        # pip_package is required — it is the single source of truth for the
+        # app version (read at runtime via importlib.metadata).
+        # Arrange
+        write_manifest(
+            tmp_path,
+            {"name": "x", "slug": "x", "label": "x", "icon": "x"},
+        )
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Assert
+        assert validator._result.passed is False
+
+    def test_missing_pip_package_adds_missing_required_error(self, tmp_path):
+        # A manifest without pip_package reports the missing-required error.
+        # Arrange
+        write_manifest(
+            tmp_path,
+            {"name": "x", "slug": "x", "label": "x", "icon": "x"},
+        )
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Assert
+        assert any(
+            "missing required fields" in e and "pip_package" in e
+            for e in validator._result.errors
+        )
+
+    def test_privileges_extracted_from_manifest(self, tmp_path):
+        # Arrange
+        privs = [{"type": "filesystem", "scope": "project"}]
+        write_manifest(
+            tmp_path,
+            {
+                "name": "x",
+                "slug": "x",
+                "label": "x",
+                "pip_package": "x-app",
+                "icon": "x",
+                "privileges": privs,
+            },
+        )
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_manifest()
+        # Assert
+        assert validator._result.privileges == privs
+
+
+# ---------------------------------------------------------------------------
+# Tests: validate_structure
+# ---------------------------------------------------------------------------
+
+
+class TestValidateStructure:
+    def test_no_django_dir_adds_warning(self, tmp_path):
+        # Arrange
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_structure()
+        # Assert
+        assert any("_django" in w for w in validator._result.warnings)
+
+    def test_django_dir_with_required_files_passes(self, tmp_path):
+        # Arrange
+        django_dir = tmp_path / "_django"
+        django_dir.mkdir()
+        (django_dir / "views.py").touch()
+        (django_dir / "urls.py").touch()
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_structure()
+        # Assert
+        assert validator._result.passed is True
+
+    def test_django_dir_missing_views_adds_error_validator_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        django_dir = tmp_path / "_django"
+        django_dir.mkdir()
+        (django_dir / "urls.py").touch()
+        # views.py is missing
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_structure()
+        # Act
+        # Assert
+        # Assert
+        assert validator._result.passed is False
+
+    def test_django_dir_missing_views_adds_error_any_views_py_in_e_for_e_in_validator_result_errors(self, tmp_path):
+        # Arrange
+        # Arrange
+        django_dir = tmp_path / "_django"
+        django_dir.mkdir()
+        (django_dir / "urls.py").touch()
+        # views.py is missing
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_structure()
+        # Act
+        # Assert
+        # Assert
+        assert any("views.py" in e for e in validator._result.errors)
+
+
+    def test_django_dir_missing_urls_adds_error_validator_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        django_dir = tmp_path / "_django"
+        django_dir.mkdir()
+        (django_dir / "views.py").touch()
+        # urls.py is missing
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_structure()
+        # Act
+        # Assert
+        # Assert
+        assert validator._result.passed is False
+
+    def test_django_dir_missing_urls_adds_error_any_urls_py_in_e_for_e_in_validator_result_errors(self, tmp_path):
+        # Arrange
+        # Arrange
+        django_dir = tmp_path / "_django"
+        django_dir.mkdir()
+        (django_dir / "views.py").touch()
+        # urls.py is missing
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_structure()
+        # Act
+        # Assert
+        # Assert
+        assert any("urls.py" in e for e in validator._result.errors)
+
+
+    def test_app_path_is_django_dir_itself(self, tmp_path):
+        """If app_path has views.py at root level, treat it as the _django dir."""
+        # Arrange
+        (tmp_path / "views.py").touch()
+        (tmp_path / "urls.py").touch()
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_structure()
+        # Should pass since views.py and urls.py are present
+        # Assert
+        assert validator._result.passed is True
+
+
+# ---------------------------------------------------------------------------
+# Tests: validate_css
+# ---------------------------------------------------------------------------
+
+
+def _shell_errors(tmp_path, css: str) -> list[str]:
+    """Run the ARMED CSS check over one stylesheet, return its shell errors."""
+    (tmp_path / "bad.css").write_text(css, encoding="utf-8")
+    validator = AppValidator(tmp_path)
+    validator.validate_css()
+    return [e for e in validator._result.errors if "shell selector" in e]
+
+
+class TestValidateCssDoesNotFlagCorrectCode:
+    """The armed check matched RAW FILE TEXT until 0.20.4.
+
+    `validate_css_canonical` models rule blocks and gets all of these right,
+    but it is deliberately UNARMED — so until it is armed, the check that
+    actually runs should at least not fail correct code. Measured on the
+    shipped 0.20.3: two of three fixtures below were false positives.
+    """
+
+    def test_a_name_inside_a_comment_is_not_a_violation(self, tmp_path):
+        """A stylesheet that WARNS readers not to style a shell selector was
+        reported as targeting it — the comment naming it was enough."""
+        # Arrange
+        css = "/* do not style #main-content */\n.mine { color: red }\n"
+        # Act
+        errors = _shell_errors(tmp_path, css)
+        # Assert
+        assert errors == []
+
+    def test_a_longer_id_that_merely_starts_with_a_shell_id_is_not_a_violation(self, tmp_path):
+        """`"#main-content" in content` is true of `#main-content-of-mine`,
+        which is an id the app owns. Same defect `_frame.py` shed in 0.18.1,
+        and the same boundary fixes it."""
+        # Arrange
+        css = ".myapp #main-content-of-mine { color: red }\n"
+        # Act
+        errors = _shell_errors(tmp_path, css)
+        # Assert
+        assert errors == []
+
+    def test_the_real_violation_still_fires(self, tmp_path):
+        """THE CONTROL. Both assertions above are satisfied by a check that
+        stopped reporting anything at all — which is precisely what a careless
+        comment-strip or an over-broad boundary would produce."""
+        # Arrange
+        css = "#main-content { color: red }\n"
+        # Act
+        errors = _shell_errors(tmp_path, css)
+        # Assert
+        assert len(errors) == 1
+
+
+class TestValidateCss:
+    def test_clean_css_passes(self, tmp_path):
+        # Arrange
+        css = tmp_path / "styles.css"
+        css.write_text("body { margin: 0; }", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_css()
+        # Assert
+        assert validator._result.passed is True
+
+    def test_shell_selector_in_css_adds_error_validator_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        bad_selector = next(iter(SHELL_SELECTORS))
+        css = tmp_path / "bad.css"
+        css.write_text(f"{bad_selector} {{ color: red; }}", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_css()
+        # Act
+        # Assert
+        # Assert
+        assert validator._result.passed is False
+
+    def test_shell_selector_in_css_adds_error_any_shell_selector_in_e_for_e_in_validator_result_errors(self, tmp_path):
+        # Arrange
+        # Arrange
+        bad_selector = next(iter(SHELL_SELECTORS))
+        css = tmp_path / "bad.css"
+        css.write_text(f"{bad_selector} {{ color: red; }}", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_css()
+        # Act
+        # Assert
+        # Assert
+        assert any("shell selector" in e for e in validator._result.errors)
+
+
+    def test_skip_dirs_excluded_from_css_scan(self, tmp_path):
+        """CSS files in node_modules/ are not scanned."""
+        # Arrange
+        skip_dir = tmp_path / "node_modules"
+        skip_dir.mkdir()
+        bad_selector = next(iter(SHELL_SELECTORS))
+        css = skip_dir / "vendor.css"
+        css.write_text(f"{bad_selector} {{ color: red; }}", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_css()
+        # Should pass — node_modules is skipped
+        # Assert
+        assert validator._result.passed is True
+
+    def test_multiple_shell_selectors_each_add_error(self, tmp_path):
+        # Arrange
+        content = "\n".join(f"{s} {{ color: red; }}" for s in list(SHELL_SELECTORS)[:2])
+        css = tmp_path / "multi.css"
+        css.write_text(content, encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_css()
+        # Assert
+        assert len(validator._result.errors) >= 2
+
+
+# ---------------------------------------------------------------------------
+# Tests: validate_js
+# ---------------------------------------------------------------------------
+
+
+class TestValidateJs:
+    def test_clean_js_passes(self, tmp_path):
+        # Arrange
+        js = tmp_path / "app.js"
+        js.write_text("console.log('hello');", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_js()
+        # Assert
+        assert validator._result.passed is True
+
+    def test_eval_in_js_adds_error_validator_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        js = tmp_path / "bad.js"
+        js.write_text("eval('dangerous code');", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_js()
+        # Act
+        # Assert
+        # Assert
+        assert validator._result.passed is False
+
+    def test_eval_in_js_adds_error_any_dangerous_pattern_in_e_for_e_in_validator_result_errors(self, tmp_path):
+        # Arrange
+        # Arrange
+        js = tmp_path / "bad.js"
+        js.write_text("eval('dangerous code');", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_js()
+        # Act
+        # Assert
+        # Assert
+        assert any("dangerous pattern" in e for e in validator._result.errors)
+
+
+    def test_a_variable_named_subprocess_is_not_a_browser_hazard(self, tmp_path):
+        r"""INVERTED 2026-09-06. This test asserted the defect.
+
+        `\bsubprocess\b` is the PYTHON forbidden list copy-pasted into a JS
+        scanner, and it matched the VARIABLE NAME in this fixture — not
+        anything dangerous. scitex-writer hit the same family through the
+        surviving `\bexec\s*\(` on `re.exec(line)` in a tokenizer loop, and
+        reported it instead of renaming their variable to dodge the checker.
+
+        NOTE WHAT IS ACTUALLY HAZARDOUS IN THIS FIXTURE and is NOT caught:
+        `require('child_process')`. No pattern in either list matches it. So
+        the old test passed for the wrong reason twice over — it fired on an
+        identifier and stayed silent on the call. Recorded rather than fixed
+        here: widening the rule is a separate decision, and it is unarmed.
+        """
+        # Arrange
+        js = tmp_path / "bad.js"
+        js.write_text("const subprocess = require('child_process');", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_js()
+        # Assert
+        assert validator._result.passed is True
+
+    def test_document_cookie_adds_error(self, tmp_path):
+        # Arrange
+        js = tmp_path / "tracker.js"
+        js.write_text("let c = document.cookie;", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_js()
+        # Assert
+        assert validator._result.passed is False
+
+    def test_typescript_file_scanned(self, tmp_path):
+        # Arrange
+        ts = tmp_path / "component.ts"
+        ts.write_text("eval('bad');", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_js()
+        # Assert
+        assert validator._result.passed is False
+
+    def test_skip_dirs_excluded_from_js_scan(self, tmp_path):
+        """JS files in dist/ are not scanned."""
+        # Arrange
+        dist_dir = tmp_path / "dist"
+        dist_dir.mkdir()
+        js = dist_dir / "bundle.js"
+        js.write_text("eval('build artifact');", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_js()
+        # dist is in SKIP_DIRS — should pass
+        # Assert
+        assert validator._result.passed is True
+
+
+# ---------------------------------------------------------------------------
+# Tests: validate_bundle_size
+# ---------------------------------------------------------------------------
+
+
+class TestValidateBundleSize:
+    def test_small_bundle_passes(self, tmp_path):
+        # Arrange
+        (tmp_path / "small.txt").write_text("tiny file", encoding="utf-8")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_bundle_size()
+        # Assert
+        assert validator._result.passed is True
+
+    def test_oversized_bundle_adds_error_validator_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        big = tmp_path / "big.bin"
+        # Write more than 50MB
+        big.write_bytes(b"x" * (DEFAULT_MAX_BUNDLE_SIZE + 1))
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_bundle_size()
+        # Act
+        # Assert
+        # Assert
+        assert validator._result.passed is False
+
+    def test_oversized_bundle_adds_error_any_exceeds_limit_in_e_for_e_in_validator_result_errors(self, tmp_path):
+        # Arrange
+        # Arrange
+        big = tmp_path / "big.bin"
+        # Write more than 50MB
+        big.write_bytes(b"x" * (DEFAULT_MAX_BUNDLE_SIZE + 1))
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_bundle_size()
+        # Act
+        # Assert
+        # Assert
+        assert any("exceeds limit" in e for e in validator._result.errors)
+
+
+    def test_custom_max_bundle_size(self, tmp_path):
+        # Arrange
+        (tmp_path / "data.bin").write_bytes(b"x" * 1_000)
+        validator = AppValidator(tmp_path, max_bundle_size=500)
+        # Act
+        validator.validate_bundle_size()
+        # Assert
+        assert validator._result.passed is False
+
+    def test_node_modules_excluded_from_bundle_size(self, tmp_path):
+        # Arrange
+        nm = tmp_path / "node_modules"
+        nm.mkdir()
+        # Write a huge file in node_modules — should be excluded
+        (nm / "vendor.js").write_bytes(b"x" * (DEFAULT_MAX_BUNDLE_SIZE + 1))
+        (tmp_path / "app.js").write_text("console.log(1);")
+        validator = AppValidator(tmp_path)
+        # Act
+        validator.validate_bundle_size()
+        # Assert
+        assert validator._result.passed is True
+
+
+# ---------------------------------------------------------------------------
+# Tests: validate_privileges
+# ---------------------------------------------------------------------------
+
+
+class TestValidatePrivileges:
+    def _validator_with_privs(self, tmp_path, privileges):
+        validator = AppValidator(tmp_path)
+        validator._result.privileges = privileges
+        return validator
+
+    def test_valid_filesystem_privilege(self, tmp_path):
+        # Arrange
+        privs = [{"type": "filesystem", "scope": "project"}]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Assert
+        assert v._result.passed is True
+
+    def test_valid_network_privilege(self, tmp_path):
+        # Arrange
+        privs = [{"type": "network", "scope": "none"}]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Assert
+        assert v._result.passed is True
+
+    def test_valid_api_privilege(self, tmp_path):
+        # Arrange
+        privs = [{"type": "api", "scope": "scitex"}]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Assert
+        assert v._result.passed is True
+
+    def test_unknown_privilege_type_adds_error_v_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        privs = [{"type": "database", "scope": "all"}]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Act
+        # Assert
+        # Assert
+        assert v._result.passed is False
+
+    def test_unknown_privilege_type_adds_error_any_unknown_privilege_type_in_e_for_e_in_v_result_errors(self, tmp_path):
+        # Arrange
+        # Arrange
+        privs = [{"type": "database", "scope": "all"}]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Act
+        # Assert
+        # Assert
+        assert any("Unknown privilege type" in e for e in v._result.errors)
+
+
+    def test_invalid_scope_for_filesystem_adds_error_v_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        privs = [{"type": "filesystem", "scope": "all"}]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Act
+        # Assert
+        # Assert
+        assert v._result.passed is False
+
+    def test_invalid_scope_for_filesystem_adds_error_any_invalid_scope_in_e_for_e_in_v_result_errors(self, tmp_path):
+        # Arrange
+        # Arrange
+        privs = [{"type": "filesystem", "scope": "all"}]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Act
+        # Assert
+        # Assert
+        assert any("Invalid scope" in e for e in v._result.errors)
+
+
+    def test_invalid_scope_for_network_adds_error(self, tmp_path):
+        # Arrange
+        privs = [{"type": "network", "scope": "project"}]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Assert
+        assert v._result.passed is False
+
+    def test_invalid_scope_for_api_adds_error(self, tmp_path):
+        # Arrange
+        privs = [{"type": "api", "scope": "database"}]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Assert
+        assert v._result.passed is False
+
+    def test_non_dict_privilege_adds_error_v_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        privs = ["not-a-dict"]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Act
+        # Assert
+        # Assert
+        assert v._result.passed is False
+
+    def test_non_dict_privilege_adds_error_any_not_a_dict_in_e_for_e_in_v_result_errors(self, tmp_path):
+        # Arrange
+        # Arrange
+        privs = ["not-a-dict"]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Act
+        # Assert
+        # Assert
+        assert any("not a dict" in e for e in v._result.errors)
+
+
+    def test_multiple_valid_privileges(self, tmp_path):
+        # Arrange
+        privs = [
+            {"type": "filesystem", "scope": "readonly"},
+            {"type": "api", "scope": "llm"},
+        ]
+        v = self._validator_with_privs(tmp_path, privs)
+        # Act
+        v.validate_privileges()
+        # Assert
+        assert v._result.passed is True
+
+
+# ---------------------------------------------------------------------------
+# Tests: full validate() pipeline
+# ---------------------------------------------------------------------------
+
+
+class TestFullValidate:
+    def test_valid_app_passes_all_checks_result_passed_is_true(self, tmp_path):
+        # Arrange
+        # Arrange
+        make_valid_manifest(tmp_path)
+        django_dir = tmp_path / "_django"
+        django_dir.mkdir()
+        (django_dir / "views.py").touch()
+        (django_dir / "urls.py").touch()
+        validator = AppValidator(tmp_path)
+        # Act
+        result = validator.validate()
+        # Act
+        # Assert
+        # Assert
+        assert result.passed is True
+
+    def test_valid_app_passes_all_checks_result_errors_equals_case(self, tmp_path):
+        # Arrange
+        # Arrange
+        make_valid_manifest(tmp_path)
+        django_dir = tmp_path / "_django"
+        django_dir.mkdir()
+        (django_dir / "views.py").touch()
+        (django_dir / "urls.py").touch()
+        validator = AppValidator(tmp_path)
+        # Act
+        result = validator.validate()
+        # Act
+        # Assert
+        # Assert
+        assert result.errors == []
+
+
+    def test_multiple_issues_collected_result_passed_is_false(self, tmp_path):
+        # Arrange
+        # Arrange
+        validator = AppValidator(tmp_path)
+        # Act
+        result = validator.validate()
+        # Act
+        # Assert
+        # Assert
+        assert result.passed is False
+
+    def test_multiple_issues_collected_len_result_errors_1(self, tmp_path):
+        # Arrange
+        # Arrange
+        validator = AppValidator(tmp_path)
+        # Act
+        result = validator.validate()
+        # Act
+        # Assert
+        # Assert
+        assert len(result.errors) >= 1
+
+
+    def test_validate_returns_fresh_result_on_repeated_calls(self, tmp_path):
+        # Arrange
+        make_valid_manifest(tmp_path)
+        validator = AppValidator(tmp_path)
+        result1 = validator.validate()
+        # Act
+        result2 = validator.validate()
+        # Both should be independent results
+        # Assert
+        assert result1 is not result2
+
+    def test_privileges_validated_when_manifest_present(self, tmp_path):
+        # Arrange
+        write_manifest(
+            tmp_path,
+            {
+                "name": "x",
+                "slug": "x",
+                "label": "x",
+                "pip_package": "x-app",
+                "icon": "x",
+                "privileges": [{"type": "invalid_type", "scope": "none"}],
+            },
+        )
+        validator = AppValidator(tmp_path)
+        # Act
+        result = validator.validate()
+        # Assert
+        assert any("Unknown privilege type" in e for e in result.errors)
+
+
+# ---------------------------------------------------------------------------
+# Tests: constants
+# ---------------------------------------------------------------------------
+
+
+class TestConstants:
+    def test_manifest_required_fields_name_in_manifest_required_fields(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "name" in MANIFEST_REQUIRED_FIELDS
+
+    def test_manifest_required_fields_slug_in_manifest_required_fields(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "slug" in MANIFEST_REQUIRED_FIELDS
+
+    def test_manifest_required_fields_label_in_manifest_required_fields(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "label" in MANIFEST_REQUIRED_FIELDS
+
+    def test_manifest_required_fields_pip_package_in_manifest_required_fields(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "pip_package" in MANIFEST_REQUIRED_FIELDS
+
+    def test_manifest_required_fields_icon_in_manifest_required_fields(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "icon" in MANIFEST_REQUIRED_FIELDS
+
+
+    def test_valid_privilege_types_filesystem_in_valid_privilege_types(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "filesystem" in VALID_PRIVILEGE_TYPES
+
+    def test_valid_privilege_types_network_in_valid_privilege_types(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "network" in VALID_PRIVILEGE_TYPES
+
+    def test_valid_privilege_types_api_in_valid_privilege_types(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "api" in VALID_PRIVILEGE_TYPES
+
+
+    def test_valid_filesystem_scopes_project_in_valid_filesystem_scopes(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "project" in VALID_FILESYSTEM_SCOPES
+
+    def test_valid_filesystem_scopes_readonly_in_valid_filesystem_scopes(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "readonly" in VALID_FILESYSTEM_SCOPES
+
+    def test_valid_filesystem_scopes_none_in_valid_filesystem_scopes(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "none" in VALID_FILESYSTEM_SCOPES
+
+
+    def test_valid_network_scopes_none_in_valid_network_scopes(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "none" in VALID_NETWORK_SCOPES
+
+    def test_valid_network_scopes_allowlist_in_valid_network_scopes(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "allowlist" in VALID_NETWORK_SCOPES
+
+
+    def test_valid_api_scopes_scitex_in_valid_api_scopes(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "scitex" in VALID_API_SCOPES
+
+    def test_valid_api_scopes_llm_in_valid_api_scopes(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "llm" in VALID_API_SCOPES
+
+    def test_valid_api_scopes_none_in_valid_api_scopes(self):
+        # Arrange
+        # Act
+        # Assert
+        # Arrange
+        # Act
+        # Assert
+        assert "none" in VALID_API_SCOPES
+
+
+    def test_dangerous_js_patterns_is_non_empty(self):
+        # Arrange
+        # Act
+        # Assert
+        assert len(DANGEROUS_JS_PATTERNS) > 0
+
+    def test_shell_selectors_is_non_empty(self):
+        # Arrange
+        # Act
+        # Assert
+        assert len(SHELL_SELECTORS) > 0
+
+    def test_default_max_bundle_size(self):
+        # Arrange
+        # Act
+        # Assert
+        assert DEFAULT_MAX_BUNDLE_SIZE == 50 * 1_024 * 1_024
+
+
+# EOF
+
+
+def test_appvalidator_and_the_cli_share_one_required_key_list():
+    """SAME OBJECT, not merely equal.
+
+    These were two declarations of one fact for months — the CLI's six keys
+    against AppValidator's five — so `license` was required by one entry point
+    and not the other, and the shipped coverage table compared them
+    check-by-check without saying so.
+
+    Asserts identity rather than equality because an equality test goes green
+    again the moment someone re-declares the list in both places, which is
+    exactly the state that produced the divergence.
+    """
+    # Arrange
+    from scitex_sdk.app.appmaker._validate._manifest import MANIFEST_REQUIRED_KEYS
+    from scitex_sdk.app.validator import MANIFEST_REQUIRED_FIELDS
+    # Act
+    shared = MANIFEST_REQUIRED_FIELDS is MANIFEST_REQUIRED_KEYS
+    # Assert
+    assert shared
+
+
+def test_the_required_key_list_cannot_be_mutated_by_a_caller():
+    """It is imported by two modules, so a list would be mutable shared state:
+    any importer could append a key and change validation for every caller in
+    the interpreter. scitex-writer's point, applied to the second list."""
+    # Arrange
+    from scitex_sdk.app.validator import MANIFEST_REQUIRED_FIELDS
+    # Act
+    kind = type(MANIFEST_REQUIRED_FIELDS)
+    # Assert
+    assert kind is tuple
+
+
+def test_a_caller_cannot_append_a_required_key():
+    """The TYPE and the HAZARD are two claims. scitex-writer measured the
+    difference on the JS list; this asserts the one anybody actually cares
+    about — that mutation FAILS.
+
+    An earlier version checked `getattr(x, "append", None) is None`, which is
+    still a claim about the object's SHAPE rather than about what a caller can
+    do to it. Attempting the mutation is the only form that tests the hazard."""
+    # Arrange
+    from scitex_sdk.app.validator import MANIFEST_REQUIRED_FIELDS
+    # Act
+    # Assert
+    with pytest.raises(AttributeError):
+        MANIFEST_REQUIRED_FIELDS.append("evil")
+
+
+def test_a_caller_cannot_replace_a_required_key():
+    """The other mutation path, for the same reason as the JS list."""
+    # Arrange
+    from scitex_sdk.app.validator import MANIFEST_REQUIRED_FIELDS
+    # Act
+    # Assert
+    with pytest.raises(TypeError):
+        MANIFEST_REQUIRED_FIELDS[0] = "evil"
+
+
+def test_appvalidator_now_requires_license(tmp_path):
+    """THE BEHAVIOUR CHANGE, stated as a test rather than left to be
+    discovered. Before this, a manifest with no `license` passed AppValidator
+    and failed the CLI."""
+    # Arrange
+    from scitex_sdk.app.validator import MANIFEST_REQUIRED_FIELDS
+    # Act
+    required = set(MANIFEST_REQUIRED_FIELDS)
+    # Assert
+    assert "license" in required
+
+
+def test_version_is_still_not_required(tmp_path):
+    """THE CONTROL. Converging upward must not quietly add `version`, which is
+    derived at runtime from pip_package and is FORBIDDEN in a manifest."""
+    # Arrange
+    from scitex_sdk.app.validator import MANIFEST_REQUIRED_FIELDS
+    # Act
+    required = set(MANIFEST_REQUIRED_FIELDS)
+    # Assert
+    assert "version" not in required
+
+
+# ---------------------------------------------------------------------------
+# THE PUBLIC SURFACE — added 2026-09-06 from scitex-writer's design.
+#
+# Their conclusion: do NOT publish the `a is b` identity guarantee. Making it
+# checkable from outside means exporting the canonical side, which lives two
+# underscore modules deep, and publishing a private path to prove a property
+# about the mechanism makes the private path load-bearing.
+#
+# What a consumer CAN use is SINGULARITY OF THE PUBLIC NAME. That was already
+# true, and true only by accident of module layout. These assert it.
+# ---------------------------------------------------------------------------
+
+
+def test_the_public_surface_is_declared_not_inherited():
+    """Without __all__, `scitex_sdk.app.validator.X` reached json, logging, re,
+    Path, List, Optional, dataclass, field and logger. Anything importable is a
+    promise someone can depend on, and one made by accident is still a promise.
+    """
+    # Arrange
+    import scitex_sdk.app.validator as module
+    # Act
+    declared = getattr(module, "__all__", None)
+    # Assert
+    assert declared is not None
+
+
+def test_every_declared_name_exists():
+    """An __all__ naming something absent breaks `import *` at runtime and is
+    invisible to any test that only imports the names it happens to use."""
+    # Arrange
+    import scitex_sdk.app.validator as module
+    # Act
+    absent = [n for n in module.__all__ if not hasattr(module, n)]
+    # Assert
+    assert absent == []
+
+
+def test_the_module_does_not_publish_its_own_imports():
+    """The leak this closes. `re` and `Path` are implementation, not surface."""
+    # Arrange
+    import scitex_sdk.app.validator as module
+    incidental = {"json", "logging", "re", "Path", "List", "Optional",
+                  "dataclass", "field", "logger", "annotations"}
+    # Act
+    published = incidental & set(module.__all__)
+    # Assert
+    assert published == set()
+
+
+def test_exactly_one_public_name_reaches_the_js_pattern_list():
+    """SINGULARITY, which is what does outside what `is` does inside.
+
+    If two public names reached this object, a consumer could hold both and
+    they could disagree — which is the exact state that produced the 9-vs-5
+    divergence. One public name means there is nothing to disagree with, and it
+    needs no private export to state.
+    """
+    # Arrange
+    import scitex_sdk.app.appmaker as appmaker
+    import scitex_sdk.app.validator as validator
+    from scitex_sdk.app.appmaker._validate._js import DANGEROUS_JS_PATTERNS as canonical
+    # Act
+    public_routes = [
+        name for module, name in (
+            (validator, "scitex_sdk.app.validator"),
+            (appmaker, "scitex_sdk.app.appmaker"),
+        )
+        if getattr(module, "DANGEROUS_JS_PATTERNS", None) is canonical
+    ]
+    # Assert
+    assert public_routes == ["scitex_sdk.app.validator"]
+
+
+def test_exactly_one_public_name_reaches_the_manifest_key_list():
+    """Same property for the second shared list."""
+    # Arrange
+    import scitex_sdk.app.appmaker as appmaker
+    import scitex_sdk.app.validator as validator
+    from scitex_sdk.app.appmaker._validate._manifest import (
+        MANIFEST_REQUIRED_KEYS as canonical,
+    )
+    # Act
+    public_routes = [
+        name for module, name in (
+            (validator, "scitex_sdk.app.validator"),
+            (appmaker, "scitex_sdk.app.appmaker"),
+        )
+        if getattr(module, "MANIFEST_REQUIRED_FIELDS", None) is canonical
+        or getattr(module, "MANIFEST_REQUIRED_KEYS", None) is canonical
+    ]
+    # Assert
+    assert public_routes == ["scitex_sdk.app.validator"]
+
+
+# ---------------------------------------------------------------------------
+# SKIP_DIRS — the THIRD list declared twice, after DANGEROUS_JS_PATTERNS
+# (0.16.2) and MANIFEST_REQUIRED_KEYS (0.18.0). Found by looking for the shape,
+# not by anyone hitting it.
+# ---------------------------------------------------------------------------
+
+
+def test_appvalidator_and_the_js_rule_share_one_skip_list():
+    """SAME OBJECT, not merely equal. They were byte-identical and separate,
+    which is precisely the state that preceded both previous drifts."""
+    # Arrange
+    from scitex_sdk.app.appmaker._validate._js import JS_SKIP_DIRS
+    from scitex_sdk.app.validator import SKIP_DIRS
+    # Act
+    shared = SKIP_DIRS is JS_SKIP_DIRS
+    # Assert
+    assert shared
+
+
+def test_the_skip_list_cannot_be_mutated_by_a_caller():
+    """Imported by two modules, so a mutable set would let any importer change
+    what every caller in the interpreter scans."""
+    # Arrange
+    from scitex_sdk.app.validator import SKIP_DIRS
+    # Act
+    kind = type(SKIP_DIRS)
+    # Assert
+    assert kind is frozenset
+
+
+def test_a_caller_cannot_add_a_skip_directory():
+    """The HAZARD, not the declaration — the distinction scitex-writer drew on
+    the pattern list. A frozenset has no `.add`."""
+    # Arrange
+    from scitex_sdk.app.validator import SKIP_DIRS
+    # Act
+    # Assert
+    with pytest.raises(AttributeError):
+        SKIP_DIRS.add("evil")
+
+
+def test_the_prefix_skip_list_stays_deliberately_different():
+    """THE CONTROL THAT PROTECTS A DIVERGENCE RATHER THAN A CONVERGENCE.
+
+    `_prefix.PREFIX_SKIP_DIRS` has nine entries to this one's six, and the
+    difference is INTENDED: prefix safety must read built bundles (`dist`,
+    `assets`) because the shipped URL lives there, and this rule must not
+    because minified vendor code trips it.
+
+    Without this assertion, a later tidy-up that sees "three skip lists" could
+    collapse all three and be green — mistaking a deliberate divergence for a
+    duplicate. Every other test here pushes toward convergence; this one marks
+    where convergence would be a bug.
+    """
+    # Arrange
+    from scitex_sdk.app.appmaker._validate._prefix import PREFIX_SKIP_DIRS
+    from scitex_sdk.app.validator import SKIP_DIRS
+    # Act
+    same = SKIP_DIRS is PREFIX_SKIP_DIRS or set(SKIP_DIRS) == set(PREFIX_SKIP_DIRS)
+    # Assert
+    assert not same

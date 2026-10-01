@@ -10,13 +10,14 @@ redirect rather than guessing (noun-verb contract).
 
 Importing this module needs only ``click``, never Django, so
 ``scitex-sdk --help`` always lists ``gui``. ``serve``/``open`` boot the
-wizard through the engine's launcher (``scitex_app.embed``) until the
+wizard through the engine's launcher (``scitex_sdk.app.embed``) until the
 implementation consolidates into the SDK.
 """
 
 from __future__ import annotations
 
 import json
+import copy
 import os
 import subprocess
 import sys
@@ -33,13 +34,13 @@ DEFAULT_HOST = "127.0.0.1"
 
 
 def _gui_status():
-    from scitex_app.embed import gui_status
+    from scitex_sdk.app.embed import gui_status
 
     return gui_status(PACKAGE)
 
 
 def _gui_stop():
-    from scitex_app.embed import gui_stop
+    from scitex_sdk.app.embed import gui_stop
 
     return gui_stop(PACKAGE)
 
@@ -119,8 +120,8 @@ def gui_serve(
         import django  # noqa: F401
     except ImportError as exc:
         raise click.ClickException(
-            "The App Creator GUI requires Django and scitex-ui. Install with: "
-            f"pip install 'scitex-sdk[all]'  ({exc})"
+            "The App Creator GUI requires Django. Install with: "
+            f"pip install 'scitex-sdk[gui]'  ({exc})"
         ) from exc
     from scitex_sdk.creator._server import serve
 
@@ -238,6 +239,32 @@ def gui_stop(dry_run: bool, yes: bool, as_json: bool) -> None:
     result = _gui_stop()
     click.echo(json.dumps(result) if as_json else f"stopped (pid {result.get('pid')})")
 
+
+def _register_components() -> None:
+    """Expose owned component CLIs through the canonical SDK command."""
+    from scitex_sdk.app._cli import main as component_app
+    from scitex_sdk.ui._cli import main as component_ui
+
+    # Compose a separate command tree. Removing a nested group from the
+    # imported component itself would change other callers in this process.
+    app_commands = copy.copy(component_app)
+    app_commands.commands = dict(component_app.commands)
+    ui_commands = copy.copy(component_ui)
+    ui_commands.commands = dict(component_ui.commands)
+
+    # The previous App executable had a nested `app` development group.
+    # Under `scitex-sdk app`, expose its verbs directly.
+    development = app_commands.commands.pop("app", None)
+    if development is not None:
+        for name, command in development.commands.items():
+            if name in app_commands.commands:
+                raise RuntimeError(f"SDK app command collision: {name}")
+            app_commands.add_command(command, name)
+    main.add_command(app_commands, "app")
+    main.add_command(ui_commands, "ui")
+
+
+_register_components()
 
 __all__ = ["DEFAULT_HOST", "DEFAULT_PORT", "PACKAGE", "gui", "main"]
 

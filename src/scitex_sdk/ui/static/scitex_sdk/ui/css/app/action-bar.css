@@ -1,0 +1,91 @@
+/* =============================================================================
+ * SciTeX App — Bottom Action Bar
+ * =============================================================================
+ * Prefix: stx-action-bar
+ * Requires: shell/theme.css (tokens only — no shell adoption needed)
+ *
+ * DERIVED FROM A REAL IMPLEMENTATION, not designed in the abstract. scitex-writer
+ * shipped this shape first (`static/writer/css/editor-mobile.css`,
+ * `.writer-mobile-actions`), and this file is the extraction of the parts every
+ * app was re-deriving (card ui-mobile-layout-primitives-extract-from-apps-20260914).
+ * figrecipe's 390px layout was the second input; it adopted the panes primitive
+ * and did NOT need a bar, which is why this is one primitive and not four.
+ *
+ * THE COLLISION, AND WHY THE RESERVATION IS NOT ON :root
+ * -----------------------------------------------------
+ * A fixed bar at `bottom: 0` is under two other things: the hub's site dock and
+ * the iOS home indicator. Writer's comment states the requirement exactly —
+ * "Above the hub's site dock when there is one, and above the iOS home bar
+ * always" — and `--site-dock-clearance` is the dock's own height, published by
+ * the hub. It is consumed here WITH a `0px` fallback on purpose: an app served
+ * without the hub's stylesheet has no dock, so 0 is the correct value there,
+ * not a missing one. (That token is defined by the hub and by nothing in this
+ * package — recorded in the extraction inventory as the shared-token hole it is.)
+ *
+ * The reservation is a SEPARATE, OPT-IN UTILITY (`.stx-action-bar-space`) that
+ * the consumer applies to its own scrolling container, and it is deliberately
+ * NOT a rule on `body` / `html` / `:root`. Two reasons, and the second is a
+ * guard rather than a preference:
+ *
+ *   1. A page-level reservation is a permanently shorter app surface: invisible
+ *      on a wide screen, visible as dead space on every phone.
+ *   2. The launcher overlay shares this bottom edge, and its contract forbids
+ *      reserving a band on the page (hub PR 923 §4: the dock "overlays content;
+ *      it does not reserve a full-width bottom strip"), enforced by
+ *      tests/develop/test_launcher_overlay_contract.py. Reserving on the
+ *      consumer's own container lets both primitives coexist without either
+ *      breaking the other's rule.
+ *
+ * THE HEIGHT IS MEASURED, NOT ASSUMED. `--stx-action-bar-height` is published
+ * by ts/app/action-bar/ from the rendered bar (`_ActionBar.ts`), because a
+ * translated label or a two-item row makes the bar taller than any constant,
+ * and a hardcoded 56px then hides the last line of the content it was meant to
+ * clear. 56px is only the pre-measurement default.
+ * ============================================================================= */
+
+:root {
+  /* Pre-measurement default. Overwritten in place by the mounted bar. */
+  --stx-action-bar-height: 56px;
+  --stx-action-bar-padding: 6px 8px;
+}
+
+.stx-action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  /* Dock clearance first (0px when there is no dock), then the gesture bar. */
+  bottom: calc(
+    var(--site-dock-clearance, 0px) + var(--stx-safe-inset-bottom, 0px)
+  );
+  /* Above page chrome, below the launcher overlay (--stx-launcher-z: 10050) so
+     the launcher is never trapped behind an app's bar. */
+  z-index: 40;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: var(--stx-action-bar-padding);
+  background: var(--bg-surface, #f8f7f5);
+  border-top: 1px solid var(--workspace-border-subtle, rgba(0, 0, 0, 0.12));
+}
+
+/* Every control in the bar is a 44px target — the shared token, so a phone
+   does not get one app's 44 and another's 38. */
+.stx-action-bar__item {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--stx-touch-target-min, 44px);
+  font-size: 14px;
+}
+
+/* ── The reservation: apply to the container that scrolls ───────────────────
+   One line in the consumer, and the last line of content stays reachable. */
+.stx-action-bar-space {
+  padding-bottom: calc(
+    var(--stx-action-bar-height, 56px) + var(--site-dock-clearance, 0px) +
+      var(--stx-safe-inset-bottom, 0px)
+  );
+}

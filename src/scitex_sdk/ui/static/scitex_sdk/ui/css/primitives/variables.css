@@ -1,0 +1,21 @@
+/* SciTeX CSS Variables - Main Import File */
+/* This file imports all modular CSS variable definitions */
+
+/* Import all variable modules */
+@import url("colors.css");
+@import url("typography-vars.css");
+@import url("spacing.css");
+@import url("z-index.css");
+
+/*
+ * Imported LAST on purpose, and the order is the whole point.
+ *
+ * scitex-hub imports this same file in this same position, where it overrode
+ * the transition durations declared in spacing.css — silently, because the
+ * names matched and only the values differed. scitex-ui's copy therefore
+ * declares NO token that any file above also declares, so being last costs
+ * nothing here. Adding an overlapping name to utilities/effects.css would
+ * revive that bug in this package; test_effects_utilities_add_only_new_tokens
+ * fails if anyone does.
+ */
+@import url("../utils/effects.css");

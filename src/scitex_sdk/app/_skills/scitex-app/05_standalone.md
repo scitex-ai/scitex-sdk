@@ -1,0 +1,165 @@
+---
+description: |
+  [TOPIC] Standalone Mode
+  [DETAILS] run_standalone() — launch a SciTeX app locally with the full workspace shell (Django + sidebar + file tree + AI panel) without scitex-hub..
+tags: [scitex-app-standalone]
+---
+
+# Standalone Mode
+
+`scitex_sdk.app.embed.run_standalone()` launches any SciTeX app locally with the full workspace shell — same UX as scitex-hub, no server required.
+
+`embed` is the public host-embedding surface (`scitex_sdk.app.embed`) — import from there, not from the private `scitex_sdk.app._standalone` / `scitex_sdk.app._django` implementation modules.
+
+## run_standalone()
+
+```python
+def run_standalone(
+    app_module: str,
+    port: int = 8050,
+    host: str = "127.0.0.1",
+    open_browser: bool = True,
+    hot_reload: bool = False,
+    working_dir: Optional[str] = None,
+    desktop: bool = False,
+    extra_installed_apps: Optional[list[str]] = None,
+    extra_staticfiles_dirs: Optional[list[str]] = None,
+    extra_env: Optional[dict[str, str]] = None,
+) -> None
+```
+
+### Parameters
+
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `app_module` | required | Dotted path to the app's Django module (e.g. `"my_app"`) |
+| `port` | `8050` | TCP port for the Django server |
+| `host` | `"127.0.0.1"` | Host to bind (use `"0.0.0.0"` for LAN access) |
+| `open_browser` | `True` | Open browser tab automatically after 1.5 s |
+| `hot_reload` | `False` | Enable Django `--reload` (file watching) |
+| `working_dir` | `None` | Sets `SCITEX_WORKING_DIR`; defaults to `cwd` |
+| `desktop` | `False` | Launch as native window via `pywebview` if installed |
+| `extra_installed_apps` | `None` | Additional Django app strings to add to `INSTALLED_APPS` |
+| `extra_staticfiles_dirs` | `None` | Additional static file directories |
+| `extra_env` | `None` | Extra env vars to set before Django configures |
+
+### Basic usage
+
+```python
+from scitex_sdk.app.embed import run_standalone
+
+# Minimal — app at my_app/urls.py, my_app/views.py, etc.
+run_standalone(app_module="my_app")
+
+# Custom port, no browser
+run_standalone(app_module="my_app", port=8051, open_browser=False)
+
+# Native desktop window (requires: pip install pywebview)
+run_standalone(app_module="my_app", desktop=True)
+```
+
+### From a scaffolded app's CLI
+
+Apps created with `scitex-sdk app init` get a `_cli.py` with a `gui` command:
+
+```bash
+my-app gui                           # default port 8050
+my-app gui --port 8051 --no-browser
+my-app gui --force                   # stop THIS app's own previous instance, then serve
+```
+
+The `gui` command uses `scitex_sdk.app.embed.serve_gui`: it binds exactly
+`--port` or fails loud (never drifts to the next free port), and refuses
+a second instance of this app's own GUI unless `--force` is given.
+
+`--force` stops this app's own GUI whether it is *recorded* in the
+runtime state or *orphaned* — still holding the port after dying without
+clearing that state, which is exactly the case the flag exists for.
+It never touches a process it cannot prove is ours, and ownership is
+proven from the holder's **argv**, not its name: a `comm` of `python`
+is shared by every Python server on the box.
+
+For a foreign holder it prints the name, pid and argv with a `kill`
+command, and never offers `--force` — a remedy that would refuse.
+When the port is held but the holder cannot be identified (our agent
+containers deny `/proc/<pid>/fd` even for our own processes), it says
+so plainly rather than blaming another user. The three outcomes are
+declared on `PortHolder.status`: `free`, `identified`, `unreadable`;
+`ours` is three-valued — `True`, `False`, or `None` for "we could not
+look".
+
+### Django settings configured
+
+**ONLY IF DJANGO IS NOT ALREADY CONFIGURED.** `_configure_django()` opens with
+`if django.conf.settings.configured: return`, so if your app sets
+`DJANGO_SETTINGS_MODULE` and calls `django.setup()` before `run_standalone()`,
+**none of the settings below apply to you** — your own settings module supplies
+all of them, and the SDK contributes nothing.
+
+That is the shape every embedded leaf uses today, so for those apps this list is
+not what you get. Measured 2026-08-23 with scitex-scholar: their `_server.py`
+calls `django.setup()` and then `run_standalone()`, and the running process
+reports their own `ALLOWED_HOSTS`, not the SDK's. I had assumed the opposite and
+told them so; the one-line check below is what settled it.
+
+```python
+import django.conf
+print(django.conf.settings.configured)      # True before run_standalone -> SDK is inert
+print(django.conf.settings.ALLOWED_HOSTS)   # whose list did you actually get?
+```
+
+If Django is unconfigured at call time, `run_standalone()` calls
+`django.conf.settings.configure()` with:
+
+- `INSTALLED_APPS`: `django.contrib.staticfiles`, `scitex_app`, `<app_module>`, `scitex_ui` (the shell — `run_standalone()` requires scitex-ui installed and raises `ScitexUiRequiredError` at startup if it is missing)
+- `ROOT_URLCONF`: `<app_module>.urls`
+- `STATIC_URL`: `/static/`
+- `STATICFILES_DIRS`: app's own `static/` + `_standalone_static/` shell assets
+- `DATABASES`: `{}` (no DB required for read-only apps)
+- `SECRET_KEY`: from `DJANGO_SECRET_KEY` env or `"scitex-standalone-dev-key"`
+- `DEBUG`: from `DJANGO_DEBUG` env (default `"true"`)
+
+- `ALLOWED_HOSTS`: loopback, the bound `host`, and `SCITEX_ALLOWED_HOSTS` (comma-separated)
+
+Settings configure only once. Note this cuts two ways, and the second is the one
+that surprises people: calling `run_standalone()` twice is a harmless no-op, but
+configuring Django *yourself* first makes the SDK's settings silently inert —
+no error, no warning, and a `serve --host` that binds fine and then 400s if your
+own `ALLOWED_HOSTS` does not include the address.
+
+### Chat, in a profile with no database
+
+`DATABASES: {}` above is not a detail — it decides which chat routes you may
+mount. There are two mount points and they are not interchangeable:
+
+```python
+urlpatterns += chat.chat_stream_urlpatterns   # streaming only, NO database
+urlpatterns += chat.chat_urlpatterns          # + session history, needs one
+```
+
+`chat_urlpatterns` bundles the session CRUD routes and every one of those
+queries the ORM, so mounting it here is a 500 per request, not a degraded mode.
+Until 0.21.0 it was the only list published — a trap with no correct exit.
+`chat_stream_urlpatterns` is the exit, and it is the one this profile wants.
+
+Session history needs BOTH a database AND the models' app registered. Those two
+requirements come apart (a host can have one without the other), so since 0.22.0
+the views name which one is missing. Catch `chat.ChatSessionsUnavailableError`
+for "can these work here at all"; its two subclasses say which fix applies.
+
+### Requirements
+
+- `django` (always required)
+- `scitex_ui` (optional, provides the workspace shell sidebar/panel)
+- `pywebview` (optional, only for `desktop=True`)
+
+### Testing the `gui` command's real CLI path
+
+`serve_gui`'s state-file location can be redirected with an env var --
+the only channel available to a subprocess-driven end-to-end test
+(`python -m my_app gui serve` run as a real subprocess), which cannot
+inject a path via function arguments across a process boundary. Set
+`SCITEX_<PACKAGE>_GUI_STATE` (package name uppercased, non-alnum chars
+-> `_`, e.g. `SCITEX_MY_APP_GUI_STATE` for `"my-app"`) before spawning
+the subprocess to point state at a tmp path instead of the developer's
+real runtime state -- keeps end-to-end CLI tests mock-free.

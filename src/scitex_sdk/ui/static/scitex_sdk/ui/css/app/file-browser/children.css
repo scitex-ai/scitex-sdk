@@ -1,0 +1,72 @@
+/**
+ * File Browser — Children & Indent Guides
+ * Ported verbatim from scitex-cloud stx-app-file-tree/children.css
+ */
+
+.stx-app-file-tree__children {
+  overflow: hidden;
+  position: relative;
+}
+
+.stx-app-file-tree__children:not(.expanded) {
+  display: none;
+}
+
+/* Indent guide lines — dashed, always visible */
+.stx-app-file-tree__children.expanded {
+  border-left: 1px dashed rgba(150, 150, 150, 0.35);
+  margin-left: 12px;
+  padding-left: 4px;
+}
+
+/* Horizontal connector from vertical guide to each item */
+.stx-app-file-tree__children.expanded > .stx-app-file-tree__item::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  width: 4px;
+  height: 1px;
+  border-top: 1px dashed rgba(150, 150, 150, 0.35);
+}
+
+.stx-app-file-tree__children.expanded > .stx-app-file-tree__item {
+  position: relative;
+}
+
+/* Nested indent guides fade at deeper levels */
+.stx-app-file-tree__children.expanded .stx-app-file-tree__children.expanded {
+  border-left-color: rgba(150, 150, 150, 0.3);
+}
+
+.stx-app-file-tree__children.expanded .stx-app-file-tree__children.expanded .stx-app-file-tree__children.expanded {
+  border-left-color: rgba(150, 150, 150, 0.25);
+}
+
+.stx-app-file-tree__children.expanded
+  .stx-app-file-tree__children.expanded
+  .stx-app-file-tree__children.expanded
+  .stx-app-file-tree__children.expanded {
+  border-left-color: rgba(150, 150, 150, 0.2);
+}
+
+/* Highlight indent guide on hover */
+.stx-app-file-tree__children.expanded:has(> .stx-app-file-tree__item:hover),
+.stx-app-file-tree__children.expanded .stx-app-file-tree__children.expanded:has(> .stx-app-file-tree__item:hover),
+.stx-app-file-tree__children.expanded
+  .stx-app-file-tree__children.expanded
+  .stx-app-file-tree__children.expanded:has(> .stx-app-file-tree__item:hover),
+.stx-app-file-tree__children.expanded
+  .stx-app-file-tree__children.expanded
+  .stx-app-file-tree__children.expanded
+  .stx-app-file-tree__children.expanded:has(> .stx-app-file-tree__item:hover) {
+  border-left-color: rgba(180, 180, 180, 0.6);
+}
+
+.stx-app-file-tree__children.expanded > .stx-app-file-tree__item:hover::before {
+  border-top-color: rgba(180, 180, 180, 0.6);
+}
+
+.stx-app-file-tree__children.expanded:hover {
+  border-left-color: rgba(150, 150, 150, 0.45);
+}

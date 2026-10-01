@@ -1,0 +1,77 @@
+/**
+ * Collapsible Panel — reusable collapsed state for app split-panes.
+ *
+ * Use `.stx-app-panel` on a pane container with `.stx-app-panel--collapsed`
+ * for the collapsed state. Add `.stx-app-panel__title` with <i> + text
+ * for the vertical icon+label shown when collapsed.
+ *
+ * Compatible with any app using the scaffold/Workspace shell.
+ */
+
+/* ── Collapsed state ─────────────────────────────────────────────── */
+
+.stx-app-panel--collapsed {
+  width: 40px !important;
+  min-width: 40px;
+  max-width: 40px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+/* Hide content when collapsed */
+.stx-app-panel--collapsed > *:not(.stx-app-panel__header) {
+  display: none;
+}
+
+/* Header becomes vertical when collapsed */
+.stx-app-panel--collapsed .stx-app-panel__header {
+  flex-direction: column;
+  height: 100%;
+  padding: 12px 0;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  border-bottom: none;
+}
+
+/* Hide header buttons except toggle when collapsed */
+.stx-app-panel--collapsed
+  .stx-app-panel__header
+  > *:not(.stx-app-panel__title):not(.stx-app-panel__toggle) {
+  display: none;
+}
+
+/* ── Collapsed label (icon top, text bottom) ─────────────────────── */
+
+.stx-app-panel__title {
+  display: none;
+}
+
+.stx-app-panel--collapsed .stx-app-panel__title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.stx-app-panel--collapsed .stx-app-panel__title i {
+  font-size: var(--ui-nav-icon-size, 20px);
+  color: var(--text-secondary, #8b949e);
+}
+
+.stx-app-panel--collapsed .stx-app-panel__title span {
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  line-height: 1;
+  color: var(--text-secondary, #8b949e);
+}
+
+/* ── Collapsed hover ─────────────────────────────────────────────── */
+
+.stx-app-panel--collapsed:hover {
+  background: rgba(139, 148, 158, 0.08);
+}

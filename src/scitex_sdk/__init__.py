@@ -1,17 +1,35 @@
-"""scitex-sdk — one project for the app contract + the UI shell.
+"""Shared App contract and UI implementation for standalone and hosted apps."""
 
-Step 1 (thin facade):
-  - ``scitex_sdk.app`` re-exports ``scitex_app`` (the app contract).
-  - ``scitex_sdk.ui`` re-exports ``scitex_ui`` (the UI shell + assets).
+from __future__ import annotations
 
-Re-exports are the SAME objects as the originals (identity, not copies) —
-verified by ``tests/test_facade_identity.py`` — so consumers can switch
-``scitex_app`` -> ``scitex_sdk.app`` (and ``scitex_ui`` -> ``scitex_sdk.ui``)
-mechanically with zero behavior change. The implementation moves INTO
-scitex-sdk gradually after this facade releases; the original distributions
-stay as thin compat shims until every consumer has migrated.
-"""
+import importlib
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
-from scitex_sdk import app, ui  # noqa: F401
+try:
+    __version__ = version("scitex-sdk")
+except PackageNotFoundError:
+    import re
 
-__all__ = ["app", "ui"]
+    _project = Path(__file__).parents[2] / "pyproject.toml"
+    _match = re.search(r'^version\s*=\s*"([^"]+)"', _project.read_text(), re.M) if _project.exists() else None
+    __version__ = _match.group(1) if _match else "0.0.0+local"
+
+
+def get_frontend_package_dir() -> Path:
+    """Return the packaged @scitex/sdk directory for npm/Vite resolution.
+
+    Its export paths work in a source checkout and an installed wheel.
+    """
+    return Path(__file__).resolve().parent
+
+
+def __getattr__(name: str):
+    if name in {"app", "ui", "project"}:
+        module = importlib.import_module(f"{__name__}.{name}")
+        globals()[name] = module
+        return module
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+__all__ = ["__version__", "app", "ui", "get_frontend_package_dir"]

@@ -1,0 +1,296 @@
+/* =============================================================================
+ * SciTeX Shell — Workspace (universal app frame)
+ * =============================================================================
+ * Ported from scitex-cloud's stx-shell-sidebar + workspace-panel-resizer.
+ *
+ * Layout: Console/Chat | FileTree | AppContent
+ *         ──────────── StatusBar ─────────────
+ *
+ * All colors reference theme.css tokens. No hardcoded values.
+ * ============================================================================= */
+
+.stx-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--workspace-bg-primary);
+  color: var(--text-primary);
+}
+
+.stx-workspace__columns {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* --- Resizers (ported from scitex-cloud panel-resizer.css) --- */
+
+.stx-workspace__resizer--vertical {
+  width: 2px;
+  cursor: col-resize;
+  background: var(--workspace-border-default);
+  flex-shrink: 0;
+  transition: background 200ms;
+  position: relative;
+  z-index: 10;
+}
+
+/* Expanded hit area — ±12px on each side (26px total) */
+.stx-workspace__resizer--vertical::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12px;
+  right: -12px;
+}
+
+.stx-workspace__resizer--vertical:hover {
+  background: var(--workspace-icon-primary, var(--workspace-slider-hover));
+}
+
+.stx-workspace__resizer--vertical:active {
+  background: var(--stx-app-accent, var(--workspace-icon-primary));
+}
+
+/* --- Console/Chat Panel (Column 1) --- */
+
+.stx-workspace__console-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--workspace-bg-secondary);
+  overflow: hidden;
+  flex-shrink: 0;
+  /* No transition — instant resize, no acceleration */
+}
+
+/* Console/Chat inner panel structure now uses stx-shell-ai-* classes.
+ * See css/shell/ai-panel.css and css/shell/ai-panel/ for details. */
+
+.stx-workspace__console-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Console toolbar/status now uses .stx-shell-ai-console-toolbar (see ai-panel.css) */
+
+/* --- File Tree Panel (Column 2) --- */
+
+.stx-workspace__tree-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--workspace-bg-secondary);
+  overflow: hidden;
+  flex-shrink: 0;
+  /* No transition — instant resize, no acceleration */
+}
+
+/* Sidebar header — ported from scitex-cloud stx-shell-sidebar.css */
+.stx-shell-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  height: 44px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--workspace-border-subtle);
+  background: var(--workspace-bg-secondary);
+  flex-shrink: 0;
+}
+
+.stx-shell-sidebar__header:hover {
+  background: var(--workspace-bg-hover, rgba(139, 148, 158, 0.08));
+  border-bottom-color: var(--stx-app-accent, #059669);
+}
+
+.stx-shell-sidebar__title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stx-shell-sidebar__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stx-shell-sidebar__header-actions button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.stx-shell-sidebar__header-actions button:hover {
+  color: var(--text-primary);
+  background: var(--workspace-bg-hover);
+}
+
+.stx-shell-sidebar__header-actions button.active {
+  color: var(--stx-app-accent, #059669);
+}
+
+/* --- Collapsed State (ported from stx-shell-sidebar.css) ---
+ * Panels collapse to 48px showing vertical icon + label.
+ * Click to expand. Smart collapse during drag. */
+
+.stx-workspace__panel--collapsed {
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.stx-workspace__panel--collapsed:hover {
+  background: var(--workspace-bg-hover);
+  box-shadow: inset -3px 0 10px -4px var(--workspace-icon-primary);
+}
+
+.stx-workspace__collapsed-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-top: 12px;
+  color: var(--text-secondary);
+}
+
+.stx-workspace__collapsed-label i {
+  font-size: var(--ui-nav-icon-size, 20px);
+  color: var(--text-secondary);
+}
+
+.stx-workspace__collapsed-label span {
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* --- Placeholder (no backend configured) --- */
+
+.stx-workspace__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.stx-workspace__placeholder i {
+  font-size: 24px;
+  opacity: 0.4;
+}
+
+/* --- Viewer Panel (Column 3) --- */
+
+.stx-workspace__viewer-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--workspace-bg-secondary);
+  overflow: hidden;
+  flex-shrink: 0;
+  /* No transition — instant resize, no acceleration */
+}
+
+/* --- App Content (Column 4, flex) --- */
+
+.stx-workspace__app-content {
+  flex: 1;
+  min-width: 0;
+  max-height: 100%; /* Never exceed workspace columns height */
+  overflow: auto;
+}
+
+/* --- Status Bar (bottom, full width — matches scitex-cloud) --- */
+
+.stx-workspace__status-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  height: 28px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--workspace-bg-tertiary);
+  border-top: 1px solid var(--workspace-border-subtle);
+  flex-shrink: 0;
+}
+
+.stx-workspace__status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Module Tab Bar (multi-module shell) ─────────────────────── */
+
+.stx-workspace__module-tabs {
+  display: flex;
+  flex-direction: column;
+  width: 48px;
+  min-width: 48px;
+  background: var(--workspace-bg-secondary, #161b22);
+  border-right: 1px solid var(--workspace-border-default, #30363d);
+  padding: 4px 0;
+  gap: 2px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.stx-workspace__module-tabs__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  color: var(--workspace-text-secondary, #8b949e);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+  font-size: 16px;
+  gap: 2px;
+}
+
+.stx-workspace__module-tabs__tab:hover {
+  color: var(--workspace-text-primary, #e6edf3);
+  background: var(--workspace-bg-tertiary, #1c2128);
+}
+
+.stx-workspace__module-tabs__tab--active {
+  color: var(--workspace-text-primary, #e6edf3);
+  border-left-color: var(--color-accent-emphasis);
+  background: var(--workspace-bg-tertiary, #1c2128);
+}
+
+.stx-workspace__module-tabs__label {
+  font-size: 9px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 44px;
+}

@@ -1,0 +1,487 @@
+/* Config Mode — MCP Tool Toggle Cards + Config Popover
+ * Ported from scitex-cloud 14-config-mode.css + 16-tab-config.css */
+
+/* ── Utility ─────────────────────────────────── */
+
+.stx-hidden {
+  display: none !important;
+}
+
+/* ── Config Popover (gear dropdown) ──────────── */
+
+.stx-shell-ai-gear-btn {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.stx-shell-ai-gear-btn:hover {
+  opacity: 1;
+}
+
+.stx-shell-ai-config-popover {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  width: calc(100% - 16px);
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0 8px 4px;
+  padding: 8px;
+  background: var(--bg-surface, #161b22);
+  border: 1px solid var(--border-default, #30363d);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  font-size: 12px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ── Config Content (scrollable) ─────────────── */
+
+.stx-shell-ai-config-content {
+  padding: 8px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* ── Category Sections ───────────────────────── */
+
+.ai-config-category {
+  margin-bottom: 6px;
+}
+
+.ai-config-category-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.ai-config-category-header:hover {
+  background: var(--bg-muted, rgba(139, 148, 158, 0.1));
+}
+
+.ai-config-category-chevron {
+  font-size: 10px;
+  color: var(--fg-muted, var(--text-muted, #8b949e));
+  width: 12px;
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+.ai-config-category.expanded .ai-config-category-chevron {
+  transform: rotate(90deg);
+}
+
+.ai-config-category-name {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted, var(--text-muted, #8b949e));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-config-category-count {
+  font-size: 10px;
+  color: var(--fg-muted, var(--text-muted, #8b949e));
+  background: var(--bg-muted, rgba(139, 148, 158, 0.1));
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* ── Toggle Grid ─────────────────────────────── */
+
+.ai-config-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  padding: 0;
+  max-height: 0;
+  overflow: hidden;
+}
+
+.ai-config-category.expanded .ai-config-grid {
+  max-height: none;
+  overflow: visible;
+  padding: 2px 0 4px 16px;
+}
+
+/* ── Toggle Card ─────────────────────────────── */
+
+.ai-config-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-default, #30363d);
+  border-radius: 6px;
+  background: var(--bg-surface, #161b22);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.ai-config-card:hover {
+  border-color: var(--color-cta, #58a6ff);
+}
+
+.ai-config-card.enabled {
+  border-color: var(--success-color, #3fb950);
+  background: var(--bg-page, var(--bg-primary, #0d1117));
+}
+
+.ai-config-card-icon {
+  width: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--fg-muted, var(--text-muted, #8b949e));
+  flex-shrink: 0;
+}
+
+.ai-config-card.enabled .ai-config-card-icon {
+  color: var(--success-color, #3fb950);
+}
+
+.ai-config-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-config-card-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.ai-config-card-desc {
+  font-size: 10px;
+  color: var(--fg-muted, var(--text-muted, #8b949e));
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-config-card-badge {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fg-muted, var(--text-muted, #8b949e));
+  background: var(--bg-muted, rgba(139, 148, 158, 0.1));
+  padding: 0 5px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.ai-config-card.enabled .ai-config-card-badge {
+  color: var(--success-color, #3fb950);
+  background: var(--color-success-bg, rgba(63, 185, 80, 0.1));
+}
+
+/* ── Mini Toggle Switch (28 × 16) ────────────── */
+
+.ai-config-toggle {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.ai-config-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.ai-config-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: var(--border-default, #30363d);
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.ai-config-slider::before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 2px;
+  top: 2px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.ai-config-toggle input:checked + .ai-config-slider {
+  background: var(--success-color, #3fb950);
+}
+
+.ai-config-toggle input:checked + .ai-config-slider::before {
+  transform: translateX(12px);
+}
+
+/* ── Active Tag ──────────────────────────────── */
+
+.ai-config-active-tag {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--success-color, #3fb950);
+  background: var(--color-success-bg, rgba(63, 185, 80, 0.1));
+  padding: 0 4px;
+  border-radius: 4px;
+  margin-left: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ── Save Toast ──────────────────────────────── */
+
+.ai-config-toast {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 11px;
+  color: var(--success-color, #3fb950);
+  background: var(--bg-surface, #161b22);
+  border: 1px solid var(--success-color, #3fb950);
+  padding: 3px 10px;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+.ai-config-toast.visible {
+  opacity: 1;
+}
+
+/* ── Empty State ─────────────────────────────── */
+
+.stx-shell-config-empty {
+  font-size: 11px;
+  color: var(--fg-muted, var(--text-muted, #8b949e));
+  padding: 12px 8px;
+  text-align: center;
+}
+
+/* ── Settings Rows (popover) ─────────────────── */
+
+.stx-shell-ai-config-popover .ai-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border-default, rgba(255, 255, 255, 0.06));
+}
+
+.stx-shell-ai-config-popover .ai-settings-row:last-child {
+  border-bottom: none;
+}
+
+/* ── Settings Section ────────────────────────── */
+
+.ai-settings-section {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-default, #30363d);
+}
+
+.ai-settings-section:last-child {
+  border-bottom: none;
+}
+
+.stx-shell-ai-settings-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--fg-muted, var(--text-secondary, #8b949e));
+  white-space: nowrap;
+}
+
+.stx-shell-ai-settings-label i {
+  width: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--fg-muted, var(--text-muted, #6e7681));
+}
+
+.ai-settings-select,
+.ai-settings-input {
+  flex: 1;
+  max-width: 160px;
+  padding: 3px 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-primary, var(--bg-page, #0d1117));
+  border: 1px solid var(--border-default, #30363d);
+  border-radius: 4px;
+}
+
+.ai-settings-select:focus,
+.ai-settings-input:focus {
+  outline: none;
+  border-color: var(--color-accent-fg, #58a6ff);
+}
+
+/* ── Agent Sources (App Skills) ──────────────── */
+
+.ai-agent-sources {
+  padding: 4px 0;
+  font-size: 11px;
+  color: var(--fg-muted, var(--text-muted, #8b949e));
+}
+
+.ai-source-loading {
+  padding: 4px;
+  font-size: 11px;
+  color: var(--fg-muted, var(--text-muted, #8b949e));
+}
+
+/* ── Settings Label (stx-shell-ai prefix) ──── */
+
+.stx-shell-ai-config-popover .stx-shell-ai-settings-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary, #8b949e);
+  white-space: nowrap;
+}
+
+.stx-shell-ai-config-popover .stx-shell-ai-settings-label i {
+  width: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted, #6e7681);
+}
+
+.stx-shell-ai-config-popover .ai-settings-select,
+.stx-shell-ai-config-popover .ai-settings-input {
+  flex: 1;
+  max-width: 160px;
+  padding: 3px 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-page, #0d1117);
+  border: 1px solid var(--border-default, #30363d);
+  border-radius: 4px;
+}
+
+.stx-shell-ai-config-popover .ai-settings-links {
+  display: flex;
+  gap: 12px;
+  padding: 6px 4px 2px;
+}
+
+.stx-shell-ai-config-popover .ai-settings-links a {
+  font-size: 10px;
+  color: var(--text-muted, #8b949e);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stx-shell-ai-config-popover .ai-settings-links a:hover {
+  color: var(--color-accent-fg, #58a6ff);
+}
+
+/* ── Auto-Accept Toggle ────────────────────── */
+
+.stx-shell-ai-auto-accept-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stx-shell-ai-auto-accept-btn.active {
+  color: var(--success-color, #3fb950);
+}
+
+.stx-shell-ai-auto-accept-btn.active i {
+  color: var(--success-color, #3fb950);
+}
+
+.stx-shell-ai-auto-accept-state {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  max-width: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Jobs Section (collapsible inside console) ── */
+
+.stx-shell-ai-jobs-section {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-default, #30363d);
+  background: var(--bg-tertiary, #0d1117);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.stx-shell-ai-jobs-section-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-muted, #8b949e);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.stx-shell-ai-jobs-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.stx-shell-ai-jobs-section-summary::before {
+  content: "\25B8";
+  font-size: 10px;
+  transition: transform 0.15s;
+}
+
+.stx-shell-ai-jobs-section[open] .stx-shell-ai-jobs-section-summary::before {
+  transform: rotate(90deg);
+}
+
+.stx-shell-ai-jobs-section-summary i.fa-tasks {
+  font-size: 10px;
+}
+
+.stx-shell-ai-jobs-section-summary .stx-shell-ai-jobs-summary {
+  flex: 1;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.stx-shell-ai-jobs-section-summary .stx-shell-ai-action-btn {
+  font-size: 10px;
+  padding: 2px 4px;
+}
+
+.stx-shell-ai-jobs-section .stx-shell-ai-jobs-list {
+  padding: 2px 8px 6px;
+}
+
+/* ── Toolbar relative positioning for popover ── */
+
+.stx-shell-toolbar-relative {
+  position: relative;
+}

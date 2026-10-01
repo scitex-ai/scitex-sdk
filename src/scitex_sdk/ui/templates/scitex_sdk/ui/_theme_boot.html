@@ -1,0 +1,49 @@
+{% comment %}
+Pre-paint theme resolution. Include this in <head>, ABOVE the stylesheets:
+
+    {% include "scitex_sdk/ui/_theme_boot.html" %}
+
+Sets data-theme on <html> from the visitor's stored preference before the
+first paint. 0.7.0 shipped this as an external <script src>, which cost a
+render-blocking request on every page; it is inlined here because it must run
+before paint and is too small to be worth a round trip.
+
+Keys, in precedence order:
+  "stx-theme"               canonical (ThemeProvider's DEFAULT_STORAGE_KEY)
+  "scitex-theme-preference" legacy read-only fallback for hub/cloud-served
+                            pages, until those converge on the canonical key
+
+Default when nothing is stored: dark, overridable per page by rendering
+<html data-theme-default="light"> (the shell does this from
+shell_theme_default).
+
+hook-bypass: inline-script — this is exactly the sanctioned case. A deferred
+or external script paints the wrong theme first and flashes; scitex-cards
+raised page latency as a live concern (2026-07-18) after an operator-visible
+slow-board incident, which is why the request was removed rather than kept.
+{% endcomment %}
+<!-- hook-bypass: inline-script -->
+<script>
+ (function () {
+     var root = document.documentElement;
+     var fallback = root.getAttribute("data-theme-default") === "light" ? "light" : "dark";
+     var theme;
+     try {
+         theme = localStorage.getItem("stx-theme") || localStorage.getItem("scitex-theme-preference");
+     } catch (e) {
+         /* private mode / storage disabled — fall through to the default */
+     }
+     if (theme !== "light" && theme !== "dark") theme = fallback;
+
+     root.setAttribute("data-theme", theme);
+     /* Legacy class contract. On <html> it applies pre-paint and still matches
+        descendant selectors like `.dark-theme .foo`; mirror it onto <body> once
+        that exists so rules written as `body.dark-theme` keep matching. */
+     root.classList.add(theme === "dark" ? "dark-theme" : "light-theme");
+     document.addEventListener("DOMContentLoaded", function () {
+         document.body.classList.add(theme === "dark" ? "dark-theme" : "light-theme");
+     });
+
+     window.__stxTheme = theme;
+ })();
+</script>

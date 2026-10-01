@@ -1,0 +1,49 @@
+/* =============================================================================
+ * SciTeX Shell — Terminal (ported from scitex-cloud console_app)
+ * =============================================================================
+ * Prefix: stx-shell-terminal
+ * All colors reference theme.css tokens.
+ * ============================================================================= */
+
+.stx-shell-terminal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--workspace-bg-primary);
+}
+
+.stx-shell-terminal__container {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  padding: 4px;
+  overflow: hidden;
+}
+
+.stx-shell-terminal__loading,
+.stx-shell-terminal__error {
+  padding: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.stx-shell-terminal__error {
+  color: var(--status-error);
+}
+
+/* xterm.js overrides — must fill container height.
+   padding on .xterm breaks cursor click-to-position because xterm.js
+   measures character cells without accounting for CSS padding.
+   line-height must be normal so xterm-char-measure-element computes correct cell height. */
+.stx-shell-terminal .xterm {
+  height: 100%;
+  padding: 0;
+  line-height: normal;
+}
+
+.stx-shell-terminal .xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: var(--workspace-border-default) transparent;
+}

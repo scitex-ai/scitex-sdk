@@ -1,0 +1,122 @@
+/* =============================================================================
+ * SciTeX App — Context Menu
+ * =============================================================================
+ * Prefix: stx-app-context-menu
+ * Requires: shell/theme.css — and ONLY that. See below.
+ *
+ * EVERY TOKEN HERE MUST BE ONE theme.css DEFINES. This file used to read
+ * `--bg-secondary`, which lives in primitives/colors.css and NOT in theme.css,
+ * while its text read `--text-secondary`, which theme.css does define. So on a
+ * page linking only theme.css the background fell back to a hardcoded dark
+ * literal and could never follow the theme, while the text followed it — and in
+ * the light palette the two collided into dark-grey-on-dark. scitex-cards hit
+ * exactly that on the operator's live chat: the menu looked disabled and
+ * clicked fine.
+ *
+ * A component whose DOCUMENTED dependency is narrower than its ACTUAL one is
+ * broken for anyone who believes the documentation, which is everyone. Fixed by
+ * using --bg-surface, which theme.css defines in both palettes, so the stated
+ * one-file dependency is now the true one. Guarded by
+ * tests/develop/test_app_css_token_layer.py.
+ * ============================================================================= */
+
+.stx-app-context-menu {
+  position: fixed;
+  /* Tokenised rather than raised. Measured 2026-07-28: figrecipe collides here
+     (three of their overlays also sit at 1000 and they do not portal the menu),
+     while scitex-cards' chat stacks at 20/15 and needs nothing. One app each
+     way, so raising the default would fix figrecipe's layering at everyone
+     else's cost — set --stx-context-menu-z instead of overriding the selector. */
+  z-index: var(--stx-context-menu-z, 1000);
+  background: var(--bg-surface, #161b22);
+  border: 1px solid var(--border-default, #30363d);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 180px;
+}
+
+.stx-app-context-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary, #c9d1d9);
+  /* Items are <button>, which does NOT inherit the page font by default and
+     base ships no global button reset — without this the menu text falls back
+     to the UA button font for every adopter. */
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.stx-app-context-menu__item:hover {
+  background: rgba(177, 186, 196, 0.08);
+  color: var(--text-primary, #f0f6fc);
+}
+
+.stx-app-context-menu__item--danger {
+  color: #f85149;
+}
+
+.stx-app-context-menu__item--danger:hover {
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.stx-app-context-menu__item:disabled {
+  color: var(--text-secondary, #c9d1d9);
+  /* NOT var(--disabled-opacity), deliberately. This file is one of two listed
+     in _THEME_ONLY (tests/develop/test_app_css_token_layer.py): it advertises
+     itself as consumable with shell/theme.css ALONE. The token lives in
+     primitives/spacing.css, and no single home satisfies both contracts —
+     app.css imports primitives but NOT shell/theme.css, so moving it to
+     theme.css would break the other fourteen sites instead. Reaching across
+     that layer is how the context menu once rendered dark-on-dark on a live
+     page. The value below is the token's value; keep them equal by hand until
+     the app.css/primitives layering question is settled
+     (scitex-ui-app-css-tokens-defined-nowhere-20260728). */
+  opacity: 0.5;
+  cursor: default;
+}
+
+.stx-app-context-menu__item:disabled:hover {
+  background: transparent;
+  color: var(--text-secondary, #c9d1d9);
+}
+
+.stx-app-context-menu__item i {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.stx-app-context-menu__divider {
+  height: 1px;
+  background: var(--border-default, #30363d);
+  margin: 4px 8px;
+}
+
+/* Right-aligned keyboard-shortcut hint inside an item */
+.stx-app-context-menu__shortcut {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-secondary, #c9d1d9);
+  opacity: 0.7;
+}
+
+/* Uppercase section label between item groups */
+.stx-app-context-menu__label {
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #c9d1d9);
+  opacity: 0.7;
+}

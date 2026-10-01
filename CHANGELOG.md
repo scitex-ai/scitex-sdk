@@ -4,24 +4,45 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
-### Added
-- `scitex_sdk.creator` — the App Creator wizard as a web UI (first
-  implementation living in the SDK, not behind the facade): starter
-  cards (data entry / dashboard / log viewer / blank), new-app
-  scaffolding, validation feedback, and publish / dev-install hooks.
-  The engine (scaffold, validate, publish, dev-install) is imported
-  from `scitex-app`'s appmaker until the implementation consolidates.
-- `scitex-sdk gui {serve,open,status,stop}` console script
-  (`scitex_sdk.cli:main`, plus `python -m scitex_sdk`) — the
-  ecosystem-standard GUI lifecycle on fixed port `31301`.
-- `scitex_sdk.creator.urls` + `manifest.json` (slug `create-app`) for
-  generic host mounting, e.g.
-  `path("create-app/", include("scitex_sdk.creator.urls"))`.
+## [0.3.0]
 
-The versioning here is the **umbrella** release (the facade + the gradually
-moving implementation). Each half keeps its own version through the migration
-window: `scitex_app.__version__` (scitex-app) and `scitex_ui.__version__`
-(scitex-ui). See ADR 0001 (scitex-app) and ADR 0003 (scitex-ui).
+### Changed
+
+- Move App and UI implementations, templates, assets, translations and skills
+  into `scitex_sdk.app` and `scitex_sdk.ui`; the SDK no longer imports or
+  requires the retired App/UI distributions.
+- Version both components with the SDK distribution. Preserve existing Django
+  database labels, chat migration identity, template blocks and environment
+  settings while migrating Python and template/static resource paths.
+- Ship the frontend as `@scitex/sdk` inside the Python package, with concrete
+  component exports and a shared package directory lookup.
+- Provide `scitex-sdk app` and `scitex-sdk ui` CLI groups alongside the creator
+  wizard and GUI lifecycle. Generated apps use SDK contracts and shell
+  templates in both standalone and plugin modes.
+- Verify source/sdist/wheel package bytes, frontend exports and version identity
+  before publishing. Run full source and installed-wheel suites, strict access
+  controls and the frontend checks on pull requests and release branches.
+- Normalize optional host project aliases only to IDs in the request's
+  accessible project list, before consulting storage or remembering a selection.
+
+### Fixed
+
+- Reject missing, empty, non-string and malformed project-selection POST input
+  before creating or consulting a provider. Invalid submissions cannot fall
+  back to a stored project. Ordinary navigation without an explicit selection
+  retains its authorized stored-project fallback.
+- Extract the matching version's changelog entry for GitHub release notes.
+
+### Release gates
+
+- The `project` and `all` extras require a genuine public scitex-dev>=0.62.0
+  release. Publication also requires a normal built-wheel `[all]` installation,
+  `pip check` and direct SDK ownership inspection.
+- Sequential SDK publication reports any transitive predecessor packages as
+  `DEPENDENCY_RETIREMENT_NOT_READY`. The separate strict retirement workflow
+  still requires genuine canonical consumer releases and clean public graphs;
+  SDK publication and the public App/UI repository archives do not certify
+  completed consumer migration or deployment.
 
 ## [0.1.0] — 2026-09-14
 
