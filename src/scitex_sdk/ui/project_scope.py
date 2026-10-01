@@ -209,8 +209,8 @@ def project_listing_view(
         return provider if isinstance(provider, ProjectProvider) else provider(request)
 
     def view(request: Any):
-        chosen = resolve_provider(request)
         if request.method == "GET":
+            chosen = resolve_provider(request)
             entries = chosen.list_projects(request)
             return JsonResponse(
                 {
@@ -220,9 +220,15 @@ def project_listing_view(
             )
         if request.method == "POST":
             try:
-                project_id = json.loads(request.body or b"{}").get("id")
-            except (ValueError, AttributeError):
+                payload = json.loads(request.body or b"{}")
+                project_id = payload.get("id") if isinstance(payload, dict) else None
+            except ValueError:
                 project_id = None
+            # POST always requests an explicit selection. Invalid input must
+            # not become navigation's absent-selector fallback to stored state.
+            if not isinstance(project_id, str) or not project_id:
+                return JsonResponse({"error": "project not accessible"}, status=403)
+            chosen = resolve_provider(request)
             selected = resolve_project(request, chosen, explicit=project_id)
             if selected is None:
                 return JsonResponse({"error": "project not accessible"}, status=403)
