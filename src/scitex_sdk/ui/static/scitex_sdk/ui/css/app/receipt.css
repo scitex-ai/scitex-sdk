@@ -1,0 +1,62 @@
+/* =============================================================================
+ * SciTeX App — Delivery Receipt
+ * =============================================================================
+ * Prefix: stx-app-receipt
+ * Requires: primitives/colors.css (--status-* triplets)
+ *
+ * ONE mark that ADVANCES through delivery states, not a row of indicators —
+ * the claude-code-telegrammer model, which scitex-cards asked base to ship
+ * before they built a private one.
+ *
+ * THE STATE SET IS FOUR, DELIBERATELY, AND `unknown` IS THE DEFAULT.
+ * A read/unread boolean cannot say "we do not know", and collapsing unknown
+ * into either pole is the most common bug we ship. So `unknown` is a state you
+ * can SEE — a hollow, dimmed mark that reads as neither delivered nor failed —
+ * and it is what you get until something explicitly says otherwise.
+ *
+ *   unknown  no delivery signal yet          hollow, dimmed
+ *   sent     reached the store               solid, secondary
+ *   seen     reached the recipient           solid, accent/success
+ *   failed   delivery is known to have died  error tone, never quiet
+ *
+ * `failed` is intentionally the loudest: a silent failure is the state this
+ * component exists to make impossible.
+ * ============================================================================= */
+
+.stx-app-receipt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1em;
+  font-size: 0.75em;
+  line-height: 1;
+  vertical-align: baseline;
+  user-select: none;
+  /* Reserve the glyph's space in every state so the line does not reflow as a
+     message advances from unknown to sent to seen. */
+  font-variant-emoji: text;
+}
+
+/* ── unknown: visible, but clearly not a claim of delivery ── */
+.stx-app-receipt--unknown {
+  color: var(--text-secondary, #6e7681);
+  opacity: 0.35;
+}
+
+/* ── sent: reached the store ── */
+.stx-app-receipt--sent {
+  color: var(--text-secondary, #6e7681);
+  opacity: 0.9;
+}
+
+/* ── seen: reached the recipient ── */
+.stx-app-receipt--seen {
+  color: var(--status-success-text, #3fb950);
+  opacity: 1;
+}
+
+/* ── failed: known-dead delivery, never quiet ── */
+.stx-app-receipt--failed {
+  color: var(--status-error-text, #f85149);
+  opacity: 1;
+}

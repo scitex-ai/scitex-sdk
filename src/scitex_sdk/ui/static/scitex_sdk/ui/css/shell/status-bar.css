@@ -1,0 +1,98 @@
+/* =============================================================================
+ * SciTeX Shell — Status Bar
+ * =============================================================================
+ * Prefix: stx-shell-status-bar
+ * Requires: shell/theme.css
+ * ============================================================================= */
+
+.stx-shell-status-bar {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: var(--workspace-bg-secondary, #efeeed);
+  border-top: 1px solid var(--workspace-border-default, #c0bfbd);
+  font-size: 11px;
+  color: var(--text-muted, #777777);
+  flex-shrink: 0;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.stx-shell-status-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.stx-shell-status-bar__center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
+
+.stx-shell-status-bar__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.stx-shell-status-bar__item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.stx-shell-status-bar__item i {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.stx-shell-status-bar__btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  color: var(--text-muted, #777777);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  white-space: nowrap;
+}
+
+.stx-shell-status-bar__btn:hover {
+  background: var(--workspace-bg-hover, rgba(0, 0, 0, 0.04));
+  color: var(--text-primary, #333333);
+}
+
+.stx-shell-status-bar__separator {
+  width: 1px;
+  height: 14px;
+  background: var(--workspace-border-subtle, #dddcda);
+}
+
+/* Theme toggle — colored icon so the dual-state affordance is obvious.
+ * Previously the status-bar theme button used fa-sun / fa-moon pairs,
+ * which readers confused with a gear icon. fa-circle-half-stroke reads
+ * unambiguously as a toggle at any size.
+ */
+.stx-shell-status-bar [data-id="__theme-toggle"] i {
+  font-size: 13px;
+  transition: transform 0.25s ease;
+}
+html[data-theme="dark"] .stx-shell-status-bar [data-id="__theme-toggle"] i {
+  color: #f5b86a;  /* warm amber — signals switch-to-light */
+}
+html[data-theme="light"] .stx-shell-status-bar [data-id="__theme-toggle"] i {
+  color: #4a6fa5;  /* cool blue — signals switch-to-dark */
+}
+.stx-shell-status-bar [data-id="__theme-toggle"]:hover i {
+  transform: rotate(180deg);
+}

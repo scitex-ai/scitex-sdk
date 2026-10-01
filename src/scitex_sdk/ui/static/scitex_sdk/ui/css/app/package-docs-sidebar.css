@@ -1,0 +1,77 @@
+/* =============================================================================
+ * SciTeX App — Package Docs Sidebar (in-app navigation)
+ * =============================================================================
+ * Prefix: stx-app-pkg-sidebar
+ * Requires: shell/theme.css
+ * ============================================================================= */
+
+.stx-app-pkg-sidebar {
+  padding: 4px 0;
+}
+
+.stx-app-pkg-sidebar__group-header {
+  padding: 8px 10px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #777777);
+}
+
+.stx-app-pkg-sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  color: var(--text-secondary, #4a4a4a);
+  text-decoration: none;
+  font-size: 12px;
+  border-right: 2px solid transparent;
+  transition:
+    background 0.1s,
+    color 0.1s;
+  cursor: pointer;
+}
+
+.stx-app-pkg-sidebar__item:hover {
+  background: var(--workspace-bg-hover, rgba(0, 0, 0, 0.04));
+  color: var(--text-primary, #333333);
+  text-decoration: none;
+}
+
+.stx-app-pkg-sidebar__item--active {
+  background: var(--workspace-bg-active, rgba(0, 0, 0, 0.08));
+  color: var(--text-primary, #333333);
+  border-right-color: var(--stx-app-accent, #6b6b6b);
+}
+
+.stx-app-pkg-sidebar__item i {
+  width: 14px;
+  text-align: center;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.stx-app-pkg-sidebar__label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stx-app-pkg-sidebar__version {
+  font-size: 10px;
+  color: var(--text-muted, #777777);
+  font-family: var(--mono-font-family, "JetBrains Mono", monospace);
+}
+
+.stx-app-pkg-sidebar__loading,
+.stx-app-pkg-sidebar__error {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text-muted, #777777);
+}
+
+.stx-app-pkg-sidebar__error {
+  color: var(--status-error, #a67373);
+}

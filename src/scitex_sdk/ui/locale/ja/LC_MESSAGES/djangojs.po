@@ -1,0 +1,52 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: scitex-ui\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: static/scitex_sdk/ui/ts/shell/viewer/_ViewerManager.ts
+msgid "Viewer"
+msgstr "ビューワー"
+
+#: static/scitex_sdk/ui/ts/shell/viewer/_ViewerManager.ts
+msgid "Editor"
+msgstr "エディタ"
+
+#: static/scitex_sdk/ui/ts/shell/viewer/_ViewerManager.ts
+msgid "Switch to Editor"
+msgstr "エディタに切り替え"
+
+#: static/scitex_sdk/ui/ts/shell/viewer/_ViewerManager.ts
+msgid "Switch to Viewer"
+msgstr "ビューワーに切り替え"
+
+#: static/scitex_sdk/ui/ts/app/project-selector/_ProjectSelector.ts
+msgid "Select project"
+msgstr "プロジェクトを選択してください"
+
+#: static/scitex_sdk/ui/ts/app/project-selector/_ProjectSelector.ts
+msgid "Search projects"
+msgstr "プロジェクトを検索"
+
+#: static/scitex_sdk/ui/ts/app/project-selector/_ProjectSelector.ts
+msgid "No projects"
+msgstr "プロジェクトがありません"
+
+#: static/scitex_sdk/ui/ts/app/project-selector/_ProjectSelector.ts
+msgid "No matching projects"
+msgstr "一致するプロジェクトがありません"
+
+#: static/scitex_sdk/ui/ts/app/project-selector/_ProjectSelector.ts
+msgid "Loading projects…"
+msgstr "プロジェクトを読み込み中…"
+
+#: static/scitex_sdk/ui/ts/app/project-selector/_ProjectSelector.ts
+msgid "Could not load projects"
+msgstr "プロジェクトを読み込めませんでした"
+
+#: static/scitex_sdk/ui/ts/app/panes/_Panes.ts
+msgid "Sections"
+msgstr "セクション"

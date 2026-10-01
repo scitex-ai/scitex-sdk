@@ -1,0 +1,50 @@
+/**
+ * scitex-ui — app CSS bundle (AUTO-GENERATED)
+ *
+ * Do not edit manually. Regenerate with: npx tsx css/_build-index.ts
+ */
+
+@import "./primitives/colors.css";
+@import "./primitives/spacing.css";
+@import "./primitives/typography-vars.css";
+@import "./app/action-bar.css";
+@import "./app/alert-banner.css";
+@import "./app/app-header.css";
+@import "./app/app-help.css";
+@import "./app/app-launcher.css";
+@import "./app/attachment.css";
+@import "./app/badge.css";
+@import "./app/collapsible-panel.css";
+@import "./app/combobox.css";
+@import "./app/confirm-modal.css";
+@import "./app/context-menu.css";
+@import "./app/data-table.css";
+@import "./app/dim.css";
+@import "./app/drawer.css";
+@import "./app/dropdown.css";
+@import "./app/empty.css";
+@import "./app/file-browser.css";
+@import "./app/file-browser/base.css";
+@import "./app/file-browser/children.css";
+@import "./app/file-browser/context-menu.css";
+@import "./app/file-browser/search.css";
+@import "./app/file-browser/states.css";
+@import "./app/file-browser/themes.css";
+@import "./app/file-tabs.css";
+@import "./app/form-controls.css";
+@import "./app/import-export.css";
+@import "./app/media-viewer.css";
+@import "./app/miller-columns.css";
+@import "./app/package-docs-sidebar.css";
+@import "./app/panes.css";
+@import "./app/project-selector.css";
+@import "./app/receipt.css";
+@import "./app/recent-pane.css";
+@import "./app/reply-quote.css";
+@import "./app/selector-nav.css";
+@import "./app/settings-card.css";
+@import "./app/sidebar-layout.css";
+@import "./app/toast.css";
+@import "./app/toggle-switch.css";
+@import "./app/tooltip.css";
+@import "./app/tour-player.css";

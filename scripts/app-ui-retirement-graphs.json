@@ -1,0 +1,185 @@
+{
+  "schema": 1,
+  "status": "DEPENDENCY RETIREMENT NOT READY: canonical release floors require genuine published version/source registration",
+  "scope": "Every audited active consumer: isolated normal published runtime/GUI groups plus packaged executable imports; owning source/native frontend/GUI and artifact provenance are separate mandatory gates",
+  "graphs": [
+    {
+      "name": "sdk-all",
+      "distribution": "scitex-sdk",
+      "extras": [
+        "all"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "owner",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "reviewed_candidate_source_commit": "5a860c3e837519dcb1409607412110587e132e3f"
+    },
+    {
+      "name": "figrecipe-gui",
+      "distribution": "figrecipe",
+      "extras": [
+        "gui"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "reviewed_candidate_source_commit": "9446aa8c5295fd5e5dc5d16c4c6c2a86e3a7ffaa"
+    },
+    {
+      "name": "writer-gui",
+      "distribution": "scitex-writer",
+      "extras": [],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "contract": "Writer base declares Django plus SDK>=0.3.0; no nonexistent gui extra. Native GUI/compile tests remain separate.",
+      "reviewed_candidate_source_commit": "65898341c1fa84e15a1ed6b7127329efe3186bd0"
+    },
+    {
+      "name": "hub-gui",
+      "distribution": "scitex-hub",
+      "extras": [],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "reviewed_candidate_source_commit": "0d288767ac074c1df054bf3cd12ae7b00a2e6cb2"
+    },
+    {
+      "name": "stats-server",
+      "distribution": "scitex-stats",
+      "extras": [
+        "server"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "reviewed_candidate_source_commit": "a7d4e871a2966c4a907947f9f0f925280f3a8911"
+    },
+    {
+      "name": "scholar-all",
+      "distribution": "scitex-scholar",
+      "extras": [
+        "all"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "reviewed_candidate_source_commit": "45889be162a2b06fd942ebec2b7af85cdf4157fe"
+    },
+    {
+      "name": "storage-gui",
+      "distribution": "scitex-storage",
+      "extras": [
+        "gui"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "reviewed_candidate_source_commit": "ff25ecd77d3717ecd31067e3067a9ce6fab604c2"
+    },
+    {
+      "name": "cards-web",
+      "distribution": "scitex-cards",
+      "extras": [
+        "web"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "reviewed_candidate_source_commit": "cb3e5a8161a826e76a3d4611d1b6e029fd2449f0"
+    },
+    {
+      "name": "sac-gui",
+      "distribution": "scitex-agent-container",
+      "extras": [
+        "gui"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "reviewed_candidate_source_commit": "26f3806fc642e63c558574e3e346f2bda76438cd"
+    },
+    {
+      "name": "umbrella-app-ui",
+      "distribution": "scitex",
+      "extras": [
+        "app",
+        "ui",
+        "scholar-gui",
+        "writer"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "reviewed_candidate_source_commit": "89f7b39b6c777bb5c352a1131f1ae6d8ea3af33b"
+    },
+    {
+      "name": "business-core",
+      "distribution": "scitex-business",
+      "extras": [],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
+      "reviewed_candidate_source_commit": "5342bae3538e3aac77e830b335e60f51ab9510f6"
+    },
+    {
+      "name": "template-core",
+      "distribution": "scitex-template",
+      "extras": [],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "none",
+      "contract": "Generator emits SDK>=0.3.0 scaffolds; package itself does not require SDK. Native generated Python/React scaffold tests mandatory.",
+      "reviewed_candidate_source_commit": "f679acead1155b8f1e24afad9076d525b44e4f7f",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement"
+    },
+    {
+      "name": "dev-all",
+      "distribution": "scitex-dev",
+      "extras": [
+        "all",
+        "dev"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "none",
+      "contract": "Registry/project owner; candidate now includes canonical project-get follow-up at remote PR833 head. Genuine Dev>=0.62 prerequisite and normal native release tests required. No invented direct SDK floor.",
+      "reviewed_candidate_source_commit": "7a8d15c130ca8b71e52d782c718bf6ccccbcfa68",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement"
+    },
+    {
+      "name": "config-core",
+      "distribution": "scitex-config",
+      "extras": [],
+      "minimum_canonical_version": "0.3.6",
+      "canonical_source_commit": "52a0efec330b49b260cc85b19ce36234d2b9b73c",
+      "sdk_requirement": "none",
+      "contract": "Retained SCITEX_APP/UI env names/local directories; no active retired Python module/distribution edge. Owning metadata classification reviewed without namespace substitution."
+    },
+    {
+      "name": "clew-gui",
+      "distribution": "scitex-clew",
+      "extras": [
+        "gui"
+      ],
+      "minimum_canonical_version": null,
+      "canonical_source_commit": null,
+      "sdk_requirement": "active",
+      "contract": "Actual canonical GUI draft162 at exact immutable head; candidate source version 0.21.0 is unpublished and not a registered genuine release floor.",
+      "reviewed_candidate_source_commit": "d7499c09ca95b7c101d26ecf9950deefb4a4ce09",
+      "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement"
+    }
+  ],
+  "repository_archive": "App/UI already archived by root; repository archival does not establish clean dependency graphs"
+}

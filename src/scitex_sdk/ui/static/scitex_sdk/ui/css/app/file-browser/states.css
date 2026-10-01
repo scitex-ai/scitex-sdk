@@ -1,0 +1,86 @@
+/**
+ * File Browser — Item States
+ * Ported verbatim from scitex-cloud stx-app-file-tree/states.css
+ */
+
+.stx-app-file-tree__file.selected,
+.stx-app-file-tree__folder.selected {
+  background-color: var(--color-accent-subtle, rgba(47, 129, 247, 0.15));
+}
+
+.stx-app-file-tree__file.selected:hover,
+.stx-app-file-tree__folder.selected:hover {
+  background-color: var(--color-accent-subtle, rgba(47, 129, 247, 0.2));
+}
+
+/* Active/editing file — stronger highlight */
+.stx-app-file-tree__file.active,
+.stx-app-file-tree__file.editing {
+  background-color: var(--color-accent-subtle, rgba(47, 129, 247, 0.2));
+  font-weight: 500;
+}
+
+.stx-app-file-tree__folder.focused {
+  background-color: var(--color-accent-subtle, rgba(47, 129, 247, 0.1));
+  outline: 1px solid var(--color-accent-fg, rgba(47, 129, 247, 0.5));
+  outline-offset: -1px;
+}
+
+.stx-app-file-tree__file.disabled {
+  opacity: var(--disabled-opacity);
+  filter: grayscale(50%);
+}
+
+.stx-app-file-tree__file.disabled .stx-app-file-tree__name {
+  color: var(--color-fg-muted, #768390);
+}
+
+.stx-app-file-tree__item.inactive {
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+
+.stx-app-file-tree__item.inactive:hover {
+  opacity: 1;
+  background-color: var(--color-canvas-subtle, rgba(127, 127, 127, 0.1));
+}
+
+/* Target file indicator badge — hidden for cleaner UI */
+.stx-app-file-tree__target-badge {
+  display: none;
+}
+
+.stx-app-file-tree__file.target {
+  background-color: var(--color-accent-subtle, rgba(47, 129, 247, 0.15));
+}
+
+/* Error state */
+.stx-app-file-tree__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--color-danger-fg, #f85149);
+}
+
+/* Loading state */
+.stx-app-file-tree__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--color-fg-muted, #768390);
+}
+
+/* Disable focus outlines */
+.stx-app-file-tree__item:focus,
+.stx-app-file-tree__item:focus-visible {
+  outline: none;
+}
+
+/* Multi-selection */
+.stx-app-file-tree__item.multi-selected {
+  background-color: var(--color-accent-subtle, rgba(47, 129, 247, 0.2));
+  outline: 1px solid var(--color-accent-muted, rgba(47, 129, 247, 0.3));
+  outline-offset: -1px;
+}

@@ -17,13 +17,13 @@ from django.conf import settings
 if not settings.configured:
     _apps = [
         "django.contrib.staticfiles",
-        "scitex_app",
+        "scitex_sdk.app",
         "scitex_sdk.creator",
     ]
     try:
-        import scitex_ui  # noqa: F401
+        from scitex_sdk import ui as scitex_ui  # noqa: F401
 
-        _apps.append("scitex_ui")
+        _apps.append("scitex_sdk.ui")
     except ImportError:
         pass
     settings.configure(

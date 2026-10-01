@@ -1,0 +1,87 @@
+/**
+ * File Browser — Theme Overrides
+ * Ported verbatim from scitex-cloud stx-app-file-tree/themes.css
+ */
+
+/* Light mode overrides */
+[data-theme="light"] .stx-app-file-tree__name,
+.light .stx-app-file-tree__name {
+  color: var(--color-fg-default, #1f2328);
+}
+
+html[data-theme="light"] .stx-app-file-tree__folder > .stx-app-file-tree__name,
+.light .stx-app-file-tree__folder > .stx-app-file-tree__name {
+  color: #0550ae !important;
+}
+
+[data-theme="light"] .stx-app-file-tree__chevron,
+.light .stx-app-file-tree__chevron {
+  color: var(--color-fg-muted, #656d76);
+}
+
+[data-theme="light"] .stx-app-file-tree__item:hover,
+.light .stx-app-file-tree__item:hover {
+  background-color: var(--color-canvas-subtle, rgba(0, 0, 0, 0.05));
+}
+
+[data-theme="light"] .stx-app-file-tree__file.selected,
+[data-theme="light"] .stx-app-file-tree__folder.selected,
+.light .stx-app-file-tree__file.selected,
+.light .stx-app-file-tree__folder.selected {
+  background-color: var(--color-accent-subtle, rgba(47, 129, 247, 0.1));
+}
+
+[data-theme="light"] .stx-app-file-tree__folder.focused,
+.light .stx-app-file-tree__folder.focused {
+  background-color: var(--color-accent-subtle, rgba(47, 129, 247, 0.08));
+  outline-color: var(--color-accent-fg, rgba(47, 129, 247, 0.4));
+}
+
+/* Disable focus outlines for tree container */
+.stx-app-file-tree:focus,
+.stx-app-file-tree:focus-visible,
+.stx-app-file-tree *:focus,
+.stx-app-file-tree *:focus-visible,
+.stx-app-file-tree__tree:focus,
+.stx-app-file-tree__tree:focus-visible {
+  outline: none;
+}
+
+/* Git status color overrides */
+.stx-app-file-tree__item[data-git-status]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 3px;
+  border-radius: 1px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.stx-app-file-tree__item[data-git-status="M"]::after {
+  background-color: var(--color-attention-fg, #d29922);
+}
+
+.stx-app-file-tree__item[data-git-status="A"]::after {
+  background-color: var(--color-success-fg, #3fb950);
+}
+
+.stx-app-file-tree__item[data-git-status="D"]::after {
+  background-color: var(--color-danger-fg, #f85149);
+}
+
+.stx-app-file-tree__item[data-git-status="??"]::after {
+  background: repeating-linear-gradient(
+    180deg,
+    var(--color-fg-muted, #768390) 0,
+    var(--color-fg-muted, #768390) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+.stx-app-file-tree__folder.expanded[data-git-status]::after {
+  display: none;
+}

@@ -1,0 +1,105 @@
+/* Toast — transient notification, optionally undoable.
+ *
+ * Harvested from scitex-cards board_v3 (`.toast`, `.toast--err`,
+ * `.toast-undo`). That source defined `.toast-undo` TWICE, in
+ * 03-right-and-modal.css and again in 04-collapse-and-groups.css, so the live
+ * button was a merge of the two by load order: 04's margin/padding/border
+ * radius and hover won, while 03's `:disabled` rule survived because 04 never
+ * declared one. Collapsed into a single definition here. Where the two
+ * disagreed this keeps the one that was WINNING, so adopting it is not a
+ * silent restyle.
+ *
+ * Colours are tokenised with literal fallbacks because `css/shell/theme.css`
+ * defines no status palette — there is no `--green`/`--red` to inherit, and a
+ * bare `var(--green)` would resolve to nothing and render an unstyled box.
+ * Override the `--stx-toast-*` tokens to theme it.
+ */
+
+.stx-toast {
+  position: fixed;
+  bottom: var(--stx-toast-offset, 18px);
+  right: var(--stx-toast-offset, 18px);
+  z-index: var(--stx-toast-z, 200);
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(420px, calc(100vw - 36px));
+
+  padding: 11px 18px;
+  border-radius: 8px;
+  box-shadow: 0 6px 22px rgb(0 0 0 / 45%);
+
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--stx-toast-fg, #fff);
+  background: var(--stx-toast-bg-info, #37474f);
+
+  /* Hidden by default: the element is created up-front and reused, so it must
+     start off-screen rather than appear empty on first paint. */
+  transform: translateY(80px);
+  opacity: 0;
+  transition:
+    transform 220ms ease,
+    opacity 220ms ease;
+}
+
+.stx-toast--visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.stx-toast[data-tone="success"] {
+  background: var(--stx-toast-bg-success, #2e7d32);
+}
+
+.stx-toast[data-tone="error"] {
+  background: var(--stx-toast-bg-error, #c62828);
+}
+
+.stx-toast__message {
+  /* A server error can be one long unbroken token; without this it widens the
+     toast past its max-width instead of wrapping. */
+  overflow-wrap: anywhere;
+}
+
+.stx-toast__undo {
+  flex-shrink: 0;
+  margin-left: 12px;
+  padding: 2px 10px;
+
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+
+  color: var(--stx-toast-fg, #fff);
+  background: rgb(255 255 255 / 18%);
+  border: 1px solid var(--stx-toast-fg, #fff);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.stx-toast__undo:hover {
+  background: var(--stx-toast-fg, #fff);
+  color: var(--stx-toast-undo-hover-fg, #333);
+}
+
+.stx-toast__undo:disabled {
+  /* The button disables itself while an async undo is in flight, so this is
+     "working", not "unavailable". */
+  opacity: var(--disabled-opacity);
+  cursor: wait;
+}
+
+/* The slide-in reads as motion; honour a user who has asked for less of it.
+   The toast still appears and still auto-hides — only the travel is dropped. */
+@media (prefers-reduced-motion: reduce) {
+  .stx-toast {
+    transform: none;
+    transition: opacity 120ms ease;
+  }
+
+  .stx-toast--visible {
+    transform: none;
+  }
+}

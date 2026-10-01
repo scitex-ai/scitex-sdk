@@ -1,0 +1,349 @@
+/**
+ * @component Mobile Workspace Layout
+ * @description Single source of truth for mobile (<=768px) workspace layout.
+ *
+ *   workspace-three-col — THE LAYOUT THIS PACKAGE SHIPS:
+ *     Below 768px the three columns become a vertical STACK. Every pane
+ *     stays on the page; none is hidden and none needs to be switched to,
+ *     so there is no pane-switcher, no JS and no state class involved.
+ *     An app hides a pane it does not use by DECLARING it:
+ *     `shell_context(panes={"ai": "unused"})` emits `ws-pane-unused`.
+ *
+ *     It was single-pane until 2026-08-19, revealed by `.mobile-active-pane`
+ *     — a class nothing in this package ever wrote, so all three panes were
+ *     unreachable rather than collapsed. Measured at 390x844 before the fix:
+ *     zero visible clickable elements on the page. Pinned by
+ *     tests/develop/test_mobile_panes_stay_reachable.py.
+ *
+ *   workspace-layout — NOT this package's markup:
+ *     Rules for the hub's shell, which nothing here renders. They are inert
+ *     in scitex-ui and are kept only so a hub page loading this stylesheet
+ *     gets its mobile layout.
+ *
+ * @category Layouts
+ * @darkmode true
+ */
+
+/* ============================================================================
+ * All rules scoped inside @media (max-width: 768px).
+ * Desktop layout is never affected.
+ * ========================================================================== */
+
+@media (max-width: 768px) {
+  /* ╔══════════════════════════════════════════════════════════════════╗
+   * ║  NEW LAYOUT: .workspace-layout (single-pane, sidebar-driven)   ║
+   * ╚══════════════════════════════════════════════════════════════════╝ */
+
+  /* Container: full viewport height, horizontal layout preserved
+     (sidebar rail on left, content on right) */
+  .workspace-layout {
+    height: 100vh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  /* Content area fills remaining space after sidebar rail */
+  .workspace-layout .workspace-content {
+    flex: 1 !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  /* Active pane: fill the entire content area */
+  .workspace-layout .workspace-pane.active {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  /* Inner sidebar panels (AI, worktree, viewer) must fill their pane */
+  .workspace-layout .workspace-pane .stx-shell-sidebar {
+    width: 100% !important;
+    height: 100% !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+
+  /* Force-remove collapsed state in new layout — panes are always full */
+  .workspace-layout .workspace-pane .stx-shell-sidebar.collapsed {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* AI panel: fill the pane completely */
+  .workspace-layout .workspace-pane #stx-shell-ai-panel,
+  .workspace-layout .workspace-pane #ai-panel-container {
+    width: 100% !important;
+    height: 100% !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Sidebar content area: scrollable, fill remaining space */
+  .workspace-layout .workspace-pane .stx-shell-sidebar__content {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Editor split layout: stack vertically on mobile */
+  .workspace-layout .editor-split-layout {
+    flex-direction: column !important;
+    height: 100% !important;
+  }
+
+  .workspace-layout .editor-split-left,
+  .workspace-layout .editor-split-right {
+    width: 100% !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+
+  /* Module pane content: scrollable */
+  .workspace-layout .workspace-pane[data-pane="module"] {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide resizers in single-pane mode — no multi-pane to resize */
+  .workspace-layout .panel-resizer,
+  .workspace-layout .split-resizer,
+  .workspace-layout .v-resizer {
+    display: none !important;
+  }
+
+  /* Hide header/footer collapse toggles (no header in workspace) */
+  .workspace-layout ~ #header-collapse-toggle,
+  #footer-collapse-toggle {
+    display: none !important;
+  }
+
+  /* ╔══════════════════════════════════════════════════════════════════╗
+   * ║  LEGACY LAYOUT: .workspace-three-col (single-pane mode)        ║
+   * ║  Only one pane visible at a time. Sidebar icons switch panes.  ║
+   * ╚══════════════════════════════════════════════════════════════════╝ */
+
+  /* Container: full viewport */
+  .workspace-three-col {
+    /* STACKED, not a fixed viewport box. The old rules pinned this to the
+       viewport with overflow:hidden because exactly one pane was ever visible
+       and it was absolutely positioned on top. Stacking means the content is
+       taller than the screen by design, so the page must be allowed to scroll
+       -- overflow:hidden here would clip every pane below the first. */
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: calc(100vh - 44px - env(safe-area-inset-bottom, 0px)) !important;
+    overflow: visible !important;
+  }
+
+  .global-header.collapsed ~ .workspace-three-col {
+    height: calc(100vh - 6px - env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(100vh - 6px - env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* STACK the panes instead of hiding them.
+   *
+   * These three were `display: none !important` here, revealed by a
+   * `.mobile-active-pane` class that appears in exactly one file -- this one --
+   * and that no template, js or ts in this package ever writes. The destructive
+   * half shipped and the restorative half never ran, so Console/Chat and Viewer
+   * were UNREACHABLE below 768px rather than collapsed, with the resizers that
+   * might have dragged them back hidden by the same block.
+   *
+   * Measured in chromium at 390x844 before this change: zero visible clickable
+   * elements on the entire page.
+   *
+   * A pane an app does not use is already handled, and by a DECLARED contract
+   * rather than a guess: `shell_context(panes={"ai": "unused"})` adds
+   * `ws-pane-unused`, which hides it. So an app that declares its panes gets a
+   * short stack; one that declares nothing gets all of them, which is the
+   * desktop behaviour and a safe default.
+   *
+   * `:not(.ws-pane-unused)` IS LOAD-BEARING, not decoration. That contract is
+   * enforced by `.workspace-three-col > .ws-pane-unused { display: none }` in
+   * workspace-three-col.css, which carries NO `!important` -- so a bare
+   * `display: flex !important` here would outrank it and drag every declared-
+   * unused pane back on screen at exactly the width where space is scarcest.
+   * Pinned by test_mobile_panes_stay_reachable.py::
+   * test_stacking_does_not_override_a_declared_unused_pane. */
+  .workspace-three-col > .ws-ai-pane:not(.ws-pane-unused),
+  .workspace-three-col > .ws-worktree-pane:not(.ws-pane-unused),
+  .workspace-three-col > .ws-viewer-pane:not(.ws-pane-unused) {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+    /* Bounded so no single pane can push the rest off the page, but scrollable
+       within itself. Without a cap, a long file tree buries the app content. */
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+
+  /* Module pane: always visible as the default, fills space */
+  .workspace-three-col > .ws-module-pane {
+    /* The app's own content leads the stack and takes the remaining height.
+       No longer `height: 100%` -- it shares the column now rather than being
+       the only thing on screen. */
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    flex: 1 1 auto !important;
+    min-height: 50vh !important;
+    overflow: auto !important;
+  }
+
+
+  /* Sidebars inside active panes: full width + height */
+  .workspace-three-col .stx-shell-sidebar,
+  .workspace-three-col #stx-shell-ai-panel,
+  .workspace-three-col #ws-worktree-sidebar,
+  .workspace-three-col #ws-viewer-sidebar,
+  .workspace-three-col #ws-apps-sidebar {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+
+
+  /* Sidebar content: scrollable */
+  .workspace-three-col .stx-shell-sidebar__content {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide all resizers in single-pane mode */
+  .workspace-three-col > .panel-resizer,
+  .workspace-three-col .panel-resizer,
+  .workspace-three-col .split-resizer,
+  .workspace-three-col .v-resizer {
+    display: none !important;
+  }
+
+  /* ╔══════════════════════════════════════════════════════════════════╗
+   * ║  SHARED: rules that apply to both layouts                      ║
+   * ╚══════════════════════════════════════════════════════════════════╝ */
+
+  /* ── Shared responsive utilities (opt-in, additive; hub + leaf chrome) ──
+   * These are the "smallest shared responsive primitives" (card
+   * scitex-ui-responsive-shell-primitives-20260914). They are UTILITIES a
+   * consumer applies to its own container — the shared shell layout above is
+   * left untouched, so there is no leaf-local duplicate chrome and no risk to
+   * the pane-stacking contract that test_mobile_panes_stay_reachable pins.
+   *
+   * The tokens these and other responsive rules share (--stx-narrow-breakpoint,
+   * --stx-touch-target-min, --stx-safe-inset-*) are defined once in theme.css
+   * so hub and every leaf reference the SAME value instead of re-hardcoding
+   * 768px / 44px / env(safe-area-inset-*) per app. */
+
+  /* No-horizontal-overflow guard. `clip` (not `hidden`) so the container does
+   * NOT become a scroll container — `hidden` is what the pane rules above
+   * deliberately avoid, because it clips panes that are meant to scroll
+   * vertically. `clip` removes overflow painting without a scroll box. Applied
+   * at the narrow breakpoint only: at desktop widths a wide rail is legitimate
+   * and must not be clipped.
+   *
+   * CAVEAT (coordination, recorded on the card): this catches in-flow and
+   * ABSOLUTELY-positioned descendants. A nav control that is position:FIXED
+   * to the viewport escapes the containing block and is NOT clipped — if the
+   * hub's #mobile-hamburger-btn is fixed, the fix is to place it inside the
+   * .stx-viewport-fit container (or constrain it to the safe-area inset).
+   * The measured 48px overflow == --ui-collapsed-pane-width, the shell rail
+   * that the hub nav sits beside, which is why the rail/clip is the shared
+   * root rather than the button itself. */
+  .stx-viewport-fit {
+    overflow-x: clip;
+  }
+
+  /* Touch targets (Apple HIG: 44px) — shared token, not a per-app literal.
+   * --stx-touch-target-min is defined in theme.css so every consumer
+   * (hub + leaves) references the SAME 44px value. */
+  .stx-shell-sidebar__header button,
+  a.selector-nav-item {
+    min-height: var(--stx-touch-target-min, 44px);
+  }
+
+  /* Shared touch-target utility. Apply to any interactive element that must
+   * meet the WCAG 2.5.5 / Apple HIG 44px minimum at the narrow breakpoint.
+   * Consolidates the ad-hoc 44px rules that were per-leaf before this
+   * primitive existed (the card's "avoid leaf-local duplicate chrome" aim). */
+  .stx-touch-min {
+    min-width: var(--stx-touch-target-min, 44px);
+    min-height: var(--stx-touch-target-min, 44px);
+  }
+
+  /* Shared keyboard-focus ring. Visible for keyboard users, suppressed for
+   * pointer users (:focus-visible), so a touch device doesn't show a focus
+   * outline on tap while a keyboard user still gets one. This is the
+   * "focus" half of the card's narrow-viewport contract — before this, each
+   * leaf re-implemented its own outline or shipped none. */
+  .stx-focus-ring:focus-visible {
+    outline: 2px solid var(--accent, #6d4cad);
+    outline-offset: 2px;
+  }
+  .stx-focus-ring:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  a.selector-nav-item {
+    min-width: 44px;
+  }
+
+  /* Selector Nav: horizontal bar on mobile */
+  .selector-nav {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    height: 56px !important;
+    width: 100% !important;
+    padding: 0 4px !important;
+    gap: 0 !important;
+  }
+
+  .selector-nav-item {
+    flex-direction: column !important;
+    flex-shrink: 0 !important;
+    padding: 4px 10px !important;
+    min-width: 56px !important;
+    height: 100% !important;
+  }
+
+  /* Active indicator: bottom bar instead of right bar */
+  .selector-nav-item.active::after {
+    right: 20% !important;
+    left: 20% !important;
+    top: auto !important;
+    bottom: 0 !important;
+    width: auto !important;
+    height: 3px !important;
+    border-radius: 2px 2px 0 0 !important;
+  }
+
+  /* Header collapse toggle: visible on mobile */
+  #header-collapse-toggle {
+    display: flex !important;
+  }
+  #footer-collapse-toggle {
+    display: none !important;
+  }
+}

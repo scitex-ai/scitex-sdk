@@ -1,0 +1,139 @@
+/* =============================================================================
+ * SciTeX App — File Tabs (open file tab bar)
+ * =============================================================================
+ * Prefix: stx-app-file-tabs
+ * Requires: shell/theme.css
+ * ============================================================================= */
+
+.stx-app-file-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: var(--workspace-bg-secondary, #f5f5f5);
+  border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.stx-app-file-tabs::-webkit-scrollbar {
+  height: 2px;
+}
+
+.stx-app-file-tabs::-webkit-scrollbar-thumb {
+  background: var(--border-subtle, rgba(0, 0, 0, 0.1));
+}
+
+/* --- Tab --- */
+
+.stx-app-file-tabs__tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border: none;
+  border-right: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+  background: transparent;
+  color: var(--text-muted, #777777);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 0;
+  transition: background 0.1s ease;
+}
+
+.stx-app-file-tabs__tab:hover {
+  background: var(--workspace-bg-hover, rgba(0, 0, 0, 0.04));
+  color: var(--text-primary, #333333);
+}
+
+.stx-app-file-tabs__tab--active {
+  background: var(--workspace-bg-primary, #ffffff);
+  color: var(--text-primary, #333333);
+  border-bottom: 2px solid
+    var(--stx-app-accent, var(--workspace-icon-primary, #059669));
+}
+
+.stx-app-file-tabs__tab--dirty .stx-app-file-tabs__label {
+  font-style: italic;
+}
+
+.stx-app-file-tabs__tab--dragging {
+  opacity: 0.5;
+}
+
+.stx-app-file-tabs__tab--drag-over {
+  border-left: 2px solid
+    var(--stx-app-accent, var(--workspace-icon-primary, #059669));
+}
+
+/* --- Label --- */
+
+.stx-app-file-tabs__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+/* --- Dirty indicator --- */
+
+.stx-app-file-tabs__dirty {
+  font-size: 8px;
+  color: var(--stx-app-accent, var(--workspace-icon-primary, #059669));
+}
+
+/* --- Close button --- */
+
+.stx-app-file-tabs__close {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--text-muted, #777777);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  margin-left: 2px;
+}
+
+.stx-app-file-tabs__tab:hover .stx-app-file-tabs__close {
+  opacity: 1;
+}
+
+.stx-app-file-tabs__close:hover {
+  color: var(--status-error, #a67373);
+}
+
+/* --- New file button --- */
+
+.stx-app-file-tabs__new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #777777);
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.stx-app-file-tabs__new:hover {
+  background: var(--workspace-bg-hover, rgba(0, 0, 0, 0.04));
+  color: var(--text-primary, #333333);
+}
+
+/* --- Inline inputs --- */
+
+.stx-app-file-tabs__rename-input,
+.stx-app-file-tabs__new-input {
+  border: 1px solid
+    var(--stx-app-accent, var(--workspace-icon-primary, #059669));
+  background: var(--workspace-bg-primary, #ffffff);
+  color: var(--text-primary, #333333);
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  outline: none;
+  width: 100px;
+}

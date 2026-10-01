@@ -4,7 +4,7 @@
 
 Boots the SAME Django app a host mounts (``scitex_sdk.creator``). The
 serving machinery (guarded launcher, runtime state, workspace shell)
-comes from the engine package — ``scitex_app.embed`` — until the
+comes from the engine package — ``scitex_sdk.app.embed`` — until the
 implementation consolidates into the SDK.
 
 Top-level imports are stdlib-only so ``scitex-sdk gui --help`` never
@@ -34,7 +34,7 @@ def _run_server(
     open_browser: bool = False,
     hot_reload: bool = False,
 ) -> None:
-    from scitex_app.embed import run_standalone
+    from scitex_sdk.app.embed import run_standalone
 
     run_standalone(
         app_module=APP_MODULE,
@@ -80,7 +80,7 @@ def serve(
     hot_reload: bool = False,
 ) -> int:
     """Launch the guarded standalone server. Returns an exit code."""
-    from scitex_app.embed import serve_gui
+    from scitex_sdk.app.embed import serve_gui
 
     return serve_gui(
         package=package,

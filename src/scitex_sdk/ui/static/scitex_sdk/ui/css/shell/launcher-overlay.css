@@ -1,0 +1,174 @@
+/* =============================================================================
+ * Launcher overlay — the floating launcher, shared
+ * =============================================================================
+ * Card: ui-shared-brand-dock-tour-primitives-20260917
+ * SSOT: scitex-hub PR 923, docs/product/PRIVATE_BETA_LOGIN_TO_WOW.md §4
+ *
+ * §4, verbatim: "The floating launcher overlays content; it does not reserve a
+ * full-width bottom strip. Apps use the full available viewport."
+ *
+ * WHAT THIS FILE REFUSES TO DO, because the shipped dock does it. scitex-hub's
+ * site-dock.css solves the dock/content collision by RESERVING a band —
+ * `body:has(> .site-dock) { padding-bottom: var(--site-dock-clearance) }`. The
+ * dock is translucent and floats over the page, and the page is nevertheless
+ * permanently shorter by its height; that reservation is what makes the strip
+ * real. §4 forbids it and moves the collision to the one moment it matters,
+ * while an actionable control has focus — which is a RUNTIME job, so it lives in
+ * ts/shell/launcher-overlay.ts, not here.
+ *
+ * NO RULE IN THIS FILE TOUCHES body/html/:root PADDING OR MARGIN. That is not a
+ * style note; tests/develop/test_launcher_overlay_contract.py fails if one
+ * appears, in either direction, because a reserved band is invisible on a wide
+ * screen and only shows as a permanently short app surface.
+ *
+ * The overlay is also out of flow by construction: `position: fixed` with no
+ * in-flow sibling, so page content lays out as if it were not there.
+ *
+ * Consumed by Hub (policy/content: which apps, which order, where the launcher
+ * goes) and by leaf apps (which just need the app surface to be the viewport).
+ * ============================================================================= */
+
+:root {
+  /* Where the overlay sits. `--stx-launcher-inset` is the visual gap; the
+     gesture bar / notch is added to it below rather than baked in, so a browser
+     without env() support (it resolves to 0) still gets the gap. */
+  --stx-launcher-inset: 12px;
+  --stx-launcher-gap: 8px;
+  --stx-launcher-pad: 6px;
+  --stx-launcher-radius: 22px;
+
+  /* Idle translucency. §4: "semi-transparent so users perceive content behind
+     it", opaque the moment they aim at it. The alpha is a token because the
+     right value is a product judgement, not a layout fact. */
+  --stx-launcher-idle-alpha: 0.82;
+  --stx-launcher-transition: 160ms;
+
+  --stx-launcher-bg: rgba(248, 247, 245, 0.55);
+  --stx-launcher-bg-opaque: rgba(248, 247, 245, 0.97);
+  --stx-launcher-border: rgba(0, 0, 0, 0.12);
+  --stx-launcher-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+
+  /* Above page chrome, below a modal: the header sits at 1000 and the shell's
+     zen mode at 10000 in this package. */
+  --stx-launcher-z: 10050;
+}
+
+[data-theme="dark"] {
+  --stx-launcher-bg: rgba(28, 31, 40, 0.55);
+  --stx-launcher-bg-opaque: rgba(28, 31, 40, 0.97);
+  --stx-launcher-border: rgba(255, 255, 255, 0.12);
+  --stx-launcher-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --stx-launcher-bg: rgba(28, 31, 40, 0.55);
+    --stx-launcher-bg-opaque: rgba(28, 31, 40, 0.97);
+    --stx-launcher-border: rgba(255, 255, 255, 0.12);
+    --stx-launcher-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+  }
+}
+
+/* The app surface takes the WHOLE viewport — the half of §4 the reservation
+   broke. `dvh` tracks the mobile URL bar collapsing; `vh` is the fallback for
+   browsers that predate it, declared first so the second wins where supported.
+   Nothing here subtracts a dock height: the overlay is out of flow. */
+.stx-viewport-full {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ---------------------------------------------------------------------------
+ * The overlay
+ * ------------------------------------------------------------------------- */
+
+.stx-launcher-overlay {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--stx-launcher-inset) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: var(--stx-launcher-z);
+
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--stx-launcher-gap);
+  max-width: calc(
+    100vw - 2 * var(--stx-launcher-inset) - env(safe-area-inset-left, 0px) -
+      env(safe-area-inset-right, 0px)
+  );
+  padding: var(--stx-launcher-pad);
+
+  border: 1px solid var(--stx-launcher-border);
+  border-radius: var(--stx-launcher-radius);
+  background: var(--stx-launcher-bg);
+  box-shadow: var(--stx-launcher-shadow);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+
+  /* Opacity only. Nothing in the interaction states below may change a
+     dimension: §4 forbids the overlay changing size or shifting layout while
+     its opacity changes, and a width transition here would do exactly that. */
+  opacity: var(--stx-launcher-idle-alpha);
+  transition:
+    opacity var(--stx-launcher-transition) ease,
+    background-color var(--stx-launcher-transition) ease;
+
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* §4: "It becomes opaque on hover, focus-within, touch/press, expansion, or
+   open menu." All six states, one rule, so a state cannot be added to the
+   product without being added here. `data-stx-launcher-pressed` is what the
+   runtime sets on pointerdown: `:active` is unreliable for a touch press that
+   travels, which is the common case on a dock. */
+.stx-launcher-overlay:hover,
+.stx-launcher-overlay:focus-within,
+.stx-launcher-overlay:active,
+.stx-launcher-overlay[aria-expanded="true"],
+.stx-launcher-overlay[data-stx-launcher-open],
+.stx-launcher-overlay[data-stx-launcher-pressed] {
+  opacity: 1;
+  background: var(--stx-launcher-bg-opaque);
+}
+
+/* The collision escape hatch, and the only rule in this file that may change
+   geometry: when the runtime cannot scroll a focused control clear, the overlay
+   gets out of the way instead (§4: "collapse/move the launcher, or temporarily
+   hide it"). It is a state, not a band — nothing reserves space for it. */
+.stx-launcher-overlay[data-stx-launcher-retracted="true"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* §4 lists 44px targets. The item is the tappable thing; the token is shared
+   with the rest of the shell rather than re-hardcoded here. */
+.stx-launcher-overlay__item {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--stx-touch-target-min, 44px);
+  min-height: var(--stx-touch-target-min, 44px);
+  padding: 0 10px;
+  border: 0;
+  border-radius: calc(var(--stx-launcher-radius) - var(--stx-launcher-pad));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.stx-launcher-overlay__item:focus-visible {
+  outline: 2px solid var(--focus-ring-color, var(--accent, #1a2a40));
+  outline-offset: 2px;
+}
+
+/* A fade is motion. Under `prefers-reduced-motion` the state change is
+   immediate, which keeps the opacity contract without animating it. */
+@media (prefers-reduced-motion: reduce) {
+  .stx-launcher-overlay {
+    transition: none;
+  }
+}

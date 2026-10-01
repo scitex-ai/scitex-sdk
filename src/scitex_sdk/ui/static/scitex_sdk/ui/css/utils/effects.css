@@ -1,0 +1,109 @@
+/* =============================================================================
+ * SciTeX Effects Utilities
+ * =============================================================================
+ * The convergence point for scitex-ui's and scitex-hub's effects vocabularies.
+ *
+ * WHY THIS FILE EXISTS AT ALL
+ *
+ * scitex-hub forked scitex-ui's primitives and its variables.css carries one
+ * import mine lacked: an at-import of effects.css from their utilities
+ * directory, one level up from the importing file.
+ *
+ * THAT IMPORT IS DESCRIBED IN PROSE HERE, NEVER WRITTEN AS CSS SYNTAX, and the
+ * reason is a build break rather than style. This comment first quoted the line
+ * verbatim, because an explanation that matches the real thing character for
+ * character is easier to trust. Django's staticfiles post-processor rewrites
+ * asset references by REGEX, and below 6.1 it does not know what a comment is:
+ * it reads the quoted path as a live reference, tries to resolve
+ * `utils/../utilities/effects.css`, finds nothing, and fails collectstatic for
+ * the whole project. Measured 2026-09-05 — scitex-ui 0.20.1 broke every
+ * scitex-hub PR this way, gating a production rebuild. The boundary was
+ * measured from both sides: Django 6.1.1 HAS `_css_ignored_re`
+ * (contrib/staticfiles/storage.py) and does NOT reproduce it; Django 6.0.8,
+ * which hub's CI resolves to, does not have it and does. The failure needs
+ * both halves — a quoted path here and a pre-6.1 reader there — which is
+ * exactly why the rule is absolute: this package cannot
+ * choose its consumers' Django version, so no shipped stylesheet may contain a
+ * `url(` or quoted `@import` token that does not resolve, comment or not.
+ * Enforced by tests/develop/test_shipped_css_references_all_resolve.py, which
+ * scans the raw bytes without stripping comments.
+ *
+ * Until that import resolved on both sides, hub could not delete their fork and
+ * load scitex-ui's primitives: doing so would have dropped 13 actively-used
+ * tokens across 96 of their files. The two variables.css files now converge by
+ * BOTH CARRYING THE LINE rather than by hub deleting it.
+ *
+ * ONE WORD OF THAT LINE DIFFERS, DELIBERATELY: this package spells the
+ * directory `utils/`, not `utilities/`. The plan was to adopt hub's path
+ * verbatim, and reading the tree overruled it — scitex-ui already HAS the
+ * directory under the shorter name, and `utils/layout.css` opens with "Layout
+ * Utilities". Shipping `utilities/` beside `utils/` would have put two names
+ * for one directory into this package: the same two-vocabularies defect this
+ * convergence exists to remove, merely relocated from between the repos to
+ * inside one of them. hub changes one word; nobody grows a synonym.
+ *
+ * WHAT WAS AGREED, 2026-09-04
+ *
+ *     radii, shadows   scitex-ui names win (--radius-*, --shadow-*)
+ *     transitions      scitex-ui VALUES win (150/200/300ms)
+ *     border width     hub's name wins, because scitex-ui had nothing
+ *
+ * Transitions were the sharp edge and were NOT a matter of taste. hub declared
+ * 150/200/300 in primitives/spacing.css and then overrode it with 200/300/500
+ * from utilities/effects.css, which variables.css imports second. Their
+ * spacing.css declarations were dead and hub ran 33-67% slower than scitex-ui
+ * while the token names claimed parity. hub's own reading: an import-order
+ * accident, not a design judgement. So it resolves to one vocabulary rather
+ * than to a compromise.
+ * ============================================================================= */
+
+:root {
+  /*
+   * The single border width.
+   *
+   * MEASURED before choosing the shape, across this package's 67 stylesheets
+   * that set a literal border width:
+   *
+   *     1px   160 uses
+   *     2px    14
+   *     3px     6
+   *     4px     4
+   *
+   * So this is deliberately ONE token and not a scale. A scale would have to
+   * be named, and every name would compete with the one hub already ships
+   * (`--border-width`) — giving each consumer two spellings of the same
+   * concept. That is the precise failure this whole convergence exists to
+   * avoid: it turns one fork into two vocabularies, which is worse than the
+   * fork was.
+   *
+   * The 24 non-1px uses stay literal on purpose. They are one-off emphasis
+   * (focus rings, active markers), not a scale anybody selects from, and
+   * tokenising them would invent a vocabulary ahead of a demand for it.
+   * Adding `--border-width-thick` later is additive and breaks nothing;
+   * retiring a name that shipped is not.
+   */
+  --border-width: 1px;
+}
+
+/*
+ * --border-color IS DELIBERATELY NOT DEFINED HERE, and this comment is the
+ * durable half of that decision.
+ *
+ * hub's effects.css carries `--border-color` alongside `--border-width`, and
+ * this package's own card recorded the plan as "scitex-ui ADOPTS
+ * --border-width and --border-color, which it genuinely lacks". Half of that
+ * sentence was wrong, and it was wrong in the direction that breaks something:
+ *
+ *     primitives/colors/_light.css:309   --border-color: var(--border-default)
+ *     primitives/colors/_dark.css:248    --border-color: var(--workspace-border-default)
+ *
+ * scitex-ui does NOT lack it. It owns it, in the colors layer, THEME-AWARE —
+ * a different source token per theme. Defining it again here would give it one
+ * flat theme-independent value that wins or loses on import order, and the
+ * side that loses is dark mode. Dark mode is this project's default rather
+ * than a preference, so that is a real regression and not a tidiness point.
+ *
+ * hub migrating off their `--border-color` therefore needs no new token: the
+ * name they already use resolves to the theme-aware definition once they load
+ * scitex-ui's colors layer. They keep the spelling and gain the theming.
+ */

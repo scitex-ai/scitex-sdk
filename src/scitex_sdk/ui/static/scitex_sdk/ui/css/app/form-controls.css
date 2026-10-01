@@ -1,0 +1,203 @@
+/* Form controls — the single definition of input / select / textarea /
+ * checkbox / button, including the standard control heights
+ * (--input-height / --button-height, defined in primitives/spacing.css).
+ *
+ * WHY THIS EXISTS. scitex-cards redefines the same controls in at least seven
+ * places (`body select`, `.tl-ctl select`, `.filt-sort select`,
+ * `.filt-groupby select`, `.details-row--filter select`, `.card-select`,
+ * `.at-select`), and they do not agree. Two incompatible visual languages are
+ * live at once:
+ *
+ *     base  : 4px radius, 0.82rem, purple focus, tokenised background
+ *     .at-* : 6px radius, 0.92rem, green  focus, background HARD-CODED #232a36
+ *
+ * A control's appearance should not depend on which toolbar it happens to sit
+ * in. This file is the one place it is decided.
+ *
+ * ON THE HARD-CODED BACKGROUND: `.at-input` takes `color: var(--text)` but a
+ * literal dark `background`. That is not a live bug today — board_v3 defines
+ * `--text` once and ships no light-mode block, despite its own header claiming
+ * "dark/light mode". It becomes one the moment a light theme lands: themed
+ * text on an unthemed dark box. Every colour here is a token, so that failure
+ * cannot occur.
+ *
+ * Colours come from `primitives/colors.css`, which app.css now imports. Before
+ * that, `--status-*` and friends resolved to nothing in the app layer, which is
+ * exactly why components grew literal fallbacks in the first place.
+ */
+
+.stx-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 4px);
+}
+
+.stx-label {
+  color: var(--text-muted, #777);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stx-input,
+.stx-select,
+.stx-textarea {
+  /* Stated locally on purpose: this bundle has no global border-box reset,
+     so a height set without it would be content-box in most apps. */
+  box-sizing: border-box;
+  padding: 6px 10px;
+
+  color: var(--text-primary, #333);
+  background: var(--bg-surface, #f8f7f5);
+  border: 1px solid var(--border-default, #999);
+  border-radius: 4px;
+
+  font: inherit;
+  font-size: 0.85rem;
+
+  /* Controls inherit a fixed intrinsic width from the UA; without this a
+     select in a flex row refuses to shrink and overflows its container. */
+  min-width: 0;
+}
+
+.stx-textarea {
+  resize: vertical;
+  min-height: 4.5em;
+}
+
+.stx-select {
+  cursor: pointer;
+}
+
+/* Standard input height (compass L616). Single-line controls only —
+   .stx-textarea keeps min-height + resize so it can grow. */
+.stx-input,
+.stx-select {
+  height: var(--input-height, 36px);
+}
+
+/* Standard button (compass L617). The neutral base: one standard height,
+   the --color-btn-* token triplet, the shared control radius and font.
+   Per-component buttons (confirm-modal__btn, media-viewer__btn, ...) adopt
+   this class for a consistent height and keep their own modifiers. */
+.stx-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs, 4px);
+  height: var(--button-height, 36px);
+  padding: 0 12px;
+
+  border: 1px solid var(--color-btn-border, #999);
+  border-radius: var(--radius-md, 4px);
+  background: var(--color-btn-bg, #f8f7f5);
+  color: var(--color-btn-text, #333);
+
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.stx-button:hover:not(:disabled) {
+  background: var(--color-btn-hover-bg, #eee);
+}
+
+.stx-button--primary {
+  background: var(--color-btn-primary-bg, #24292f);
+  border-color: var(--color-btn-primary-border, #24292f);
+  color: var(--color-btn-primary-text, #fff);
+}
+
+.stx-button--primary:hover:not(:disabled) {
+  background: var(--color-btn-primary-hover-bg, #000);
+}
+
+.stx-button:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+.stx-input:hover:not(:disabled),
+.stx-select:hover:not(:disabled),
+.stx-textarea:hover:not(:disabled) {
+  border-color: var(--border-muted, #c0c0c0);
+}
+
+/* One focus treatment for every control. `:focus-visible` alone would drop the
+   ring for programmatic focus, so both are matched — a field focused by script
+   still has to show where the caret went. */
+.stx-input:focus,
+.stx-input:focus-visible,
+.stx-select:focus,
+.stx-select:focus-visible,
+.stx-textarea:focus,
+.stx-textarea:focus-visible {
+  outline: 2px solid var(--status-info, #6b7280);
+  outline-offset: 1px;
+  border-color: var(--status-info, #6b7280);
+}
+
+.stx-input:disabled,
+.stx-select:disabled,
+.stx-textarea:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+/* Driven by `aria-invalid`, not by a class, so the visual state cannot drift
+   from the state assistive tech is told about. A red border with no
+   aria-invalid is a lie to a screen reader. */
+.stx-input[aria-invalid="true"],
+.stx-select[aria-invalid="true"],
+.stx-textarea[aria-invalid="true"] {
+  border-color: var(--status-error, #a67373);
+}
+
+.stx-input[aria-invalid="true"]:focus,
+.stx-select[aria-invalid="true"]:focus,
+.stx-textarea[aria-invalid="true"]:focus {
+  outline-color: var(--status-error, #a67373);
+}
+
+.stx-field__error {
+  color: var(--status-error-text, #994444);
+  font-size: 0.75rem;
+}
+
+.stx-checkbox {
+  /* accent-color themes the native control, so the checkbox stays a real
+     checkbox — keyboard behaviour, indeterminate state and AT semantics all
+     intact — instead of the usual hidden-input-plus-styled-span. */
+  accent-color: var(--status-info, #6b7280);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.stx-checkbox:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+.stx-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.stx-checkbox-label:has(.stx-checkbox:disabled) {
+  cursor: not-allowed;
+  opacity: var(--disabled-opacity);
+}
+
+/* Compact variant for dense toolbars — the case that spawned the per-toolbar
+   overrides being replaced here. */
+.stx-input--compact,
+.stx-select--compact {
+  padding: 3px 8px;
+  font-size: 0.78rem;
+}

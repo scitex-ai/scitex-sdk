@@ -1,0 +1,125 @@
+/**
+ * Workspace Files Tree - Filtering Criteria
+ * Ported from scitex-cloud (identical logic)
+ */
+
+import type { WorkspaceMode } from "./types";
+
+export const ALLOW_DIRECTORIES: Record<WorkspaceMode, string[]> = {
+  scholar: ["scitex/scholar"],
+  vis: ["scitex/vis"],
+  writer: ["scitex/_writer"],
+  code: [],
+  clew: ["scitex/verify"],
+  hub: [],
+  files: [],
+  tools: [],
+  explorer: [],
+  example: [],
+  apps: [],
+  all: [],
+};
+
+export const DENY_DIRECTORIES: Record<WorkspaceMode, string[]> = {
+  scholar: [
+    "node_modules",
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+  ],
+  vis: ["node_modules", ".git", "__pycache__", ".venv", "venv"],
+  writer: [
+    "node_modules",
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "ai",
+    "config",
+    "docs",
+    "requirements",
+    "scripts",
+    "tests",
+    "texts",
+    "archive",
+    "figures",
+    "latex_styles",
+    "tables",
+    "wordcounts",
+    "logs",
+    "output",
+  ],
+  code: [".git"],
+  clew: ["node_modules", ".git", "__pycache__", ".venv", "venv"],
+  hub: ["node_modules", ".git", "__pycache__", ".venv", "venv"],
+  files: [".git"],
+  tools: ["node_modules", ".git", "__pycache__", ".venv", "venv"],
+  explorer: ["node_modules", ".git", "__pycache__", ".venv", "venv"],
+  example: ["node_modules", ".git", "__pycache__", ".venv", "venv"],
+  apps: ["node_modules", ".git", "__pycache__", ".venv", "venv"],
+  all: [],
+};
+
+export const ALLOW_EXTENSIONS: Record<WorkspaceMode, string[] | "all"> = {
+  scholar: [".bib"],
+  vis: [
+    ".csv",
+    ".tsv",
+    ".json",
+    ".xml",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".webp",
+    ".pdf",
+    ".figz",
+    ".pltz",
+  ],
+  writer: [
+    ".tex",
+    ".bib",
+    ".cls",
+    ".sty",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".pdf",
+    ".svg",
+    ".eps",
+    ".csv",
+    ".tsv",
+  ],
+  code: "all",
+  clew: "all",
+  hub: "all",
+  files: "all",
+  tools: "all",
+  explorer: "all",
+  example: "all",
+  apps: "all",
+  all: "all",
+};
+
+export const ALWAYS_VISIBLE_FILENAMES: string[] = [".gitkeep"];
+
+export const DEFAULT_FOCUS_PATHS: Record<WorkspaceMode, string> = {
+  scholar: "scitex/scholar",
+  vis: "scitex/vis",
+  writer: "scitex/_writer/01_manuscript",
+  code: "scripts",
+  clew: "scitex/verify",
+  hub: "",
+  files: "",
+  tools: "",
+  explorer: "",
+  example: "",
+  apps: "",
+  all: "",
+};

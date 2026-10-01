@@ -3,8 +3,8 @@
 """Views for the SciTeX App Creator wizard.
 
 ``index`` is the server-rendered wizard (starter cards + forms); every
-mutation is a JSON API wired to the appmaker ENGINE in scitex-app
-(``scitex_app.appmaker`` — the implementation consolidates into the SDK
+mutation is a JSON API wired to the SDK-owned appmaker engine
+(``scitex_sdk.app.appmaker`` — the implementation consolidates into the SDK
 gradually, per the facade pattern):
 
 - ``api/validate-input`` — wizard field validation, no filesystem touch.
@@ -109,7 +109,7 @@ def api_validate_input(request):
 @require_POST
 def api_create(request):
     """Scaffold a new app from a starter into a fresh directory."""
-    from scitex_app.appmaker import init_app
+    from scitex_sdk.app.appmaker import init_app
 
     data, err = _json_body(request)
     if err is not None:
@@ -172,7 +172,7 @@ def api_create(request):
 @require_POST
 def api_validate_app(request):
     """Run ``validate_with_warnings`` on an existing app directory."""
-    from scitex_app.appmaker import validate_with_warnings
+    from scitex_sdk.app.appmaker import validate_with_warnings
 
     data, err = _json_body(request)
     if err is not None:
@@ -215,7 +215,7 @@ def _server_params(data):
 @require_POST
 def api_publish(request):
     """Submit an app for review via the engine's publish hook."""
-    from scitex_app.appmaker._publish import publish
+    from scitex_sdk.app.appmaker._publish import publish
 
     data, err = _json_body(request)
     if err is not None:
@@ -236,7 +236,7 @@ def api_publish(request):
 @require_POST
 def api_dev_install(request):
     """Dev-install an app on a server via the engine's dev-install hook."""
-    from scitex_app.appmaker._dev_install import dev_install
+    from scitex_sdk.app.appmaker._dev_install import dev_install
 
     data, err = _json_body(request)
     if err is not None:

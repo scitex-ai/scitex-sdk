@@ -1,0 +1,50 @@
+name: app-ui-dependency-retirement
+
+# Observation only: no publishing, repository administration or protection changes.
+# Missing genuine canonical release floors fail before dependency installation.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  published-consumer-graphs:
+    runs-on: [self-hosted, Linux, X64, scitex-ci]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use a job-owned Python tool cache
+        run: |
+          tool_cache="$RUNNER_TEMP/sdk-retirement-python-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$tool_cache"
+          printf '%s\n' "RUNNER_TOOL_CACHE=$tool_cache" \
+            "AGENT_TOOLSDIRECTORY=$tool_cache" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Create an isolated checker environment
+        run: |
+          python -m venv "$RUNNER_TEMP/sdk-retirement-checker-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          printf '%s\n' "$RUNNER_TEMP/sdk-retirement-checker-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/bin" >> "$GITHUB_PATH"
+      - name: Install checker tooling normally
+        env:
+          TMPDIR: ${{ runner.temp }}
+          XDG_CACHE_HOME: ${{ runner.temp }}/sdk-retirement-tooling-cache
+          PIP_CACHE_DIR: ${{ runner.temp }}/sdk-retirement-tooling-cache/pip
+          PIP_CONFIG_FILE: /dev/null
+        run: python -m pip install --index-url https://pypi.org/simple packaging
+      - name: Require every genuine published canonical consumer graph
+        run: >-
+          python scripts/retirement_graphs.py
+          --policy scripts/app-ui-retirement-graphs.json
+          --scratch "$RUNNER_TEMP/sdk-retirement-graphs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          --output "$RUNNER_TEMP/sdk-retirement-report-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-retirement-evidence
+          path: |
+            ${{ runner.temp }}/sdk-retirement-report-${{ github.run_id }}-${{ github.run_attempt }}.json
+            ${{ runner.temp }}/sdk-retirement-graphs-${{ github.run_id }}-${{ github.run_attempt }}/**/*.json
+            ${{ runner.temp }}/sdk-retirement-graphs-${{ github.run_id }}-${{ github.run_attempt }}/**/*.log
+          if-no-files-found: error

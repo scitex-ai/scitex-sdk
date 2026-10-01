@@ -1,0 +1,220 @@
+/* =============================================================================
+ * SciTeX App — Selector Nav (vertical icon+label navigation strip)
+ * =============================================================================
+ * Ported from scitex-cloud selector-nav.css
+ * Prefix: stx-app-selector-nav
+ * ============================================================================= */
+
+.stx-app-selector-nav {
+  --selector-nav-icon-size: var(--ui-nav-icon-size, 20px);
+  --selector-nav-label-size: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+  background: var(--workspace-bg-primary, #0d1117);
+}
+
+.stx-app-selector-nav__items {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.stx-app-selector-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 2px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--workspace-text-secondary, #8b949e);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  line-height: 1;
+  font-weight: 400;
+  white-space: nowrap;
+  position: relative;
+}
+
+.stx-app-selector-nav__item:hover {
+  background: var(--workspace-bg-hover, rgba(177, 186, 196, 0.08));
+  color: var(--workspace-text-primary, #e6edf3);
+}
+
+.stx-app-selector-nav__item.active {
+  color: var(--workspace-text-primary, #e6edf3);
+  background: var(--workspace-bg-active, rgba(177, 186, 196, 0.12));
+}
+
+/* ── The CASCADE shape (mobile) ───────────────────────────────────────────
+ * The same tree, presented as descending dropdown levels instead of a strip.
+ * Written 2026-09-17 with ts/app/selector-nav/: the class `__level` had no rule
+ * before this, because the component was CSS-only and nothing rendered a level.
+ * One level per depth, full width, each row a touch target — and the level that
+ * CONTAINS the selection stays expanded, so restoring a deep selection does not
+ * land on a level the user then has to re-find. */
+.stx-app-selector-nav--cascade .stx-app-selector-nav__items {
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+
+.stx-app-selector-nav__level {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--workspace-border-subtle, rgba(110, 118, 129, 0.3));
+  border-radius: 6px;
+  background: var(--workspace-bg-elevated, var(--bg-surface, #fff));
+  overflow: hidden;
+}
+
+/* A nested level is indented by its depth: without this the cascade reads as
+ * one flat list and the hierarchy is invisible — MEASURED at 390x844, where
+ * every level rendered at the same x before this rule existed. The levels are
+ * SIBLINGS in the DOM (the component tags each with data-stx-depth), so the
+ * indent is keyed to the attribute, not to nesting. */
+.stx-app-selector-nav__level[data-stx-depth="1"] {
+  margin-left: 12px;
+  width: calc(100% - 12px);
+}
+
+.stx-app-selector-nav__level[data-stx-depth="2"],
+.stx-app-selector-nav__level[data-stx-depth="3"] {
+  margin-left: 24px;
+  width: calc(100% - 24px);
+}
+
+.stx-app-selector-nav--cascade .stx-app-selector-nav__item {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--stx-touch-target-min, 44px);
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.stx-app-selector-nav--cascade .stx-app-selector-nav__item .stx-app-selector-nav__label {
+  font-size: 0.875rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.stx-app-selector-nav--cascade .stx-app-selector-nav__item.active {
+  border-left: 3px solid var(--color-primary, #4a6fa5);
+}
+
+/* Level rows are 44px minimum wherever the shape is used, not only under a
+ * coarse pointer: a cascade on a desktop-narrow pane still needs the target. */
+@media (max-width: 600px), (pointer: coarse) {
+  .stx-app-selector-nav--cascade .stx-app-selector-nav__item {
+    min-height: var(--stx-touch-target-min, 44px);
+  }
+}
+
+.stx-app-selector-nav__item.disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+.stx-app-selector-nav__item i {
+  width: var(--selector-nav-icon-size, 20px);
+  min-width: var(--selector-nav-icon-size, 20px);
+  height: var(--selector-nav-icon-size, 20px);
+  text-align: center;
+  font-size: var(--selector-nav-icon-size, 20px);
+}
+
+.stx-app-selector-nav__label {
+  font-size: var(--selector-nav-label-size, 9px);
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 48px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.stx-app-selector-nav__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border-top: 1px solid var(--workspace-border-subtle, #30363d);
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--workspace-text-secondary, #8b949e);
+}
+
+/* Active indicators */
+.stx-app-selector-nav[data-indicator="left"]
+  .stx-app-selector-nav__item.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 4px;
+  border-radius: 0 2px 2px 0;
+  background: var(--app-accent-color, var(--workspace-icon-primary, #059669));
+  z-index: 2;
+}
+
+.stx-app-selector-nav[data-indicator="right"]
+  .stx-app-selector-nav__item.active::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 4px;
+  border-radius: 2px 0 0 2px;
+  background: var(--app-accent-color, var(--workspace-icon-primary, #059669));
+  z-index: 2;
+}
+
+/* ── Exactly ONE current destination; every other item NEUTRAL ────────────
+ * MEASURED DEFECT (operator, mobile screenshots, 2026-09-17): the Cards Board
+ * tab was the real selection while the global dock showed Home in purple and
+ * Chat in blue. Not multiple routing — INACTIVE ICONS PAINTED IN THEIR BRAND
+ * COLOUR, which reads as selected. A dock that is ambiguous about where you are
+ * is worse than one with no highlighting at all.
+ *
+ * The rule is deliberately specificity-armed: a brand colour (--app-accent-color
+ * or a per-app icon class) may apply ONLY to the item that carries
+ * aria-current. `:not([aria-current]) i` out-specifies a plain per-app icon
+ * rule, so a leaf's brand colour cannot resurrect the defect. The selected
+ * background is keyed to BOTH hooks, because the released component sets
+ * `.active` while the nav primitive now also sets aria-current.
+ */
+.stx-app-selector-nav__item:not([aria-current]) {
+  color: var(--workspace-text-secondary, #8b949e);
+  background: transparent;
+}
+
+.stx-app-selector-nav__item:not([aria-current]) i,
+.stx-app-selector-nav__item:not([aria-current]) .stx-app-selector-nav__label {
+  color: inherit;
+}
+
+.stx-app-selector-nav__item[aria-current],
+.stx-app-selector-nav__item.active {
+  color: var(--workspace-text-primary, #e6edf3);
+  background: var(--workspace-bg-active, rgba(177, 186, 196, 0.12));
+}

@@ -1,48 +1,23 @@
-"""scitex_sdk.app facade tests — identity re-exports from ``scitex_app``."""
-
-from __future__ import annotations
-
+"""The SDK owns the former App public API and physical submodules."""
+import importlib
+import types
 import pytest
-import scitex_app
-from scitex_sdk import app, ui
+from scitex_sdk import app, __version__
 
-# The names the facade re-exports. Kept in sync with scitex_sdk/app.py
-# __all__ (minus the facade's own __version__).
-_APP_NAMES = [
-    "FilesBackend",
-    "build_tree",
-    "chat",
-    "copy_file",
-    "delete_file",
-    "embed",
-    "file_exists",
-    "get_files",
-    "hosts_to_allow",
-    "list_files",
-    "paths",
-    "read_file",
-    "register_backend",
-    "rename_file",
-    "scaffold",
-    "validate",
-    "validator",
-    "write_file",
-]
+NAMES = ["FilesBackend", "build_tree", "chat", "copy_file", "delete_file",
+         "embed", "file_exists", "get_files", "hosts_to_allow", "list_files",
+         "paths", "read_file", "register_backend", "rename_file", "scaffold",
+         "validate", "validator", "write_file"]
 
+@pytest.mark.parametrize("name", NAMES)
+def test_app_public_implementation_is_sdk_owned(name):
+    obj = getattr(app, name)
+    owner = obj.__name__ if isinstance(obj, types.ModuleType) else obj.__module__
+    assert owner.startswith("scitex_sdk.app")
 
-@pytest.mark.parametrize("name", _APP_NAMES)
-def test_app_reexport_matches_source_by_identity(name):
-    # Arrange — one re-exported name, picked by parametrize.
-    # Act
-    facade_obj = getattr(app, name)
-    source_obj = getattr(scitex_app, name)
-    # Assert
-    assert facade_obj is source_obj
+def test_app_version_has_one_distribution_owner():
+    assert app.__version__ == __version__
 
-
-def test_facade_declares_matching_version_strings():
-    # Arrange — both facade halves plus the expected umbrella version.
-    # Act
-    observed = (app.__version__, ui.__version__)
-    # Assert
-    assert observed == ("0.1.0", "0.1.0")
+@pytest.mark.parametrize("name", ["embed", "sdk", "_django", "appmaker", "paths"])
+def test_app_submodules_are_physical_canonical_imports(name):
+    assert importlib.import_module(f"scitex_sdk.app.{name}").__name__ == f"scitex_sdk.app.{name}"

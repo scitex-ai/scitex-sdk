@@ -1,0 +1,119 @@
+/* Import/export — the standard import/export pattern (compass L623).
+ *
+ * A trigger opens a panel of FORMAT OPTIONS; picking one shows a confirm
+ * bar (a format list is long enough that an accidental tap should not fire
+ * a transfer); confirming emits `stx-import-export:confirm` and the
+ * CONSUMING APP performs the transfer. This stylesheet owns the pattern's
+ * appearance; the data and the bytes are the app's.
+ *
+ * The confirm/cancel bar uses the standard .stx-button (form-controls) —
+ * the pattern is a consumer of the control standard, not a re-definition
+ * of it.
+ */
+
+.stx-app-import-export {
+  position: relative;
+  display: inline-block;
+}
+
+.stx-app-import-export__trigger {
+  min-width: 120px;
+}
+
+.stx-app-import-export__panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + var(--spacing-xs, 4px));
+  left: 0;
+  min-width: 220px;
+  z-index: 100;
+
+  background: var(--bg-surface, #f8f7f5);
+  border: 1px solid var(--border-default, #999);
+  border-radius: var(--radius-md, 4px);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+  padding: var(--spacing-sm, 8px);
+}
+
+.stx-app-import-export--open .stx-app-import-export__panel {
+  display: block;
+}
+
+.stx-app-import-export__title {
+  color: var(--text-muted, #777);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 6px var(--spacing-xs, 4px);
+}
+
+/* Format rows — real <button>s, full width, platform keyboard operability. */
+.stx-app-import-export__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stx-app-import-export__format {
+  box-sizing: border-box;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm, 8px);
+  width: 100%;
+  padding: 8px 10px;
+
+  border: none;
+  border-radius: var(--radius-sm, 3px);
+  background: none;
+  color: var(--text-primary, #333);
+
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stx-app-import-export__format:hover {
+  background: var(--bg-muted, #e8e7e5);
+}
+
+.stx-app-import-export__format-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stx-app-import-export__format-detail {
+  color: var(--text-muted, #777);
+  font-size: 0.75rem;
+  flex: none;
+}
+
+.stx-app-import-export__empty {
+  padding: 10px;
+  color: var(--text-muted, #777);
+  font-size: 0.85rem;
+}
+
+/* The confirm step: the question, then the standard buttons. */
+.stx-app-import-export__confirm-text {
+  padding: 4px 6px var(--spacing-sm, 8px);
+  font-size: 0.85rem;
+  color: var(--text-primary, #333);
+}
+
+.stx-app-import-export__confirm-bar {
+  display: flex;
+  gap: var(--spacing-xs, 4px);
+  justify-content: flex-end;
+}
+
+.stx-app-import-export__confirm {
+  min-width: 80px;
+}
+
+.stx-app-import-export__cancel {
+  min-width: 80px;
+}

@@ -1,0 +1,60 @@
+/* =============================================================================
+ * SciTeX App — Dim
+ * =============================================================================
+ * Prefix: stx-app-dim
+ * Requires: primitives/spacing.css  (--disabled-opacity)
+ *
+ * DIM IS A SIBLING OF DISABLED, NOT A SYNONYM AND NOT A FOURTH APPEARANCE.
+ * "Broken / not usable" and "available once you sign in" are different facts,
+ * and one control cannot carry both. What they share is the visual weight of a
+ * control you cannot operate right now, so dim CONSUMES the consolidated
+ * --disabled-opacity rather than introducing a literal of its own. That token
+ * became a single value in #180 specifically so this state could arrive as a
+ * variant of one thing instead of a fourth private definition added to three.
+ *
+ * WHAT SEPARATES THEM IS AFFORDANCE, NOT OPACITY. A disabled control is inert.
+ * A dim one is focusable (aria-disabled, never the disabled attribute) and
+ * carries a reason, and where the verdict offers a route it also carries that.
+ * ============================================================================= */
+
+.stx-app-dim {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+/*
+ * A denial that offers somewhere to go. Today only
+ * `denied-because-not-signed-in` qualifies: "sign in" is an action the user can
+ * take immediately.
+ *
+ * An entitlement denial deliberately does NOT get this class, because nobody
+ * has yet confirmed that an upgrade surface exists to send them to, and a
+ * pointer cursor on a control with no destination promises an action that does
+ * not happen. If hub does have one it arrives as an `upgrade_url` payload and
+ * this class starts applying to that kind too — no new class, no new state.
+ */
+.stx-app-dim--actionable {
+  cursor: pointer;
+}
+
+/*
+ * The accessible reason. Removed from view but NOT from the accessibility tree
+ * — `display: none` and `visibility: hidden` would take it out of both, which
+ * is precisely the failure this element exists to prevent.
+ *
+ * Scoped to this component rather than added as a global `.sr-only` utility:
+ * the codebase has no such utility today, and inventing a general one to serve
+ * a single caller is a menu item nobody ordered. It can be promoted when a
+ * second caller appears.
+ */
+.stx-app-dim__reason {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

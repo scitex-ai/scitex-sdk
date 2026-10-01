@@ -1,0 +1,197 @@
+# scitex-ui shared shell — Japanese translation.
+# EN is the default (msgid == source string); JA is complete.
+# Do not add an entry for a string that is not in the shell template:
+# tests/develop/test_shell_i18n.py cross-checks the catalog against
+# the template, so an extra or missing msgid fails the build.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ja\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Toggle Console (Alt+A)"
+msgstr "コンソール切替 (Alt+A)"
+
+msgid "Console"
+msgstr "コンソール"
+
+msgid "Terminal"
+msgstr "ターミナル"
+
+msgid "AI Chat"
+msgstr "AI チャット"
+
+msgid "Chat"
+msgstr "チャット"
+
+msgid "Keyboard Shortcuts"
+msgstr "キーボードショートカット"
+
+msgid "New chat"
+msgstr "新しいチャット"
+
+msgid "Copy chat"
+msgstr "チャットをコピー"
+
+msgid "Print chat"
+msgstr "チャットを印刷"
+
+msgid "Clear chat"
+msgstr "チャットをクリア"
+
+msgid "Ask anything about SciTeX."
+msgstr "SciTeX について何でも聞いてください。"
+
+msgid "I can take actions: stats, plots, literature, and your current work."
+msgstr "統計、プロット、文献検索、現在の作業など、アクションを実行できます。"
+
+msgid "Ask anything"
+msgstr "何でも聞いてください"
+
+msgid "Attach image"
+msgstr "画像を添付"
+
+msgid "Draw sketch"
+msgstr "スケッチを描く"
+
+msgid "Voice input"
+msgstr "ボイス入力"
+
+msgid "Chat settings"
+msgstr "チャット設定"
+
+msgid "New terminal"
+msgstr "新しいターミナル"
+
+msgid "Webcam"
+msgstr "ウェブカメラ"
+
+msgid "Sketch"
+msgstr "スケッチ"
+
+msgid "Voice"
+msgstr "ボイス"
+
+msgid "Settings"
+msgstr "設定"
+
+msgid "When enabled, automatically accepts Claude Code permission prompts at the configured interval."
+msgstr "有効にすると、設定した間隔で Claude Code の許可プロンプトを自動承認します。"
+
+msgid "Claude Code Auto-Accept Mode"
+msgstr "Claude Code 自動承認モード"
+
+msgid "How often to check for and accept permission prompts"
+msgstr "許可プロンプトの確認・承認間隔"
+
+msgid "Interval"
+msgstr "間隔"
+
+msgid "1s (fast)"
+msgstr "1秒 (高速)"
+
+msgid "2s"
+msgstr "2秒"
+
+msgid "3s (slow)"
+msgstr "3秒 (低速)"
+
+msgid "Controls which commands are auto-accepted"
+msgstr "自動承認されるコマンドの種類"
+
+msgid "Safety"
+msgstr "安全性"
+
+msgid "Only accept safe, read-only commands"
+msgstr "安全な読み取り専用コマンドのみ承認"
+
+msgid "Conservative (read-only)"
+msgstr "保守的 (読み取り専用)"
+
+msgid "Accept most commands except destructive ones"
+msgstr "破壊的なものを除く大部分のコマンドを承認"
+
+msgid "Normal (most commands)"
+msgstr "標準 (大部分のコマンド)"
+
+msgid "Accept all commands — use with caution"
+msgstr "全コマンドを承認 — 注意して使用"
+
+msgid "Aggressive (all commands)"
+msgstr "積極的 (全コマンド)"
+
+msgid "Commands sent automatically for each Claude state"
+msgstr "Claude の各状態に応じて自動送信されるコマンド"
+
+msgid "Auto-Response Commands"
+msgstr "自動応答コマンド"
+
+msgid "Command sent when Claude is thinking or idle"
+msgstr "Claude が思考中またはアイドル時に送信されるコマンド"
+
+msgid "Waiting"
+msgstr "待機中"
+
+msgid "Response for Y/N permission prompts"
+msgstr "Y/N 許可プロンプトへの応答"
+
+msgid "1 (Allow)"
+msgstr "1 (許可)"
+
+msgid "2 (Deny)"
+msgstr "2 (拒否)"
+
+msgid "Response for Y/Y/N permission prompts"
+msgstr "Y/Y/N 許可プロンプトへの応答"
+
+msgid "1 (Allow once)"
+msgstr "1 (一度のみ許可)"
+
+msgid "2 (Allow always)"
+msgstr "2 (常に許可)"
+
+msgid "3 (Deny)"
+msgstr "3 (拒否)"
+
+msgid "App Skills"
+msgstr "アプリスキル"
+
+msgid "Loading..."
+msgstr "読み込み中..."
+
+msgid "Toggle file tree"
+msgstr "ファイルツリー切替"
+
+msgid "Files"
+msgstr "ファイル"
+
+msgid "Recent"
+msgstr "最近"
+
+msgid "Filter settings"
+msgstr "フィルター設定"
+
+msgid "Pause/resume monitor"
+msgstr "モニターの一時停止/再開"
+
+msgid "Clear feed"
+msgstr "フィードをクリア"
+
+msgid "Toggle viewer"
+msgstr "ビューワー切替"
+
+msgid "Viewer"
+msgstr "ビューワー"
+
+msgid "Switch to Editor"
+msgstr "エディタに切替"
+
+msgid "Supported file formats"
+msgstr "対応ファイル形式"
+
+msgid "Keyboard shortcuts (Alt+/)"
+msgstr "キーボードショートカット (Alt+/)"
+
+msgid "Click a file to open"
+msgstr "クリックしてファイルを開く"

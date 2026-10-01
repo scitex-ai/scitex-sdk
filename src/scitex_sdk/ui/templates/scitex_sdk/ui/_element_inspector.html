@@ -1,0 +1,28 @@
+{% load static %}
+{% comment %}
+  scitex-ui Element Inspector (Alt+I visual debugging overlay).
+
+  Include this partial near the end of <body> in any Django page to make
+  the inspector available:
+
+      {% include "scitex_sdk/ui/_element_inspector.html" %}
+
+  It only emits the <script>/<link> when `stx_element_inspector_enabled`
+  is truthy — provided by
+  `scitex_sdk.ui.context_processors.element_inspector` (DEBUG or staff, with
+  a `SCITEX_UI_ELEMENT_INSPECTOR` settings override). Without that
+  context processor the flag is absent and nothing is loaded.
+
+  Shortcuts once active:
+    Alt+I        toggle overlay
+    Ctrl+I       load next 512 elements (while active)
+    Ctrl+Alt+I   rectangle selection mode
+    Ctrl+Shift+I debug snapshot (screenshot + console)
+    Escape       deactivate / cancel selection
+{% endcomment %}
+{% if stx_element_inspector_enabled %}
+<link rel="stylesheet"
+      href="{% static 'scitex_sdk/ui/css/utils/element-inspector.css' %}" />
+<script src="{% static 'scitex_sdk/ui/js/utils/element-inspector.js' %}"
+        defer></script>
+{% endif %}

@@ -1,0 +1,19 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: scitex-ui i18n fixture\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "%s figure"
+msgid_plural "%s figures"
+msgstr[0] "%s 個の図"
+
+msgctxt "verb"
+msgid "Export"
+msgstr "書き出す"
