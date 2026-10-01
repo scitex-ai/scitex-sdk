@@ -42,6 +42,10 @@ jobs:
             "PYTHONPYCACHEPREFIX=$RUNNER_TEMP/scitex-sdk-pycache" \
             "PIP_CACHE_DIR=$RUNNER_TEMP/scitex-sdk-pip" \
             "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Create an isolated Python environment for this job
+        run: |
+          python -m venv "$RUNNER_TEMP/scitex-sdk-ci-${{ matrix.python-version }}-${{ matrix.branch }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          printf '%s\n' "$RUNNER_TEMP/scitex-sdk-ci-${{ matrix.python-version }}-${{ matrix.branch }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/bin" >> "$GITHUB_PATH"
       - name: Install contributor and runtime dependencies
         run: |
           python -m pip install --upgrade pip
@@ -71,8 +75,8 @@ jobs:
         run: |
           set -euo pipefail
           wheel=$(realpath dist/scitex_sdk-*.whl)
-          python -m venv "$RUNNER_TEMP/scitex-sdk-gui-${{ matrix.python-version }}-${{ matrix.branch }}"
-          py="$RUNNER_TEMP/scitex-sdk-gui-${{ matrix.python-version }}-${{ matrix.branch }}/bin/python"
+          python -m venv "$RUNNER_TEMP/scitex-sdk-gui-${{ matrix.python-version }}-${{ matrix.branch }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          py="$RUNNER_TEMP/scitex-sdk-gui-${{ matrix.python-version }}-${{ matrix.branch }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/bin/python"
           "$py" -m pip install "$wheel[gui]"
           "$py" -m pip check
           env -u PYTHONPATH "$py" - <<'PYTHON'

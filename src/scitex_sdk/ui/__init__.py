@@ -35,7 +35,7 @@ def get_static_dir() -> _Path:
     pathlib.Path
         e.g. ``/usr/lib/python3.11/.../scitex_sdk/ui/static/scitex_sdk/ui``
     """
-    return _Path(__file__).parent / "static" / "scitex_sdk" / "ui"
+    return (_Path(__file__).parent / "static" / "scitex_sdk" / "ui").resolve()
 
 
 def get_docs_path() -> _Path:

@@ -105,3 +105,11 @@ def test_generated_plugin_runs_the_same_view_at_root_and_under_a_host_mount(tmp_
         mounted = client.get("/mounted/")
         assert (root.status_code, mounted.status_code) == (200, 200)
         assert b'content="/mounted"' in mounted.content and b'content=""' in root.content
+
+
+def test_static_directory_and_frontend_owner_agree_through_a_symlink(tmp_path, monkeypatch):
+    root = get_frontend_package_dir()
+    alias = tmp_path / "sdk-alias"
+    alias.symlink_to(root, target_is_directory=True)
+    monkeypatch.setattr(ui, "__file__", str(alias / "ui/__init__.py"))
+    assert ui.get_static_dir() == root / "ui/static/scitex_sdk/ui"
