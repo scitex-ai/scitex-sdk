@@ -46,6 +46,12 @@ jobs:
         with:
           ref: ${{ steps.ver.outputs.version }}
           fetch-depth: 0
+      - name: Use a job-owned Python tool cache
+        run: |
+          tool_cache="$RUNNER_TEMP/scitex-sdk-release-python-tools-${{ matrix.python-version }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$tool_cache"
+          printf '%s\n' "RUNNER_TOOL_CACHE=$tool_cache" \
+            "AGENT_TOOLSDIRECTORY=$tool_cache" >> "$GITHUB_ENV"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -88,6 +94,12 @@ jobs:
         with:
           ref: ${{ steps.ver.outputs.version }}
           fetch-depth: 0
+      - name: Use a job-owned Python tool cache
+        run: |
+          tool_cache="$RUNNER_TEMP/scitex-sdk-release-build-python-tools-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$tool_cache"
+          printf '%s\n' "RUNNER_TOOL_CACHE=$tool_cache" \
+            "AGENT_TOOLSDIRECTORY=$tool_cache" >> "$GITHUB_ENV"
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
