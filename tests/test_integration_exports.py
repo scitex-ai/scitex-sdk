@@ -5,30 +5,81 @@ import subprocess
 import sys
 
 import pytest
+
 from scitex_sdk import app, ui
 
 
 @pytest.mark.parametrize("name", ["i18n", "plugins", "project_context"])
+def test_owned_app_integration_module_is_advertised(name):
+    # Arrange
+    owner = app
+    # Act
+    exports = owner.__all__
+    # Assert
+    assert name in exports
+
+
+@pytest.mark.parametrize("name", ["i18n", "plugins", "project_context"])
 def test_owned_app_integration_module_identity(name):
-    assert name in app.__all__
-    assert getattr(app, name) is importlib.import_module(f"scitex_sdk.app.{name}")
+    # Arrange
+    expected_module = f"scitex_sdk.app.{name}"
+    # Act
+    value = getattr(app, name)
+    # Assert
+    assert value is importlib.import_module(expected_module)
+
+
+@pytest.mark.parametrize("name", ["branding", "mount", "project_scope"])
+def test_owned_ui_integration_module_is_advertised(name):
+    # Arrange
+    owner = ui
+    # Act
+    exports = owner.__all__
+    # Assert
+    assert name in exports
 
 
 @pytest.mark.parametrize("name", ["branding", "mount", "project_scope"])
 def test_owned_ui_integration_module_identity(name):
-    assert name in ui.__all__
-    assert getattr(ui, name) is importlib.import_module(f"scitex_sdk.ui.{name}")
+    # Arrange
+    expected_module = f"scitex_sdk.ui.{name}"
+    # Act
+    value = getattr(ui, name)
+    # Assert
+    assert value is importlib.import_module(expected_module)
+
+
+@pytest.mark.parametrize("name", ["mount_context", "mount_prefix"])
+def test_ui_mount_helper_is_advertised(name):
+    # Arrange
+    owner = ui
+    # Act
+    exports = owner.__all__
+    # Assert
+    assert name in exports
 
 
 @pytest.mark.parametrize("name", ["mount_context", "mount_prefix"])
 def test_ui_mount_helper_is_the_existing_ui_function(name):
-    assert name in ui.__all__
-    assert getattr(ui, name) is getattr(importlib.import_module("scitex_sdk.ui.mount"), name)
-    assert ui.mount_prefix is not app.embed.mount_prefix
+    # Arrange
+    expected_module = "scitex_sdk.ui.mount"
+    # Act
+    value = getattr(ui, name)
+    # Assert
+    assert value is getattr(importlib.import_module(expected_module), name)
 
 
-def test_integration_exports_in_a_cold_process_without_retired_imports():
-    code = '''
+def test_ui_mount_prefix_remains_distinct_from_the_app_mount_prefix():
+    # Arrange
+    app_prefix = app.embed.mount_prefix
+    # Act
+    ui_prefix = ui.mount_prefix
+    # Assert
+    assert ui_prefix is not app_prefix
+
+
+def _cold_exports():
+    code = """
 import importlib, importlib.abc, json, sys
 class RetiredImports(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
@@ -44,7 +95,24 @@ for name in ['mount_context', 'mount_prefix']:
     assert getattr(ui, name) is getattr(importlib.import_module('scitex_sdk.ui.mount'), name)
 assert not any(name.split('.')[0] in {'scitex_app', 'scitex_ui'} for name in sys.modules)
 print(json.dumps({'owned_integration_exports': 8, 'retired_imports': False}))
-'''
-    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+"""
+    return subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=False)
+
+
+def test_integration_exports_exit_cleanly_in_a_cold_process_without_retired_imports():
+    # Arrange
+    run = _cold_exports
+    # Act
+    result = run()
+    # Assert
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout) == {"owned_integration_exports": 8, "retired_imports": False}
+
+
+def test_integration_exports_report_owned_identities_as_json_in_a_cold_process():
+    # Arrange
+    run = _cold_exports
+    # Act
+    result = run()
+    payload = json.loads(result.stdout)
+    # Assert
+    assert payload == {"owned_integration_exports": 8, "retired_imports": False}
