@@ -16,14 +16,17 @@ class Provider:
         self.stored = "alice/beta"
         self.calls = []
         self.remembered = []
+        self.reads = []
 
     def list_projects(self, request):
+        self.reads.append("list")
         return [
             scope.ProjectEntry("alice/alpha", "Alpha"),
             scope.ProjectEntry("alice/beta", "Beta"),
         ]
 
     def last_visited(self, request):
+        self.reads.append("last")
         return self.stored
 
     def remember(self, request, project_id):
@@ -92,14 +95,78 @@ def test_ui_resolution_and_post_response_use_the_same_canonical_identity():
     assert provider.remembered == ["alice/alpha"]
 
 
-@pytest.mark.parametrize("selected", [["17"], {"id": "17"}, 17])
-def test_listing_refuses_nonstring_selectors(selected):
+@pytest.mark.parametrize(
+    "selected", [None, "", 0, 0.0, False, True, [], {}, ["17"], {"id": "17"}, 17]
+)
+def test_listing_refuses_invalid_selectors_before_provider_reads(selected):
     provider = Provider()
     posted = RequestFactory().post(
         "/scope/", {"id": selected}, content_type="application/json"
     )
     response = scope.project_listing_view(provider)(posted)
-    assert response.status_code == 403 and provider.remembered == []
+    assert response.status_code == 403
+    assert response.content == b'{"error": "project not accessible"}'
+    assert provider.reads == [] and provider.calls == []
+    assert provider.remembered == [] and provider.stored == "alice/beta"
+
+
+@pytest.mark.parametrize(
+    "body", [
+        b"", b"{", b"not-json", b"\xff", b"[]", b"null", b"true", b"17", b'"17"', b"{}"
+    ]
+)
+def test_listing_refuses_missing_or_malformed_body_before_provider_factory(body):
+    provider = Provider()
+    factory_calls = []
+
+    def factory(req):
+        factory_calls.append(req)
+        return provider
+
+    posted = RequestFactory().generic(
+        "POST", "/scope/", body, content_type="application/json"
+    )
+    response = scope.project_listing_view(factory)(posted)
+    assert response.status_code == 403
+    assert response.content == b'{"error": "project not accessible"}'
+    assert factory_calls == [] and provider.reads == [] and provider.calls == []
+    assert provider.remembered == [] and provider.stored == "alice/beta"
+
+
+def test_listing_denied_alias_never_reads_stored_selection_or_remembers():
+    provider = Provider("bob/private")
+    posted = RequestFactory().post(
+        "/scope/", {"id": "17"}, content_type="application/json"
+    )
+    response = scope.project_listing_view(provider)(posted)
+    assert response.status_code == 403
+    assert provider.reads == ["list"] and provider.calls == ["17"]
+    assert provider.remembered == [] and provider.stored == "alice/beta"
+
+
+def test_listing_valid_id_resolves_provider_factory_and_remembers():
+    provider = Provider("not-listed")
+    factory_calls = []
+
+    def factory(req):
+        factory_calls.append(req)
+        return provider
+
+    posted = RequestFactory().post(
+        "/scope/", {"id": "alice/alpha"}, content_type="application/json"
+    )
+    response = scope.project_listing_view(factory)(posted)
+    assert response.status_code == 200
+    assert response.content == b'{"current": "alice/alpha"}'
+    assert factory_calls == [posted] and provider.reads == ["list"]
+    assert provider.calls == [] and provider.remembered == ["alice/alpha"]
+
+
+def test_navigation_without_selection_keeps_authorized_stored_fallback():
+    provider = Provider()
+    assert scope.resolve_project(request(), provider) == "alice/beta"
+    assert provider.reads == ["list", "last"] and provider.calls == []
+    assert provider.remembered == [] and provider.stored == "alice/beta"
 
 
 def test_provider_fault_is_unavailable_without_remembering():
