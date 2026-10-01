@@ -43,6 +43,24 @@ def get_docs_path() -> _Path:
     return _Path(__file__).parent.parent / "_docs"
 
 
-__all__ = ["__version__", "get_component", "list_components", "register_component", "get_static_dir", "get_docs_path"]
+__all__ = [
+    "__version__", "get_component", "list_components", "register_component",
+    "get_static_dir", "get_docs_path", "branding", "mount", "project_scope",
+    "mount_context", "mount_prefix",
+]
+
+
+def __getattr__(name: str):
+    """Preserve SDK integration APIs through owned modules loaded on demand."""
+    from importlib import import_module
+
+    if name in {"branding", "mount", "project_scope"}:
+        value = import_module(f"{__name__}.{name}")
+    elif name in {"mount_context", "mount_prefix"}:
+        value = getattr(import_module(f"{__name__}.mount"), name)
+    else:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    globals()[name] = value
+    return value
 
 # EOF

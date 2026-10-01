@@ -68,6 +68,9 @@ __all__ = [
     # back-compat); the function `validate` above is the flat-API
     # alias for `appmaker.validate`. Different names → both coexist.
     "validator",
+    "i18n",
+    "plugins",
+    "project_context",
 ]
 
 
@@ -80,6 +83,12 @@ def __getattr__(name: str):
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     _LOADING.add(name)
     try:
+        if name in {"i18n", "plugins", "project_context"}:
+            from importlib import import_module
+
+            value = import_module(f"{__name__}.{name}")
+            globals()[name] = value
+            return value
         if name == "chat":
             from . import _chat
 
