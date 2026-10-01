@@ -87,7 +87,9 @@ and source review are required to close those behaviors. The manually reviewed
 source association in the policy is not Git provenance attested by pip.
 
 Unregistered genuine release floors/commits, malformed inventory and missing
-consumers fail before any resolver environment is created. The current policy
-is intentionally incomplete. Its failure is not skipped or converted into a
+consumers fail before any resolver environment is created. Unpublished candidates are recorded as reviewed associations only. Their
+canonical release versions and final release commits remain explicit nulls until
+a genuine public release is registered. The current policy is intentionally
+incomplete. Its failure is not skipped or converted into a
 ready status. `app-ui-retirement.yml` is a read-only manual evidence workflow;
 it has no publish, repository-admin or protection mutation job.
