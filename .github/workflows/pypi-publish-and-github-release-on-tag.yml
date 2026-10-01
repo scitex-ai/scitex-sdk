@@ -49,7 +49,7 @@ jobs:
       - name: Isolate release state and caches
         run: |
           set -euo pipefail
-          release_state="$RUNNER_TEMP/scitex-sdk-release-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          release_state="$RUNNER_TEMP/scitex-sdk-release-${GITHUB_JOB}-${{ matrix.python-version }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           mkdir -p "$release_state/scitex" "$release_state/pycache" \
             "$release_state/pip-cache" "$release_state/tmp"
           printf '%s\n' "SCITEX_DIR=$release_state/scitex" \
