@@ -51,6 +51,9 @@ def test_react_scaffold_uses_the_installed_sdk_frontend_and_packed_links(tmp_pat
     assert (manifest["dependencies"]["@scitex/sdk"], (frontend / ".npmrc").read_text()) == (
         f"file:{get_frontend_package_dir().as_posix()}", "install-links=true\n"
     )
+    vite = (frontend / "vite.config.ts").read_text()
+    assert "execSync" not in vite and "alias:" not in vite
+    assert 'dedupe: ["react", "react-dom"]' in vite
 
 
 def test_scaffold_emits_canonical_dependencies_and_imports(tmp_path):

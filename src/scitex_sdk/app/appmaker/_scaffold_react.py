@@ -37,35 +37,14 @@ def _package_json(name, label):
 
 def _vite_config_ts(name):
     static_out = f"../static/{name}/js"
-    return f"""import {{ execSync }} from "child_process";
-import {{ defineConfig }} from "vite";
+    return f"""import {{ defineConfig }} from "vite";
 import react from "@vitejs/plugin-react";
 
-/**
- * Discover SDK UI assets from the Python environment.
- * Works for both pip-installed packages and editable (dev) installs.
- */
-function discoverScitexUiStatic(): string | null {{
-  if (process.env.SCITEX_UI_STATIC) return process.env.SCITEX_UI_STATIC;
-  try {{
-    return execSync(
-      'python3 -c "from scitex_sdk import ui; print(ui.get_static_dir())"',
-      {{ encoding: "utf-8", timeout: 5000 }},
-    ).trim();
-  }} catch {{
-    return null;
-  }}
-}}
-
-const SCITEX_UI_STATIC = discoverScitexUiStatic();
-
-// https://vitejs.dev/config/
+// Resolve UI components through the installed @scitex/sdk export contract.
 export default defineConfig({{
   plugins: [react()],
   resolve: {{
-    alias: {{
-      ...(SCITEX_UI_STATIC ? {{ "@scitex/sdk/ui": SCITEX_UI_STATIC }} : {{}}),
-    }},
+    dedupe: ["react", "react-dom"],
   }},
   build: {{
     outDir: "{static_out}",
@@ -77,11 +56,6 @@ export default defineConfig({{
         chunkFileNames: "[name].js",
         assetFileNames: "[name][extname]",
       }},
-    }},
-  }},
-  server: {{
-    fs: {{
-      allow: [".", ...(SCITEX_UI_STATIC ? [SCITEX_UI_STATIC] : [])],
     }},
   }},
 }});
