@@ -1,0 +1,295 @@
+{
+  "schema_version": 1,
+  "completeness": "LOWER_BOUND",
+  "completeness_reason": "Class names added from caller-supplied values cannot be derived statically. Treat this manifest as a lower bound: everything listed IS rendered by scitex-ui, but scitex-ui may render names not listed.",
+  "unenumerable_sites": [
+    "shell/workspace-files-tree/_handlers/ClipboardHandler.ts:234",
+    "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:122",
+    "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:140",
+    "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:165",
+    "shell/workspace-files-tree/_handlers/TreeInitHandler.ts:57"
+  ],
+  "modifiers_are_not_a_contract": "Modifiers are listed for fixtures only. Match them by grammar -- <entry>(?:--[\\w-]+)? -- because they are open-ended state.",
+  "generated_by": "tests/develop/test_class_manifest_matches_source.py",
+  "components": {
+    "stx-action-bar": {
+      "elements": [
+        "__item"
+      ],
+      "modifiers": []
+    },
+    "stx-app-combobox": {
+      "elements": [
+        "__empty",
+        "__group",
+        "__input",
+        "__item",
+        "__list",
+        "__menu"
+      ],
+      "modifiers": [
+        "--create",
+        "--disabled",
+        "--highlighted",
+        "--selected"
+      ]
+    },
+    "stx-app-confirm-modal": {
+      "elements": [
+        "__overlay"
+      ],
+      "modifiers": [
+        "--closing",
+        "--visible"
+      ]
+    },
+    "stx-app-dim": {
+      "elements": [
+        "__reason"
+      ],
+      "modifiers": [
+        "--actionable"
+      ]
+    },
+    "stx-app-dropdown": {
+      "elements": [
+        "__empty",
+        "__filter",
+        "__item",
+        "__menu",
+        "__separator"
+      ],
+      "modifiers": [
+        "--disabled"
+      ]
+    },
+    "stx-app-file-browser": {
+      "elements": [
+        "__badge",
+        "__chevron",
+        "__header",
+        "__item",
+        "__label",
+        "__symlink"
+      ],
+      "modifiers": [
+        "--active",
+        "--directory",
+        "--expanded"
+      ]
+    },
+    "stx-app-file-tabs": {
+      "elements": [
+        "__close",
+        "__dirty",
+        "__label",
+        "__new",
+        "__new-input",
+        "__rename-input",
+        "__tab"
+      ],
+      "modifiers": [
+        "--active",
+        "--dirty",
+        "--drag-over",
+        "--dragging"
+      ]
+    },
+    "stx-app-header": {
+      "elements": [
+        "__action",
+        "__actions",
+        "__slot",
+        "__title",
+        "__version"
+      ],
+      "modifiers": [
+        "--project-selector"
+      ]
+    },
+    "stx-app-help": {
+      "elements": [
+        "__button",
+        "__choice",
+        "__choices",
+        "__close",
+        "__count",
+        "__footer",
+        "__header",
+        "__nav",
+        "__panel",
+        "__panel-body",
+        "__replay",
+        "__step",
+        "__step-body",
+        "__step-icon",
+        "__step-title",
+        "__title",
+        "__tour",
+        "__tour-bubble",
+        "__tour-entry",
+        "__tour-highlight",
+        "__tour-meta"
+      ],
+      "modifiers": []
+    },
+    "stx-app-import-export": {
+      "elements": [
+        "__body",
+        "__confirm-bar",
+        "__confirm-text",
+        "__empty",
+        "__format",
+        "__format-detail",
+        "__format-label",
+        "__list",
+        "__panel",
+        "__title"
+      ],
+      "modifiers": [
+        "--open",
+        "--primary"
+      ]
+    },
+    "stx-app-launcher": {
+      "elements": [
+        "__empty",
+        "__glyph",
+        "__grid",
+        "__label",
+        "__panel",
+        "__tile",
+        "__tile-desc",
+        "__tile-icon",
+        "__tile-label",
+        "__trigger"
+      ],
+      "modifiers": [
+        "--current",
+        "--open"
+      ]
+    },
+    "stx-app-media-viewer": {
+      "elements": [
+        "__binary-wrapper",
+        "__btn",
+        "__download-btn",
+        "__error",
+        "__graphviz-wrapper",
+        "__image",
+        "__image-container",
+        "__image-wrapper",
+        "__mermaid-wrapper",
+        "__pdf-canvas",
+        "__pdf-container",
+        "__pdf-wrapper",
+        "__toolbar",
+        "__toolbar-right"
+      ],
+      "modifiers": []
+    },
+    "stx-app-pkg-sidebar": {
+      "elements": [
+        "__group-header",
+        "__item",
+        "__label",
+        "__version"
+      ],
+      "modifiers": [
+        "--active"
+      ]
+    },
+    "stx-app-project-selector": {
+      "elements": [
+        "__current",
+        "__empty",
+        "__list",
+        "__option",
+        "__option-detail",
+        "__option-name",
+        "__panel",
+        "__placeholder",
+        "__search",
+        "__trigger"
+      ],
+      "modifiers": [
+        "--active",
+        "--current",
+        "--open"
+      ]
+    },
+    "stx-app-selector-nav": {
+      "elements": [
+        "__footer",
+        "__item",
+        "__items",
+        "__label",
+        "__level"
+      ],
+      "modifiers": [
+        "--cascade"
+      ]
+    },
+    "stx-app-tooltip": {
+      "elements": [],
+      "modifiers": []
+    },
+    "stx-panes": {
+      "elements": [
+        "__pane",
+        "__tab",
+        "__tab-icon",
+        "__tab-label",
+        "__tabs"
+      ],
+      "modifiers": []
+    },
+    "stx-shell-resizer": {
+      "elements": [
+        "__toggle"
+      ],
+      "modifiers": [
+        "--active",
+        "--horizontal",
+        "--vertical"
+      ]
+    },
+    "stx-shell-sidebar": {
+      "elements": [
+        "__content",
+        "__header",
+        "__title",
+        "__toggle"
+      ],
+      "modifiers": [
+        "--collapsed"
+      ]
+    },
+    "stx-shell-status-bar": {
+      "elements": [
+        "__btn",
+        "__item"
+      ],
+      "modifiers": []
+    },
+    "stx-tour-player": {
+      "elements": [
+        "__chapter",
+        "__chapters",
+        "__control",
+        "__controls",
+        "__video"
+      ],
+      "modifiers": []
+    },
+    "wft-breadcrumb": {
+      "elements": [
+        "__segment",
+        "__separator"
+      ],
+      "modifiers": [
+        "--current"
+      ]
+    }
+  }
+}

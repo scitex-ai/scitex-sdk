@@ -1,0 +1,190 @@
+/* Panes: one column per screen on phones (ts/app/panes).
+ *
+ * Desktop: the panes sit side by side in a grid; the app sets the column widths
+ * with --stx-panes-columns, or opts out with data-stx-panes-layout="app" and
+ * keeps its own layout.
+ * Phone: the script adds .stx-panes--single; a sticky tab bar sits above the
+ * panes and only the active pane shows, at the height left between the site
+ * header and the dock. Before the script runs the panes simply stack.
+ */
+
+.stx-panes:not([data-stx-panes-layout="app"]) {
+  display: grid;
+  grid-template-columns: var(--stx-panes-columns, none);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  min-height: 0;
+}
+
+.stx-panes__tabs {
+  display: none;
+}
+
+.stx-panes__pane {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Opt-in sticky header row inside a pane (its title and controls). */
+.stx-panes--single > .stx-panes__pane > [data-stx-pane-header] {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-surface, #fff);
+}
+
+/* ── Phone ─────────────────────────────────────────────────────────── */
+
+/* The phone height subtracts the header and NOT the launcher.
+ *
+ * It used to subtract `--site-dock-height` too, which is the band the launcher
+ * overlay reserves nowhere (card ui-shared-brand-dock-tour-primitives-20260917,
+ * SSOT hub PR 923 §4: "The floating launcher overlays content; it does not
+ * reserve a full-width bottom strip. Apps use the full available viewport.").
+ * Subtracting it here made the phone panes permanently shorter by a floating
+ * overlay's height — the reservation, spelled in the SDK instead of the hub —
+ * while ts/shell/launcher-overlay.ts handles the one moment a control can
+ * actually be covered. A caller that genuinely wants the old height sets
+ * `--stx-panes-phone-height` explicitly. */
+.stx-panes.stx-panes--single {
+  display: flex;
+  flex-direction: column;
+  height: var(
+    --stx-panes-phone-height,
+    calc(100dvh - var(--site-header-height, var(--header-height, 0px)))
+  );
+  min-height: 0;
+}
+
+.stx-panes--single > .stx-panes__tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex: none;
+  gap: var(--spacing-xs, 4px);
+  padding: var(--spacing-xs, 4px);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  background: var(--bg-page, #faf9f7);
+  border-bottom: 1px solid var(--border-muted, #ddd);
+}
+
+.stx-panes--single > .stx-panes__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.stx-panes__tab {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: 1 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg, 6px);
+  background: transparent;
+  color: var(--text-secondary, #555);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.stx-panes__tab[aria-selected="true"] {
+  border-color: var(--border-default, #999);
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #222);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--text-primary, #222);
+}
+
+.stx-panes__tab:focus-visible {
+  outline: 2px solid var(--text-primary, #222);
+  outline-offset: -2px;
+}
+
+.stx-panes__tab-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.stx-panes--single > .stx-panes__pane {
+  display: none;
+}
+
+.stx-panes--single > .stx-panes__pane[data-stx-pane-active] {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* ── Accordion for secondary settings inside a pane ────────────────── */
+
+.stx-acc {
+  border: 1px solid var(--border-muted, #ddd);
+  border-radius: var(--radius-lg, 6px);
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #222);
+}
+
+.stx-acc + .stx-acc {
+  margin-top: var(--spacing-sm, 8px);
+}
+
+.stx-acc > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm, 8px);
+  min-height: 44px;
+  padding: 0 var(--spacing-md, 16px) 0 12px;
+  list-style: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stx-acc > summary::-webkit-details-marker {
+  display: none;
+}
+
+.stx-acc > summary::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--text-muted, #777);
+  border-bottom: 2px solid var(--text-muted, #777);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.15s ease;
+}
+
+.stx-acc[open] > summary::after {
+  transform: rotate(-135deg) translateY(-2px);
+}
+
+.stx-acc > summary:focus-visible {
+  outline: 2px solid var(--text-primary, #222);
+  outline-offset: -2px;
+  border-radius: var(--radius-lg, 6px);
+}
+
+.stx-acc[open] > summary {
+  border-bottom: 1px solid var(--border-muted, #ddd);
+}
+
+.stx-acc__body {
+  padding: 12px;
+}

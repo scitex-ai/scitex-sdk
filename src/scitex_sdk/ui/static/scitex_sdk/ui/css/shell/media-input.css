@@ -1,0 +1,234 @@
+/**
+ * Media Input Modal Styles — camera, sketch, voice
+ * Used by React components in shell/media-input/
+ */
+
+/* ── Modal overlay ─────────────────────────────── */
+
+.stx-shell-media-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+}
+
+.stx-shell-media-modal {
+  background: var(--workspace-bg-primary, #1a1a1a);
+  border: 1px solid var(--workspace-border-default, #3a3a3a);
+  border-radius: 10px;
+  max-width: 700px;
+  width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Header ─────────────────────────────────────── */
+
+.stx-shell-media-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--workspace-border-default, #3a3a3a);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--workspace-text-primary, #e0e0e0);
+}
+
+.stx-shell-media-modal__header button {
+  background: none;
+  border: none;
+  color: var(--workspace-text-muted, #888);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  border-radius: 4px;
+}
+
+.stx-shell-media-modal__header button:hover {
+  color: var(--workspace-text-primary, #e0e0e0);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Body ───────────────────────────────────────── */
+
+.stx-shell-media-modal__body {
+  flex: 1;
+  padding: 12px;
+  overflow: auto;
+}
+
+.stx-shell-media-modal__error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px;
+  color: #ef4444;
+  font-size: 13px;
+}
+
+.stx-shell-media-modal__error i {
+  font-size: 20px;
+}
+
+/* ── Actions ────────────────────────────────────── */
+
+.stx-shell-media-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--workspace-border-default, #3a3a3a);
+}
+
+/* ── Buttons ────────────────────────────────────── */
+
+.stx-shell-media-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.stx-shell-media-btn--primary {
+  background: var(--workspace-icon-primary, #059669);
+  color: #fff;
+}
+
+.stx-shell-media-btn--primary:hover {
+  filter: brightness(1.15);
+}
+
+.stx-shell-media-btn--primary:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: not-allowed;
+}
+
+.stx-shell-media-btn--secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--workspace-text-primary, #e0e0e0);
+}
+
+.stx-shell-media-btn--secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ── Sketch toolbar ─────────────────────────────── */
+
+.stx-shell-sketch-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--workspace-border-default, #3a3a3a);
+  flex-wrap: wrap;
+}
+
+.stx-shell-sketch-separator {
+  width: 1px;
+  height: 20px;
+  background: var(--workspace-border-default, #3a3a3a);
+  margin: 0 4px;
+}
+
+.stx-shell-sketch-tool {
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--workspace-text-muted, #888);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.stx-shell-sketch-tool:hover {
+  color: var(--workspace-text-primary, #e0e0e0);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.stx-shell-sketch-tool.active {
+  color: var(--workspace-icon-primary, #059669);
+  border-color: var(--workspace-icon-primary, #059669);
+  background: rgba(5, 150, 105, 0.1);
+}
+
+.stx-shell-sketch-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.stx-shell-sketch-swatch:hover {
+  transform: scale(1.2);
+}
+
+.stx-shell-sketch-swatch.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--workspace-icon-primary, #059669);
+}
+
+.stx-shell-sketch-width {
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--workspace-text-muted, #888);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stx-shell-sketch-width:hover {
+  color: var(--workspace-text-primary, #e0e0e0);
+}
+
+.stx-shell-sketch-width.active {
+  color: var(--workspace-icon-primary, #059669);
+  border-color: var(--workspace-icon-primary, #059669);
+}
+
+/* ── Recording indicator ────────────────────────── */
+
+.stx-shell-recording-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #ef4444;
+  animation: stx-recording-pulse 1.5s ease-in-out infinite;
+}
+
+.stx-shell-recording-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+
+@keyframes stx-recording-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

@@ -1,0 +1,200 @@
+/* =============================================================================
+ * SciTeX App -- Recent Pane (real-time file change feed)
+ * =============================================================================
+ * Prefix: stx-app-recent-pane
+ * Requires: shell/theme.css
+ *
+ * Ported from scitex-cloud's repo-monitor component.
+ * ============================================================================= */
+
+/* ----------------------------------------------------------------------------
+   Container
+   ---------------------------------------------------------------------------- */
+
+.stx-app-recent-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 30%;
+  min-height: 40px;
+  overflow: hidden;
+  border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+  position: relative;
+  z-index: 2;
+}
+
+.stx-app-recent-pane.collapsed {
+  flex: 0 0 24px !important;
+  min-height: 24px;
+}
+
+/* ----------------------------------------------------------------------------
+   Header bar -- always visible, click to toggle collapse
+   ---------------------------------------------------------------------------- */
+
+.stx-app-recent-pane__header {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  height: 24px;
+  min-height: 24px;
+  background: var(--workspace-bg-secondary, #f5f5f5);
+  font-size: 0.7rem;
+  color: var(--text-muted, #777777);
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.stx-app-recent-pane__header:hover {
+  background: var(--workspace-bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+/* Clock icon */
+.stx-app-recent-pane__icon {
+  font-size: 0.65rem;
+}
+
+/* "Recent" label */
+.stx-app-recent-pane__title {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted, #777777);
+}
+
+/* Entry count badge */
+.stx-app-recent-pane__badge {
+  font-size: 0.6rem;
+  color: var(--text-dimmed, #999999);
+  margin-left: 2px;
+}
+
+/* ----------------------------------------------------------------------------
+   Toolbar -- buttons inside the header (pushed to the right)
+   ---------------------------------------------------------------------------- */
+
+.stx-app-recent-pane__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.stx-app-recent-pane__btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: var(--text-muted, #777777);
+  font-size: 0.65rem;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.stx-app-recent-pane__btn:hover {
+  color: var(--text-primary, #333333);
+  background: var(--workspace-bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+.stx-app-recent-pane__btn--active {
+  color: var(--status-success, #059669);
+}
+
+.stx-app-recent-pane__btn:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: default;
+}
+
+.stx-app-recent-pane__btn:disabled:hover {
+  background: none;
+  color: var(--text-muted, #777777);
+}
+
+/* ----------------------------------------------------------------------------
+   Feed -- scrollable list of events
+   ---------------------------------------------------------------------------- */
+
+.stx-app-recent-pane__feed {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* ----------------------------------------------------------------------------
+   Individual entry
+   ---------------------------------------------------------------------------- */
+
+.stx-app-recent-pane__entry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px 1px 4px;
+  font: inherit;
+  min-height: 20px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.stx-app-recent-pane__entry:hover {
+  background-color: var(--workspace-bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+/* Event-type colour coding */
+.stx-app-recent-pane__entry--create {
+  color: var(--status-success, #059669);
+}
+
+.stx-app-recent-pane__entry--modify {
+  color: var(--status-warning, #d97706);
+}
+
+.stx-app-recent-pane__entry--delete {
+  color: var(--status-error, #a67373);
+}
+
+.stx-app-recent-pane__entry--move {
+  color: var(--status-info, #2563eb);
+}
+
+/* Event icon (+ ~ - arrow) */
+.stx-app-recent-pane__event-icon {
+  width: 12px;
+  text-align: center;
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+
+/* File path */
+.stx-app-recent-pane__path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+  font-weight: 400;
+  font-size: 0.7rem;
+}
+
+/* Timestamp */
+.stx-app-recent-pane__time {
+  font-size: 0.6rem;
+  color: var(--text-dimmed, #999999);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------------------------
+   Empty state
+   ---------------------------------------------------------------------------- */
+
+.stx-app-recent-pane__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  font-size: 0.7rem;
+  color: var(--text-dimmed, #999999);
+  font-style: italic;
+}

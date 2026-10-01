@@ -1,0 +1,15 @@
+{% comment %}
+Mount marker — the server half of the dual-mode contract.
+
+Emitted for ts/_base/mount.ts's `mountPrefix()`, which throws when no marker is
+present rather than guessing a root mount. standalone_shell.html includes this
+in its <head>; a GUI that owns its own layout can include it directly the same
+way it includes _branding_head.html, with no shell adoption.
+
+The context comes from scitex_sdk.ui.mount.mount_context(request, view_path=...).
+
+WHY THE FLAG AND NOT `{% if stx_mount_prefix %}`: a root mount IS the empty
+string, so testing the value alone emits nothing in standalone mode — and "no
+marker" is what the reader treats as an integration bug. Mounted-at-root and
+nobody-declared-anything must not render identically.
+{% endcomment %}{% if stx_mount_declared %}<meta name="stx-mount" content="{{ stx_mount_prefix }}" />{% endif %}

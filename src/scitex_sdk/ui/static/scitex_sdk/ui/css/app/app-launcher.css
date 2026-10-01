@@ -1,0 +1,147 @@
+/* App launcher — the standard app-navigation pattern (compass L624).
+ *
+ * A grid-glyph trigger opens a panel of app TILES in a CSS grid. The DATA
+ * comes from the consuming app (which apps exist, their routes); this
+ * stylesheet owns the pattern's appearance. The grid glyph (田) is a single
+ * self-contained character in the platform font — no icon font, no SVG.
+ *
+ * Desktop: 4-column grid. Mobile (<=768px): 3-column grid, same 44px
+ * min-height per tile so touch targets stay WCAG 2.5.5-compliant.
+ */
+
+.stx-app-launcher {
+  position: relative;
+  display: inline-block;
+  min-width: 200px;
+}
+
+.stx-app-launcher__trigger {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs, 4px);
+  width: 100%;
+  height: var(--button-height, 36px);
+  padding: 0 12px;
+
+  border: 1px solid var(--border-default, #999);
+  border-radius: var(--radius-md, 4px);
+  background: var(--bg-surface, #f8f7f5);
+  color: var(--text-primary, #333);
+
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* The grid glyph — a single character, no icon font. */
+.stx-app-launcher__glyph {
+  font-size: 1.15em;
+  line-height: 1;
+  flex: none;
+}
+
+.stx-app-launcher__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stx-app-launcher__trigger:hover:not(:disabled) {
+  border-color: var(--border-muted, #c0c0c0);
+}
+
+.stx-app-launcher__panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + var(--spacing-xs, 4px));
+  left: 0;
+  min-width: 280px;
+  z-index: 100;
+
+  background: var(--bg-surface, #f8f7f5);
+  border: 1px solid var(--border-default, #999);
+  border-radius: var(--radius-md, 4px);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+}
+
+.stx-app-launcher--open .stx-app-launcher__panel {
+  display: block;
+}
+
+.stx-app-launcher__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-xs, 4px);
+  padding: var(--spacing-sm, 8px);
+}
+
+/* Real <button> tiles — platform keyboard operability for free. */
+.stx-app-launcher__tile {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 8px 6px;
+
+  border: none;
+  border-radius: var(--radius-sm, 3px);
+  background: none;
+  color: var(--text-primary, #333);
+
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.stx-app-launcher__tile:hover {
+  background: var(--bg-muted, #e8e7e5);
+}
+
+.stx-app-launcher__tile--current {
+  background: var(--bg-muted, #e8e7e5);
+  font-weight: 600;
+}
+
+.stx-app-launcher__tile-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  width: 100%;
+  text-align: center;
+  overflow: hidden;
+}
+
+.stx-app-launcher__tile-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.stx-app-launcher__tile-desc {
+  color: var(--text-muted, #777);
+  font-size: 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.stx-app-launcher__empty {
+  grid-column: 1 / -1;
+  padding: 10px;
+  color: var(--text-muted, #777);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Mobile: narrower grid, 3 columns, same 44px minimum per tile. */
+@media (max-width: 768px) {
+  .stx-app-launcher__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

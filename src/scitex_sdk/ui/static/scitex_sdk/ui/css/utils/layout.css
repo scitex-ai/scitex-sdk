@@ -1,0 +1,99 @@
+/* ── Layout Utilities ─────────────────────────────────────
+ * Reusable layout classes for scitex-ui apps.
+ * Prefix: stx-layout-*
+ * ──────────────────────────────────────────────────────── */
+
+/* Push element to the far right within a flex container */
+.stx-layout-most-right {
+  margin-left: auto !important;
+}
+
+/* Push element to the far left within a flex container */
+.stx-layout-most-left {
+  margin-right: auto !important;
+}
+
+/* Push element to the far bottom within a flex column container */
+.stx-layout-most-bottom {
+  margin-top: auto !important;
+}
+
+/* Push element to the far top within a flex column container */
+.stx-layout-most-top {
+  margin-bottom: auto !important;
+}
+
+/* ── Pane row ─────────────────────────────────────────────
+ * A row of side-by-side panes on desktop that becomes one full-width
+ * swipe page per pane on a phone.
+ *
+ * WHY THIS EXISTS. The shell already gives WORKSPACE panes a single-pane mode
+ * on mobile, but nothing gave an APP's own internal panes the same treatment —
+ * so every leaf app re-invented (or skipped) it. Measured on scitex.ai
+ * 2026-08-04 at viewport 390: Scholar's library row laid its panels out at
+ * x=362 (w=280) and x=371 (w=263), i.e. past the right edge, inside a container
+ * with `overflow-x: hidden`. They were not merely off-screen — they were
+ * UNREACHABLE. The visible pane's empty state read "click any paper from the
+ * list" while the list itself sat in a discarded panel.
+ *
+ * WHY SWIPE AND NOT A BACK BUTTON. Operator decision, 2026-08-04:
+ * 「ペインごとにひだり、右、とスライドできると嬉しいですかね」— back-navigation
+ * was considered and explicitly rejected. Peer panes are siblings, not a stack.
+ *
+ * WHY CSS AND NOT JS. scroll-snap gives the gesture natively. Note that
+ * ts/shell/mobile-swipe.ts implements TWO-FINGER VERTICAL collapse — a
+ * different gesture; do not extend it for this.
+ *
+ * USAGE
+ *   <div class="stx-layout-pane-row">
+ *     <section>…list…</section>
+ *     <div class="stx-layout-pane-resizer"></div>   (optional; hidden on mobile)
+ *     <section>…detail…</section>
+ *   </div>
+ *
+ * Deliberately carries NO `!important`: this is an opt-in contract, so an
+ * adopting app must not also set a competing flex-direction/overflow on the
+ * same element. If you find yourself needing !important to make it bite, the
+ * app has a conflicting rule — fix that instead, or the next person inherits a
+ * specificity fight. (Exactly such a fight is why hub's Scholar CSS needed
+ * !important: an unconditional `flex-direction: row !important` sat LATER in
+ * its file than the @media block meant to override it, silently killing it at
+ * every viewport.)
+ *
+ * Resizers are hidden rather than merely narrowed because a drag handle
+ * matched by `> *` becomes its OWN full-width swipe page — measured: a 2px
+ * handle took x=380 w=380, putting a blank screen between every pair of panes.
+ * ──────────────────────────────────────────────────────── */
+
+.stx-layout-pane-row {
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .stx-layout-pane-row {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  /* Drag handles are meaningless once each pane fills the screen. */
+  .stx-layout-pane-row > .stx-layout-pane-resizer,
+  .stx-layout-pane-row > .h-resizer {
+    display: none;
+  }
+
+  /* One pane = one full-width, snap-aligned page. */
+  .stx-layout-pane-row > *:not(.stx-layout-pane-resizer):not(.h-resizer) {
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    scroll-snap-align: start;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

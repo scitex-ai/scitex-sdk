@@ -1,0 +1,363 @@
+/* =============================================================================
+ * SciTeX Theme — Semantic Color Tokens
+ * =============================================================================
+ * Single source of truth for the SciTeX design system.
+ * Activate via: <html data-theme="light"> or <html data-theme="dark">
+ * ============================================================================= */
+
+:root,
+[data-theme="light"] {
+  /* --- Typography ---
+   * Mirrors primitives/typography-vars.css. Duplicated deliberately: the shell
+   * loads only shell/*.css, and 0.7.0 pulled in a second stylesheet just for
+   * these three tokens — a render-blocking request on every page for ~600B.
+   * A test asserts these stay identical to the primitives layer, so the copy
+   * fails CI if the two drift rather than diverging silently. */
+  --base-font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --heading-font-family: var(--base-font-family);
+  --mono-font-family:
+    ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, Monaco,
+    "Andale Mono", monospace;
+  --base-font-size: 14px;
+  --base-line-height: 1.6;
+
+  /* --- Text --- */
+  --text-primary: #333333;
+  --text-secondary: #4a4a4a;
+  --text-muted: #777777;
+  --text-inverse: #f8f7f5;
+  /* See primitives/colors.css for the measurement. Defined HERE TOO because
+     this file carries its own copy of the palette: a page linking only
+     shell/theme.css (which is what css/app/context-menu.css documents as its
+     dependency) never sees primitives/colors.css. Defining it in one place
+     only is the exact bug that made the context menu render dark-on-dark. */
+  --text-link: #2c5d8f;
+  --text-link-hover: #24507c; /* 7.94:1 on --bg-page #faf9f7; darker
+                                than --text-link's 6.50:1 so hover is a
+                                perceptible change, not just a colour */
+  /* MIRRORS primitives/colors/_light.css, value unchanged. theme.css is
+     documented as consumable ALONE (css/app/context-menu.css: "Requires:
+     shell/theme.css — and ONLY that"), and app/combobox.css consumes
+     var(--accent) at three sites — so an app linking only this file rendered
+     the combobox accent as nothing. Every other palette token already honoured
+     that contract: --text-link, --bg-surface and --text-primary are each
+     declared in BOTH layers; --accent was the one that was not. */
+  --accent: #1a2a40; /* SciTeX navy, = --color-primary in primitives */
+
+  /* MIRRORS primitives/colors/_light.css, values unchanged. Same contract as
+     --accent above, three more tokens: theme.css documents itself as the single
+     source a page may link ALONE, and these resolved to NOTHING there while
+     consumers painted surfaces and focus rings with them (measured 2026-09-17 on
+     a rendered page, both themes — card
+     ui-shared-brand-dock-tour-primitives-20260917). A token whose value is
+     missing renders as an undefined colour, which is indistinguishable from a
+     layout bug and silent in both. */
+  --color-primary: #1a2a40;
+  --color-on-primary: #ffffff;
+  --focus-ring-color: rgba(26, 42, 64, 0.35);
+
+  /* --- Background --- */
+  --bg-page: #faf9f7;
+  --bg-surface: #f8f7f5;
+  --bg-muted: #f3f2f0;
+
+  /* --- Border --- */
+  --border-default: #999999;
+  --border-muted: #c0c0c0;
+
+  /* --- Workspace --- */
+  --workspace-bg-primary: #f5f4f2;
+  --workspace-bg-secondary: #efeeed;
+  --workspace-bg-tertiary: #e8e7e5;
+  --workspace-bg-elevated: #fdfcfa;
+  --workspace-bg-monaco: #fdfcfa;
+  --workspace-border-subtle: #dddcda;
+  --workspace-border-default: #c0bfbd;
+  --workspace-border-hover: #999897;
+  --workspace-border-active: #777675;
+  --workspace-bg-hover: rgba(0, 0, 0, 0.04);
+  --workspace-bg-active: rgba(0, 0, 0, 0.08);
+  --workspace-slider-hover: #777675;
+  --workspace-slider-active: #5f5e5d;
+  --workspace-ruler-bg: #e0dfdd;
+  --workspace-ruler-border: #d0cfcd;
+  --workspace-text-primary: #24292f;
+  --workspace-text-secondary: #57606a;
+
+  /* --- Icons --- */
+  --workspace-icon-primary: #6b6b6b;
+  --workspace-icon-secondary: #6b6b6b;
+  --workspace-icon-muted: #9a9a9a;
+  --workspace-icon-hover: #4a4a4a;
+  --workspace-icon-active: #3d3d3d;
+
+  /* --- Status --- */
+  --status-success: #5a9a7e;
+  --status-warning: #c4561a;
+  --status-error: #a67373;
+  --status-info: #6b7280;
+
+  /* --- Icon Size Scale --- */
+  --icon-xs: 12px;
+  --icon-sm: 14px;
+  --icon-md: 16px;
+  --icon-lg: 20px;
+  --icon-xl: 24px;
+  --icon-2xl: 32px;
+
+  /* --- UI Sizing --- */
+  --ui-nav-icon-size: var(--icon-lg);
+  --ui-collapsed-pane-width: 48px;
+
+  /* --- Responsive shell primitives (compass L: shared mobile/PWA tokens) ---
+   * Single source so leaf apps + hub reference the SAME values instead of
+   * re-hardcoding 768px / 44px / env(safe-area-inset-*) per app. These are
+   * the "smallest shared responsive primitives" — tokens only; the narrow
+   * layout rules that consume them live in shell/mobile.css.
+   *
+   * --stx-narrow-breakpoint: the mobile boundary. mobile.css' @media block
+   * uses a literal 768px today (kept for the @media selector, which cannot
+   * take a var()); this token is the documented single value so any JS/inline
+   * or future rule agrees with it. Keep them in sync.
+   * --stx-touch-target-min: WCAG 2.5.5 / Apple HIG 44px minimum tappable size.
+   * --stx-safe-inset-*: PWA-standalone notch / gesture-bar insets. env() with a
+   *   0px fallback so the tokens are safe in non-standalone (browser) contexts
+   *   where env(safe-area-inset-*) is unavailable (resolves to 0, not unset).
+   */
+  --stx-narrow-breakpoint: 768px;
+  --stx-touch-target-min: 44px;
+  --stx-safe-inset-top: env(safe-area-inset-top, 0px);
+  --stx-safe-inset-right: env(safe-area-inset-right, 0px);
+  --stx-safe-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --stx-safe-inset-left: env(safe-area-inset-left, 0px);
+
+  /* SciTeX brand palette (operator 2026-09-15): navy #1a2a40 + gold #b8956a.
+     Scales are theme-independent; the --stx-* roles below switch per theme.
+     Chrome (buttons, header strip, tabs, dock, badges) uses the roles only. */
+  --stx-navy-50: #f3f6fa;
+  --stx-navy-100: #e1e8f1;
+  --stx-navy-200: #c3d0e0;
+  --stx-navy-300: #98acc6;
+  --stx-navy-400: #6d88aa;
+  --stx-navy-500: #4d6a8f;
+  --stx-navy-600: #3a5475;
+  --stx-navy-700: #2c425e;
+  --stx-navy-800: #22354d;
+  --stx-navy-900: #1a2a40;
+  --stx-navy-950: #0f1826;
+  --stx-gold-50: #faf6f0;
+  --stx-gold-100: #f3eadd;
+  --stx-gold-200: #e8d6be;
+  --stx-gold-300: #d4a87a; /* the dark-theme gold */
+  --stx-gold-400: #c7a67f;
+  --stx-gold-500: #b8956a; /* anchor: pricing FAQ "?" gold */
+  --stx-gold-600: #8c6c44; /* 4.5:1 on light surfaces: gold text/icons */
+  --stx-gold-700: #6f5536;
+  --stx-gold-800: #554129;
+  --stx-gold-900: #3b2d1d;
+  /* App ICON tiles only: an app picks one hue for its launcher icon. Never
+     used for chrome. No purple by design. */
+  --stx-hue-navy: #2c425e;
+  --stx-hue-steel: #34689c;
+  --stx-hue-teal: #1d7a80;
+  --stx-hue-sage: #4c7a57;
+  --stx-hue-gold: #b8956a;
+  --stx-hue-copper: #a65a2e;
+  --stx-hue-brick: #a3423d;
+  --stx-hue-slate: #56606d;
+
+  /* Brand roles, light. --stx-accent is the one chrome accent on every app. */
+  --stx-brand: #1a2a40;
+  --stx-gold: #b8956a;
+  --stx-accent: #8c6c44;
+
+  /* The foreground that is legible ON each brand surface, so a consumer never
+     has to pick a scale and hope. Measured in chromium, both themes:
+       --stx-brand flips hue (light navy #1a2a40, dark gold #d4a87a) while the
+       scales are declared once, so pairing --stx-brand with either scale is
+       1.00:1 in exactly one theme (gold on brand in dark, navy on brand in
+       light). Two roles rather than one because the two brand surfaces differ
+       in light and coincide in dark. */
+  --stx-on-brand: #f8f7f5; /* 13.7:1 on the navy brand surface */
+  --stx-on-gold: #1a2a40; /* 5.2:1 on gold #b8956a, 6.7:1 on dark gold #d4a87a */
+  --stx-accent-tint: rgba(184, 149, 106, 0.12);
+  --stx-success: #2f7d5b;
+  --stx-warning: #c4561a;
+  --stx-danger: #b3403a;
+  --stx-info: #4d6a8f;
+
+  /* --- Preset App Accent Colors --- */
+  --app-accent-color: transparent;
+  --app-accent-tint: transparent;
+  --app-accent-writer: var(--stx-accent);
+  --app-accent-writer-tint: var(--stx-accent-tint);
+  --app-accent-scholar: var(--stx-accent);
+  --app-accent-scholar-tint: var(--stx-accent-tint);
+  --app-accent-visualizer: var(--stx-accent);
+  --app-accent-visualizer-tint: var(--stx-accent-tint);
+  --app-accent-console: var(--stx-accent);
+  --app-accent-console-tint: var(--stx-accent-tint);
+  --app-accent-clew: var(--stx-accent);
+  --app-accent-clew-tint: var(--stx-accent-tint);
+  --app-accent-figrecipe: var(--stx-accent);
+  --app-accent-figrecipe-tint: var(--stx-accent-tint);
+  --app-accent-docs: var(--stx-accent);
+  --app-accent-docs-tint: var(--stx-accent-tint);
+  --app-accent-hub: var(--stx-accent);
+  --app-accent-hub-tint: var(--stx-accent-tint);
+  --app-accent-tools: var(--stx-accent);
+  --app-accent-tools-tint: var(--stx-accent-tint);
+  --app-accent-store: var(--stx-accent);
+  --app-accent-store-tint: var(--stx-accent-tint);
+  --app-accent-home: var(--stx-accent);
+  --app-accent-home-tint: var(--stx-accent-tint);
+  --app-accent-discovery: var(--stx-accent);
+  --app-accent-discovery-tint: var(--stx-accent-tint);
+  --app-accent-example: var(--stx-accent);
+  --app-accent-example-tint: var(--stx-accent-tint);
+  --app-accent-notebook: var(--stx-accent);
+  --app-accent-notebook-tint: var(--stx-accent-tint);
+  /* `apps` and `cards` have no tokens of their own: their selector rows are
+     aliases pointing at --app-accent-store / --app-accent-todo. A duplicate
+     token here would be dead weight (tests assert every token is referenced). */
+  --app-accent-storage: var(--stx-accent);
+  --app-accent-storage-tint: var(--stx-accent-tint);
+  /* todo/cards: scitex-cards' own board values (2026-07-18), not a colour
+     picked here — the board already renders this amber, so mapping to it keeps
+     continuity for the operator instead of shifting a familiar UI. */
+  --app-accent-todo: var(--stx-accent);
+  --app-accent-todo-tint: var(--stx-accent-tint);
+  --app-accent-comms: var(--stx-accent);
+  --app-accent-comms-tint: var(--stx-accent-tint);
+  --app-accent-agents: var(--stx-accent);
+  --app-accent-agents-tint: var(--stx-accent-tint);
+
+  /* --- Custom App Accent (user/creator override) --- */
+  --stx-app-accent: var(--app-accent-color);
+  --stx-app-accent-tint: var(--app-accent-tint);
+}
+
+[data-theme="dark"] {
+  --text-primary: #e6edf3;
+  --text-secondary: #c9d1d9;
+  --text-muted: #8b949e;
+  --text-inverse: #161b22;
+  /* The existing fallback, so dark mode is unchanged. See colors.css. */
+  --text-link: #58a6ff;
+
+  /* Brand roles, dark. */
+  --stx-brand: #d4a87a;
+  --stx-gold: #d4a87a;
+  --stx-accent: #d4a87a;
+
+  /* See the light block. In DARK the brand surface is the gold, so the legible
+     foreground on it is navy — the exact pairing that is INVISIBLE here is gold
+     on brand, which is what the light block's values produce verbatim. */
+  --stx-on-brand: #1a2a40;
+  --stx-on-gold: #1a2a40;
+  --stx-accent-tint: rgba(212, 168, 122, 0.12);
+  --stx-success: #5cc497;
+  --stx-warning: #f59a52;
+  --stx-danger: #f08a80;
+  --stx-info: #8fb0d8;
+  --text-link-hover: #79b8ff; /* 9.11:1 on --bg-page #0d1117; LIGHTER
+                                than --text-link's 7.49:1 -- the light
+                                literal would be near-invisible here */
+  /* MIRRORS primitives/colors/_dark.css, value unchanged — see the light block.
+     The light literal measures 2.71:1 on this surface; this is the value that
+     already fixed that, and copying the light one here would reintroduce it. */
+  --accent: #d4a87a; /* SciTeX gold, = primitives/colors/_dark.css */
+
+  /* MIRRORS primitives/colors/_dark.css, values unchanged — see the light block
+     for why theme.css declares tokens it does not itself define. */
+  --color-primary: #d4a87a;
+  --color-on-primary: #1a2a40;
+  --focus-ring-color: rgba(212, 168, 122, 0.45);
+
+  --bg-page: #0d1117;
+  --bg-surface: #161b22;
+  --bg-muted: #21262d;
+
+  --border-default: #30363d;
+  --border-muted: #21262d;
+
+  --workspace-bg-primary: #0d1117;
+  --workspace-bg-secondary: #161b22;
+  --workspace-bg-tertiary: #1c2128;
+  --workspace-bg-elevated: #21262d;
+  --workspace-bg-monaco: #0d1117;
+  --workspace-border-subtle: #21262d;
+  --workspace-border-default: #30363d;
+  --workspace-border-hover: #484f58;
+  --workspace-border-active: #6e7681;
+  --workspace-bg-hover: rgba(177, 186, 196, 0.08);
+  --workspace-bg-active: rgba(177, 186, 196, 0.12);
+  --workspace-slider-hover: #6e7681;
+  --workspace-slider-active: #8b949e;
+  --workspace-ruler-bg: #161b22;
+  --workspace-ruler-border: #21262d;
+  --workspace-text-primary: #e6edf3;
+  --workspace-text-secondary: #8b949e;
+
+  --workspace-icon-primary: #8b949e;
+  --workspace-icon-secondary: #8b949e;
+  --workspace-icon-muted: #6e7681;
+  --workspace-icon-hover: #c9d1d9;
+  --workspace-icon-active: #e6edf3;
+
+  --status-success: #6ba89a;
+  --status-warning: #f59a52;
+  --status-error: #c08888;
+  --status-info: #9ca3af;
+
+  --app-accent-writer: var(--stx-accent);
+  --app-accent-writer-tint: var(--stx-accent-tint);
+  --app-accent-scholar: var(--stx-accent);
+  --app-accent-scholar-tint: var(--stx-accent-tint);
+  --app-accent-visualizer: var(--stx-accent);
+  --app-accent-visualizer-tint: var(--stx-accent-tint);
+  --app-accent-console: var(--stx-accent);
+  --app-accent-console-tint: var(--stx-accent-tint);
+  --app-accent-clew: var(--stx-accent);
+  --app-accent-clew-tint: var(--stx-accent-tint);
+  --app-accent-figrecipe: var(--stx-accent);
+  --app-accent-figrecipe-tint: var(--stx-accent-tint);
+  --app-accent-docs: var(--stx-accent);
+  --app-accent-docs-tint: var(--stx-accent-tint);
+  --app-accent-hub: var(--stx-accent);
+  --app-accent-hub-tint: var(--stx-accent-tint);
+  --app-accent-tools: var(--stx-accent);
+  --app-accent-tools-tint: var(--stx-accent-tint);
+  --app-accent-store: var(--stx-accent);
+  --app-accent-store-tint: var(--stx-accent-tint);
+  --app-accent-home: var(--stx-accent);
+  --app-accent-home-tint: var(--stx-accent-tint);
+  --app-accent-discovery: var(--stx-accent);
+  --app-accent-discovery-tint: var(--stx-accent-tint);
+  --app-accent-example: var(--stx-accent);
+  --app-accent-example-tint: var(--stx-accent-tint);
+  --app-accent-notebook: var(--stx-accent);
+  --app-accent-notebook-tint: var(--stx-accent-tint);
+  /* No `apps` / `cards` tokens — see the light block above. */
+  --app-accent-storage: var(--stx-accent);
+  --app-accent-storage-tint: var(--stx-accent-tint);
+  /* todo/cards dark: cards' amber (#d99700) lightened for dark surfaces; their
+     #fff7e6 soft is a light-mode wash, so the tint is an alpha of the accent. */
+  --app-accent-todo: var(--stx-accent);
+  --app-accent-todo-tint: var(--stx-accent-tint);
+  --app-accent-comms: var(--stx-accent);
+  --app-accent-comms-tint: var(--stx-accent-tint);
+  --app-accent-agents: var(--stx-accent);
+  --app-accent-agents-tint: var(--stx-accent-tint);
+}
+
+/* --- Custom Accent Override ---
+ * Apps set --stx-app-accent via data attribute or JS:
+ *   <div data-app-accent-custom="#7c5cbf">
+ *   shell.setAccentColor('#7c5cbf')
+ */
+[data-app-accent-custom] {
+  --stx-app-accent: attr(data-app-accent-custom);
+}

@@ -1,0 +1,82 @@
+/* =============================================================================
+ * SciTeX App — Attachment Chips
+ * =============================================================================
+ * Prefix: stx-app-attachment
+ * Requires: shell/theme.css (tokens only — no shell adoption needed)
+ *
+ * HARVESTED, not designed. scitex-cards shipped these first and sent the rules
+ * verbatim from origin/develop; this is their shape with their palette names
+ * mapped onto scitex-ui's token layer. Reconstructing from a description would
+ * have differed in exactly the details that turn "delete mine and adopt base"
+ * into a visual regression.
+ *
+ * Token mapping — theirs -> ours:
+ *   --line     -> --border-default   (borders)
+ *   --panel-2  -> --bg-surface       (file-chip background)
+ *   --text     -> --text-primary     (file-chip text)
+ *   --accent   -> --app-accent-color (file-chip hover border)
+ *
+ * Two rules below are LOAD-BEARING and were paid for in real bugs, so they are
+ * preserved exactly rather than tidied:
+ *
+ *   min(360px, 100%)   NOT a bare 360px. On a phone the bubble is narrower
+ *                      than 360 and a fixed max-width overflowed it.
+ *   word-break: break-all  on the file chip. Filenames are frequently one long
+ *                      unbroken token, which blew out the column width.
+ *
+ * Unscoped by design: scitex-cards' originals are `.msg .att-img`, scoped to
+ * their message container. A base primitive must not require a particular
+ * ancestor — the consumer decides where it lives.
+ *
+ * They CHECKED that scoping rather than recalling it, and confirmed it does no
+ * work: every other `.msg`-scoped rule in their sheet targets a disjoint class
+ * (.bubble, .meta), and nothing else matches .att-img/.att-file, so there was
+ * no specificity contest for the scope to win. It was descriptive — written
+ * INTO a chat sheet — which is precisely the ancestor assumption a base
+ * primitive must not inherit.
+ * ============================================================================= */
+
+.stx-app-attachment {
+  margin-top: 4px;
+}
+
+/* ── Image: the ANCHOR carries this class and WRAPS an <img loading="lazy">.
+      The size cap sits on the inner img, not here — that is why the anchor is
+      block with a plain 100% max-width. ── */
+.stx-app-attachment--image {
+  display: block;
+  max-width: 100%;
+}
+
+.stx-app-attachment--image img {
+  display: block;
+  max-width: min(360px, 100%);
+  max-height: 360px;
+  border-radius: 10px;
+  border: 1px solid var(--border-default, #30363d);
+}
+
+/* ── File: the anchor IS the chip. ── */
+.stx-app-attachment--file {
+  display: inline-block;
+  padding: 6px 10px;
+  /* --bg-surface, not --bg-secondary: the latter lives in primitives/colors.css
+     while this file's header promises theme.css alone. Mixing the two layers is
+     what made the context menu render dark-on-dark for scitex-cards. */
+  background: var(--bg-surface, #161b22);
+  border: 1px solid var(--border-default, #30363d);
+  border-radius: 8px;
+  color: var(--text-primary, #f0f6fc);
+  text-decoration: none;
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.stx-app-attachment--file:hover {
+  border-color: var(--app-accent-color, #58a6ff);
+}
+
+.stx-app-attachment--file:focus-visible {
+  outline: 2px solid var(--app-accent-color, #58a6ff);
+  outline-offset: 1px;
+}

@@ -1,0 +1,95 @@
+/* =============================================================================
+ * SciTeX App — Settings Card
+ * =============================================================================
+ * Prefix: stx-app-settings-card
+ * Requires: shell/theme.css
+ * ============================================================================= */
+
+/* Grid container */
+.stx-app-settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Card — clickable row with icon, text, and optional action */
+.stx-app-settings-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bg-secondary, #161b22);
+  border: 1px solid var(--border-default, #30363d);
+  border-radius: 12px;
+  color: var(--text-primary, #f0f6fc);
+  text-decoration: none;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.stx-app-settings-card:hover {
+  background: rgba(177, 186, 196, 0.08);
+  border-color: var(--text-link, #58a6ff);
+  text-decoration: none;
+  color: var(--text-primary, #f0f6fc);
+}
+
+/* Card icon */
+.stx-app-settings-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(56, 139, 253, 0.1);
+  color: var(--text-link, #58a6ff);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* Card body */
+.stx-app-settings-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.stx-app-settings-card__name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary, #f0f6fc);
+  margin: 0 0 2px;
+}
+
+.stx-app-settings-card__desc {
+  font-size: 13px;
+  color: var(--text-muted, #8b949e);
+  margin: 0;
+}
+
+/* Card arrow (for navigation cards) */
+.stx-app-settings-card__arrow {
+  color: var(--text-muted, #8b949e);
+  font-size: 12px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.stx-app-settings-card:hover .stx-app-settings-card__arrow {
+  opacity: 1;
+  color: var(--text-link, #58a6ff);
+}
+
+/* Section item (lighter, no border — for lists within a section) */
+.stx-app-settings-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  transition: background 120ms ease;
+}
+
+.stx-app-settings-item:hover {
+  background: rgba(177, 186, 196, 0.06);
+}

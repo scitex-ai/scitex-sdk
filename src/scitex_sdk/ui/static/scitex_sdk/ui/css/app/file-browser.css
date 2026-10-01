@@ -1,0 +1,16 @@
+/* =============================================================================
+ * SciTeX — File Browser / Workspace Files Tree
+ * =============================================================================
+ * React port of scitex-cloud WorkspaceFilesTree component.
+ * All styles use the canonical stx-app-file-tree__* class prefix from scitex-cloud.
+ *
+ * Sources (ported verbatim):
+ *   scitex-cloud/static/shared/css/components/stx-app-file-tree/
+ * ============================================================================= */
+
+@import url("./file-browser/base.css");
+@import url("./file-browser/children.css");
+@import url("./file-browser/states.css");
+@import url("./file-browser/search.css");
+@import url("./file-browser/context-menu.css");
+@import url("./file-browser/themes.css");

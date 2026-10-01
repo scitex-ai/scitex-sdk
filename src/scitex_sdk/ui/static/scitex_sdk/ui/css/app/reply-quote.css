@@ -1,0 +1,97 @@
+/* =============================================================================
+ * SciTeX App — Reply Quote
+ * =============================================================================
+ * Prefix: stx-app-reply-quote
+ * Requires: shell/theme.css (tokens only — no shell adoption needed)
+ *
+ * A truncated quote of the message being replied to, shown above the reply.
+ * Clickable: activating it takes you to the original.
+ *
+ * THE CONSTRAINT THAT SHAPES ALL OF THIS, from scitex-cards: it must sit
+ * INSIDE a bubble that is ALREADY COLOUR-CODED BY SENDER. So it cannot pick
+ * its own background or text colour — a fixed background would be wrong on
+ * every bubble except the one it was designed against.
+ *
+ * Hence everything here is derived from `currentColor`: the tint, the accent
+ * bar and the border all inherit whatever the surrounding bubble already set.
+ * Drop it into a blue bubble and it tints blue; into a grey one and it tints
+ * grey. Nothing to configure per sender, and no per-app override needed.
+ * ============================================================================= */
+
+.stx-app-reply-quote {
+  display: block;
+  width: 100%;
+  text-align: left;
+  /* Both derived from the bubble's own colour — see the header. */
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  border: none;
+  border-left: 3px solid color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  font: inherit;
+  font-size: 0.85em;
+  color: inherit;
+  cursor: pointer;
+}
+
+.stx-app-reply-quote:hover {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.stx-app-reply-quote:focus-visible {
+  outline: 2px solid color-mix(in srgb, currentColor 60%, transparent);
+  outline-offset: 1px;
+}
+
+/* Not clickable when the original is gone — deleted, or scrolled out of a
+   windowed list. Says so rather than silently doing nothing on click. */
+.stx-app-reply-quote--orphaned {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.stx-app-reply-quote--orphaned:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.stx-app-reply-quote__author {
+  display: block;
+  font-weight: 600;
+  opacity: 0.9;
+  margin-bottom: 1px;
+}
+
+/* Two lines, then ellipsis. A quote that grows with the quoted message would
+   let one long message push every reply off the screen. */
+.stx-app-reply-quote__text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+/* Momentary highlight on the ORIGINAL after jumping to it, so the eye lands
+   on the right message instead of hunting the viewport. */
+.stx-app-reply-quote-target--flash {
+  animation: stx-app-reply-quote-flash 1.2s ease-out;
+}
+
+@keyframes stx-app-reply-quote-flash {
+  0% {
+    background: color-mix(in srgb, currentColor 22%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+/* Respect a stated preference against motion. */
+@media (prefers-reduced-motion: reduce) {
+  .stx-app-reply-quote-target--flash {
+    animation: none;
+    outline: 2px solid color-mix(in srgb, currentColor 45%, transparent);
+  }
+}

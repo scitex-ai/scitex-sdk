@@ -1,0 +1,149 @@
+---
+description: |
+  [TOPIC] Validate, Dev-Install, and Test
+  [DETAILS] Validate, dev-install, browser testing, and troubleshooting for SciTeX apps. Steps 3–5 of the app lifecycle..
+tags: [scitex-app-app-validate-install]
+---
+
+# Validate, Dev-Install, and Test
+
+Steps 3–5 of the [app lifecycle](app-lifecycle.md).
+
+---
+
+## Step 3: Validate
+
+```bash
+scitex-sdk app validate .
+```
+
+**Pass output:**
+```
+All checks passed! App is ready for submission.
+```
+
+**Fail output:**
+```
+Found 2 issue(s):
+  ✗ manifest.json missing required fields: icon, version
+  ✗ static/my_awesome_app/css/my_awesome_app.css: targets shell selector '.workspace-sidebar'
+```
+
+### What validation checks
+
+| Check | What it verifies |
+|-------|-----------------|
+| `validate_manifest` | manifest.json exists, has required fields, semver version |
+| `validate_structure` | `views.py` and `urls.py` exist at root or `_django/` subdir |
+| `validate_css` | No CSS targeting reserved shell selectors |
+| `validate_js` | No dangerous JS patterns |
+| `validate_bundle_size` | Total size under 50 MB |
+| `validate_privileges` | Declared privileges use valid types and scopes |
+
+**Forbidden CSS selectors:**
+`#scitex-ai-panel`, `#main-content`, `.ws-module-pane`, `.workspace-header`,
+`.workspace-sidebar`, `.stx-shell-*`, `#workspace-container`, `.ws-app-sidebar`
+
+**Forbidden JS patterns:**
+`eval(`, `Function(`, `document.cookie`, `window.parent`, `window.top`,
+`__import__`, `os.system`, `subprocess`, `exec(`
+
+**Skipped directories during scanning:**
+`node_modules`, `dist`, `.vite`, `_docs`, `__pycache__`, `assets`
+
+### Python API
+
+```python
+from scitex_sdk.app.appmaker import validate
+from scitex_sdk.app.validator import AppValidator
+
+# Simple wrapper — returns list of error strings
+errors = validate("./my_awesome_app")
+if not errors:
+    print("Ready for submission")
+else:
+    for e in errors:
+        print(f"ERROR: {e}")
+
+# Full control
+validator = AppValidator("./my_awesome_app", max_bundle_size=50 * 1024 * 1024)
+result = validator.validate()
+print(result.passed)     # bool
+print(result.errors)     # List[str]
+print(result.warnings)   # List[str]
+print(result.manifest)   # dict | None
+# result.add_error(msg)    — appends and sets passed=False
+# result.add_warning(msg)  — appends, does not fail
+```
+
+---
+
+## Step 4: Dev-Install
+
+Registers the app on a running SciTeX Cloud instance. App appears in the workspace
+sidebar immediately, visible only to your account.
+
+```bash
+export SCITEX_API_TOKEN="your-jwt-token"   # from Profile → Settings → API Tokens
+scitex-sdk app dev-install . --server http://127.0.0.1:8000
+```
+
+**Expected output:**
+```
+Dev-installing from: /path/to/my_awesome_app
+Server: http://127.0.0.1:8000
+Dev install successful!
+  Module: dev__alice__my-awesome-app
+  Your app should appear in the workspace sidebar.
+```
+
+### Getting your JWT token
+
+1. Navigate to your SciTeX Cloud instance (e.g. `http://127.0.0.1:8000`)
+2. Log in → Profile → Settings → API Tokens
+3. Generate a new token and copy it
+4. `export SCITEX_API_TOKEN="<the-token>"`
+
+### Options
+
+| Flag | Env var | Default | Purpose |
+|------|---------|---------|---------|
+| `--server` | `SCITEX_SERVER_URL` | `http://127.0.0.1:8000` | Server base URL |
+| `--token` | `SCITEX_API_TOKEN` | required | JWT access token |
+| `--owner` | — | auto-detected from token | Your Gitea username |
+| `--repo` | — | from manifest `slug` | Gitea repo name |
+
+### What happens on the server
+
+1. Local validation runs before making the API call
+2. `POST /apps/store/api/dev/install/` is called with `{"owner": ..., "repo": ...}`
+3. A `DevInstallation` database record is created:
+   - `source_owner` = your username
+   - `source_repo` = repo slug
+   - `module_name` = `dev__<owner>__<repo>`
+4. On each workspace page load, `build_module_config(dev_install)` synthesizes
+   a `ModuleConfig` for your user only
+5. Templates are served live from your source directory — no reinstall needed for template edits
+
+### When to re-run dev-install
+
+Re-run `dev-install` only if you change:
+- `manifest.json` fields (name, slug, label, icon, order, etc.)
+- Python module structure or app registration
+
+You do **not** need to reinstall after editing:
+- `index_partial.html` (reloads on next page load)
+- `views.py` (if Django auto-reload is on)
+- CSS files
+- Static assets
+
+---
+
+## See also
+
+- [18_app-test-troubleshoot.md](18_app-test-troubleshoot.md) — Step 5
+  (browser test + standalone mode), full troubleshooting catalogue, and
+  environment variables reference. Split from this file for SK401's
+  200-line budget.
+
+# EOF

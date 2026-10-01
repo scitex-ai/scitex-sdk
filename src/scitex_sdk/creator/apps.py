@@ -2,11 +2,7 @@
 # -*- coding: utf-8 -*-
 """Django AppConfig for the SciTeX App Creator wizard.
 
-Subclasses ``scitex_app._django.ScitexAppConfig`` while the app
-contract still lives in scitex-app (facade step: implementation moves
-here gradually), falling back to Django's plain ``AppConfig``
-otherwise — the same idiom the leaves use. A host that vendors this
-package without the engine installed still boots.
+Uses the SDK-owned leaf AppConfig contract.
 
 ``label`` is the fully-namespaced ``scitex_sdk_creator`` rather than a
 short generic name like ``creator`` — scitex-hub hit a real collision
@@ -17,11 +13,7 @@ half of that fix.
 
 from __future__ import annotations
 
-try:
-    from scitex_app._django import ScitexAppConfig
-except ImportError:  # engine not installed — standalone still boots
-    from django.apps import AppConfig as ScitexAppConfig  # type: ignore[no-redef]
-
+from scitex_sdk.app._django import ScitexAppConfig
 
 class AppCreatorConfig(ScitexAppConfig):  # type: ignore[misc]
     """AppConfig for the SDK-served app-creator wizard."""

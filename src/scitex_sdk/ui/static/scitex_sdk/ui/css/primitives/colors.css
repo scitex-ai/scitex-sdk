@@ -1,0 +1,22 @@
+/* =============================================================================
+ * SciTeX Color System - Minimal Semantic Tokens
+ * =============================================================================
+ *
+ * RULES:
+ * - Primitives (with _ prefix) are INTERNAL ONLY - use in this file only
+ * - Semantic tokens (no prefix) are PUBLIC API - use in components
+ * - Theme switching handled by remapping semantic tokens
+ *
+ * SPLIT 2026-08-11. This file was 505 lines against a 512-line house limit, so
+ * the remaining undefined tokens could not be defined without overflowing it —
+ * each needs a declaration in BOTH palettes plus a comment. It is now the two
+ * palettes' barrel, and keeps this path so every existing import and the
+ * builder's APP_TOKEN_PRIMITIVES entry resolve unchanged.
+ *
+ * ORDER IS THE CONTRACT: light first, dark second. Equal specificity means
+ * source order alone decides the winner.
+ *
+ * ============================================================================= */
+
+@import "./colors/_light.css";
+@import "./colors/_dark.css";

@@ -1,0 +1,241 @@
+/* =============================================================================
+ * AI Panel: chat input area
+ * Ported from scitex-cloud global-ai-chat/05-chat-input.css
+ * ============================================================================= */
+
+.stx-shell-ai-input-area {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--border-default, #30363d);
+  background: var(--bg-tertiary, var(--workspace-bg-tertiary, #0d1117));
+}
+
+/* Input wrapper: textarea + buttons inside */
+.stx-shell-ai-input-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 1px solid var(--border-default, #30363d);
+  border-radius: 8px;
+  background: var(--bg-secondary, var(--workspace-bg-secondary, #161b22));
+  padding: 0.25rem 0.375rem 0.25rem 0.75rem;
+  transition: border-color 0.15s;
+}
+
+.stx-shell-ai-input-wrap:focus-within {
+  border-color: var(--color-accent-fg, #0969da);
+}
+
+.stx-shell-ai-input {
+  flex: 1;
+  padding: 0.5rem 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 4rem;
+  max-height: 60vh;
+  outline: none;
+  line-height: 1.4;
+}
+
+.stx-shell-ai-input::placeholder {
+  color: var(--text-muted, #8b949e);
+}
+
+/* Hidden send button (kept for JS .click() calls) */
+.stx-shell-ai-send {
+  display: none;
+}
+
+/* Mic button — inside the input box */
+.stx-shell-ai-mic {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted, #8b949e);
+  cursor: pointer;
+  font-size: 1rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.stx-shell-ai-mic:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.stx-shell-ai-mic.recording {
+  color: #cf222e;
+  background: rgba(207, 34, 46, 0.1);
+  animation: mic-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Camera / Sketch / Gear input buttons */
+.stx-shell-ai-input-btn {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted, #8b949e);
+  cursor: pointer;
+  font-size: 1rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.stx-shell-ai-input-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.stx-shell-ai-input-btn:disabled {
+  opacity: var(--disabled-opacity);
+  cursor: default;
+}
+
+/* Model badge above the input row */
+.stx-shell-ai-model-badge {
+  font-size: 0.6rem;
+  font-family: monospace;
+  font-weight: 400;
+  color: var(--text-dimmed, #484f58);
+  display: inline;
+  margin-left: 0.25rem;
+}
+
+.stx-shell-ai-model-badge:empty {
+  display: none;
+}
+
+/* Volume visualizer (shown during recording) */
+.stx-shell-ai-vol {
+  display: none;
+  align-items: flex-end;
+  gap: 2px;
+  height: 24px;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.stx-shell-ai-vol.recording {
+  display: flex;
+}
+
+.stx-shell-ai-vol-bar {
+  display: inline-block;
+  width: 3px;
+  height: 20px;
+  border-radius: 2px;
+  background: #cf222e;
+  transform-origin: bottom center;
+  transform: scaleY(0.1);
+  transition: transform 0.08s ease-out;
+}
+
+/* Image preview strip above textarea */
+.stx-shell-ai-image-previews {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.stx-shell-ai-image-previews:empty {
+  display: none;
+}
+
+/* ── One composing attachment: the box, its image, its remove control ─────
+ * chat/_image-input.ts writes all three (a div wrapper, the <img> inside it,
+ * and a <button> with &times;). Without these rules the wrapper had no box,
+ * the image rendered at natural size, and the remove button was an unstyled
+ * browser button painted OUTSIDE the thumbnail's corner. */
+.stx-shell-ai-image-thumb {
+  position: relative;
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--workspace-border-subtle, rgba(110, 118, 129, 0.3));
+  border-radius: 4px;
+  background: var(--workspace-bg-tertiary, transparent);
+}
+
+.stx-shell-ai-image-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+/* 24px visual, deliberately NOT the 44px touch minimum: a 44px control would
+   cover most of the 56px thumbnail it belongs to. The hit area is extended
+   by the -6px offset and grown under a coarse pointer instead. */
+.stx-shell-ai-image-thumb-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stx-shell-ai-image-thumb-remove:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.stx-shell-ai-image-thumb-remove:focus-visible {
+  outline: 2px solid var(--color-primary, #4a6fa5);
+  outline-offset: 1px;
+}
+
+@media (pointer: coarse) {
+  .stx-shell-ai-image-thumb-remove {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+}

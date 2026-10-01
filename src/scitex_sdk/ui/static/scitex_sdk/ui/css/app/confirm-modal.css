@@ -1,0 +1,123 @@
+/* =============================================================================
+ * SciTeX App — Confirm Modal
+ * =============================================================================
+ * Prefix: stx-app-confirm-modal
+ * Requires: shell/theme.css
+ * ============================================================================= */
+
+.stx-app-confirm-modal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0);
+  transition: background 0.2s ease;
+}
+
+.stx-app-confirm-modal__overlay--visible {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.stx-app-confirm-modal__overlay--closing {
+  background: rgba(0, 0, 0, 0);
+}
+
+.stx-app-confirm-modal__content {
+  background: var(--workspace-bg-primary, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  min-width: 320px;
+  max-width: 480px;
+  transform: scale(0.95);
+  opacity: 0;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.stx-app-confirm-modal__overlay--visible .stx-app-confirm-modal__content {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.stx-app-confirm-modal__overlay--closing .stx-app-confirm-modal__content {
+  transform: scale(0.95);
+  opacity: 0;
+}
+
+.stx-app-confirm-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+}
+
+.stx-app-confirm-modal__header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #333333);
+}
+
+.stx-app-confirm-modal__close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text-muted, #777777);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.stx-app-confirm-modal__close:hover {
+  color: var(--text-primary, #333333);
+}
+
+.stx-app-confirm-modal__body {
+  padding: 0 20px 16px;
+  font-size: 14px;
+  color: var(--text-secondary, #4a4a4a);
+  line-height: 1.5;
+}
+
+.stx-app-confirm-modal__body p {
+  margin: 0;
+}
+
+.stx-app-confirm-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+}
+
+.stx-app-confirm-modal__btn {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.stx-app-confirm-modal__btn--cancel {
+  background: var(--workspace-bg-hover, rgba(0, 0, 0, 0.04));
+  color: var(--text-secondary, #4a4a4a);
+}
+
+.stx-app-confirm-modal__btn--cancel:hover {
+  background: var(--workspace-bg-active, rgba(0, 0, 0, 0.08));
+}
+
+.stx-app-confirm-modal__btn--confirm {
+  background: var(--stx-app-accent, var(--workspace-icon-primary, #059669));
+  color: #ffffff;
+}
+
+.stx-app-confirm-modal__btn--confirm:hover {
+  opacity: 0.9;
+}

@@ -1,0 +1,34 @@
+{
+  // Typecheck-only config. scitex-sdk ships raw .ts/.tsx SOURCE (see package.json
+  // main/types/exports), so every consumer's compiler applies to OUR code. This
+  // file exists so we are our own typechecker instead of the first consumer to
+  // compile under strict settings. `npm run typecheck` runs it; CI gates on it.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+
+    "strict": true,
+    "noImplicitAny": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    // Third-party .d.ts files are their maintainers' problem, not ours; without
+    // this a dependency's type error would redden OUR gate for a defect we
+    // cannot fix.
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": [
+    "src/scitex_sdk/ui/static/scitex_sdk/ui/ts/**/*.ts",
+    "src/scitex_sdk/ui/static/scitex_sdk/ui/ts/**/*.tsx",
+    "src/scitex_sdk/ui/static/scitex_sdk/ui/react/**/*.ts",
+    "src/scitex_sdk/ui/static/scitex_sdk/ui/react/**/*.tsx"
+  ],
+  "exclude": ["node_modules", "src/scitex_sdk/ui/static/scitex_sdk/ui/vendor"]
+}

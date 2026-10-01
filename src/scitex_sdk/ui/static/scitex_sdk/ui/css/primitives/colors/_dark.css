@@ -1,0 +1,301 @@
+/* =============================================================================
+ * SciTeX Color System - DARK palette
+ * =============================================================================
+ *
+ * Imported by ../colors.css AFTER the light palette, and the order is the whole
+ * contract: `:root` and `[data-theme="dark"]` have EQUAL specificity (0,1,0), so
+ * nothing but source order decides which value a token ends on. This file must
+ * stay last. See ./_light.css for why both parts are underscore-prefixed.
+ *
+ * ============================================================================= */
+
+[data-theme="dark"] {
+  /* Cool-tinted dark primitives (GitHub Dark inspired)
+   * Professional, modern feel with slight blue tint */
+  --_scitex-01: #161b22;
+  --_scitex-02: #21262d;
+  --_scitex-03: #30363d;
+  --_scitex-04: #484f58;
+  --_scitex-05: #6e7681;
+  --_scitex-06: #8b949e;
+  --_scitex-07: #e6edf3;
+  --_white: #f0f6fc;
+  --_gray-subtle: #f0f6fc;
+  --_warm-white: #f0f6fc;
+  --_success: #4a9b7e;
+  --_cta: #3b82f6;
+  --_cta-hover: #2563eb;
+
+  /* Brand roles, dark. */
+  --stx-brand: #d4a87a;
+  --stx-gold: #d4a87a;
+  --stx-accent: #d4a87a;
+  --stx-accent-tint: rgba(212, 168, 122, 0.12);
+  --stx-success: #5cc497;
+  --stx-warning: #f59a52;
+  --stx-danger: #f08a80;
+  --stx-info: #8fb0d8;
+
+  /* Text - flip to light */
+  --text-primary: #e6edf3;
+  --text-secondary: #c9d1d9;
+  --text-muted: #8b949e;
+  --text-inverse: var(--_scitex-01);
+  --text-color: var(--text-primary); /* Alias for legacy compatibility */
+  /* Exactly the fallback these sites already rendered, so DARK MODE — the
+     default theme — is visually unchanged by this commit. 6.85:1 on
+     --bg-surface #161b22. The no-op is the point: it makes the light-mode fix
+     verifiable without a screenshot of the dark surface. */
+  --text-link: #58a6ff;
+
+  --text-link-hover: #79b8ff; /* 9.11:1 on --bg-page #0d1117; LIGHTER
+                                than --text-link's 7.49:1 -- the light
+                                literal would be near-invisible here */
+  /* Background - flip to dark */
+  --bg-page: #0d1117;
+  --bg-surface: var(--_scitex-01);
+  --bg-muted: var(--_scitex-02);
+
+  /* Border */
+  --border-default: var(--_scitex-03);
+  --border-muted: var(--_scitex-02);
+
+  /* Workspace-specific colors - cool-tinted dark theme for Code/Writer/Vis */
+  --workspace-bg-primary: #0d1117; /* GitHub dark - main panels */
+  --workspace-bg-secondary: #161b22; /* Slightly elevated - secondary panels */
+  --workspace-bg-tertiary: #1c2128; /* Subtle lighter - hover states */
+  --workspace-bg-elevated: #21262d; /* Elevated surfaces */
+  --workspace-bg-monaco: #0d1117; /* Dark panels/sidebars bg (Monaco editor bg handled by JS theme) */
+  --workspace-border-subtle: #21262d; /* Subtle borders between panels */
+  --workspace-border-default: #30363d; /* Default borders */
+  --workspace-border-hover: #484f58; /* Hover state */
+  --workspace-border-active: #6e7681; /* Active/dragging */
+  --workspace-slider-hover: #6e7681; /* Slider handle hover */
+  --workspace-slider-active: #8b949e; /* Slider handle active */
+  --workspace-ruler-bg: #161b22; /* Rulers and guides background */
+  --workspace-ruler-border: #21262d; /* Ruler borders */
+  --workspace-text-primary: #e6edf3; /* Light text on dark backgrounds */
+  --workspace-text-secondary: #8b949e; /* Muted text on dark backgrounds */
+  --workspace-bg-hover: rgba(177, 186, 196, 0.08); /* Subtle hover on dark bg */
+  --workspace-bg-active: rgba(
+    177,
+    186,
+    196,
+    0.12
+  ); /* Subtle active on dark bg */
+
+  /* Module accent colors - dark mode */
+  --app-accent-color: transparent;
+  --app-accent-tint: transparent;
+  --app-accent-writer: var(--stx-accent);
+  --app-accent-writer-tint: var(--stx-accent-tint);
+  --app-accent-scholar: var(--stx-accent);
+  --app-accent-scholar-tint: var(--stx-accent-tint);
+  --app-accent-visualizer: var(--stx-accent);
+  --app-accent-visualizer-tint: var(--stx-accent-tint);
+  --app-accent-console: var(--stx-accent);
+  --app-accent-console-tint: var(--stx-accent-tint);
+  --app-accent-clew: var(--stx-accent);
+  --app-accent-clew-tint: var(--stx-accent-tint);
+  --app-accent-hub: var(--stx-accent);
+  --app-accent-hub-tint: var(--stx-accent-tint);
+  --app-accent-home: var(--stx-accent);
+  --app-accent-home-tint: var(--stx-accent-tint);
+  --app-accent-discovery: var(--stx-accent);
+  --app-accent-discovery-tint: var(--stx-accent-tint);
+  --app-accent-example: var(--stx-accent);
+  --app-accent-example-tint: var(--stx-accent-tint);
+  --app-accent-tools: var(--stx-accent);
+  --app-accent-tools-tint: var(--stx-accent-tint);
+  /* `apps` and `cards` deliberately have NO tokens of their own: their
+     selector rows are ALIASES pointing at --app-accent-store /
+     --app-accent-todo (see shell/stx-shell-sidebar.css). A token here
+     would be unreferenced, and test_every_accent_token_is_referenced_by_
+     a_mapping_row fails on dead weight. shell/theme.css says the same. */
+  --app-accent-store: var(--stx-accent);
+  --app-accent-store-tint: var(--stx-accent-tint);
+  --app-accent-docs: var(--stx-accent);
+  --app-accent-docs-tint: var(--stx-accent-tint);
+  --app-accent-figrecipe: var(--stx-accent);
+  --app-accent-figrecipe-tint: var(--stx-accent-tint);
+  --app-accent-notebook: var(--stx-accent);
+  --app-accent-notebook-tint: var(--stx-accent-tint);
+  /* Moved here from shell/theme.css, values UNCHANGED — see _light.css. */
+  --app-accent-storage: var(--stx-accent);
+  --app-accent-storage-tint: var(--stx-accent-tint);
+  --app-accent-comms: var(--stx-accent);
+  --app-accent-comms-tint: var(--stx-accent-tint);
+  --app-accent-todo: var(--stx-accent);
+  --app-accent-todo-tint: var(--stx-accent-tint);
+  --app-accent-agents: var(--stx-accent);
+  --app-accent-agents-tint: var(--stx-accent-tint);
+
+  /* Workspace icon color scheme (TOGGLE: swap _icon-green ↔ _icon-white below) */
+  /* Green scheme (dark mode) */
+  --_icon-green-primary: #7ee787;
+  --_icon-green-hover: #aff5b4;
+  --_icon-green-active: #56d364;
+  /* White/neutral scheme (cool-tinted, dark mode) */
+  --_icon-white-primary: #8b949e;
+  --_icon-white-hover: #c9d1d9;
+  --_icon-white-active: #e6edf3;
+
+  /* Active scheme: change '_icon-white' to '_icon-green' to switch back */
+  --workspace-icon-primary: var(--_icon-white-primary);
+  --workspace-icon-secondary: #8b949e; /* Cool gray - secondary actions */
+  --workspace-icon-muted: #6e7681; /* Cool medium gray - muted/inactive */
+  --workspace-icon-hover: var(--_icon-white-hover);
+  --workspace-icon-active: var(--_icon-white-active);
+
+  /* Terminal colors - cool dark theme */
+  --terminal-bg: #0d1117;
+  --terminal-fg: #e6edf3;
+  --terminal-cursor: #58a6ff;
+  --terminal-cursor-accent: #0d1117;
+  --terminal-black: #484f58;
+  --terminal-red: #ff7b72;
+  --terminal-green: #7ee787;
+  --terminal-yellow: #e3b341;
+  --terminal-blue: #79c0ff;
+  --terminal-magenta: #d2a8ff;
+  --terminal-cyan: #76e3ea;
+  --terminal-white: #e6edf3;
+  --terminal-bright-black: #6e7681;
+  --terminal-bright-red: #ffa198;
+  --terminal-bright-green: #aff5b4;
+  --terminal-bright-yellow: #f8e3a1;
+  --terminal-bright-blue: #a5d6ff;
+  --terminal-bright-magenta: #e2c5ff;
+  --terminal-bright-cyan: #b3f0ff;
+  --terminal-bright-white: #f0f6fc;
+
+  /* Status colors - adjust for dark mode readability */
+  --status-success: #6ba89a;
+  --status-warning: #f59a52;
+  --status-error: #c08888;
+  --status-info: #9ca3af;
+
+  /* Aliases for forms and other components */
+  --success-color: #6ba89a;
+  --warning-color: #f59a52;
+  --error-color: #c08888;
+  --info-color: #8fa9cc;
+
+  /* Status variant tokens - dark mode */
+  --status-success-bg: rgba(107, 168, 154, 0.15);
+  --status-success-text: #6ba89a;
+  --status-success-border: rgba(107, 168, 154, 0.3);
+  --status-error-bg: rgba(192, 136, 136, 0.15);
+  --status-error-text: #c08888;
+  --status-error-border: rgba(192, 136, 136, 0.3);
+  --status-warning-bg: rgba(245, 154, 82, 0.15);
+  --status-warning-text: #f59a52;
+  --status-warning-border: rgba(245, 154, 82, 0.3);
+  --status-info-bg: rgba(143, 169, 204, 0.15);
+  --status-info-text: #8fa9cc;
+  --status-info-border: rgba(143, 169, 204, 0.3);
+
+  /* Success variant tokens - dark mode */
+  --color-success-bg: rgba(107, 168, 154, 0.1);
+  --color-success-border: rgba(107, 168, 154, 0.3);
+  --color-success-shadow: rgba(107, 168, 154, 0.3);
+  --gradient-success: linear-gradient(135deg, #6ba89a 0%, #5a9484 100%);
+
+  /* CTA colors - same in dark mode */
+  --color-cta: var(--_cta);
+  --color-cta-hover: var(--_cta-hover);
+  --color-cta-subtle: rgba(59, 130, 246, 0.15);
+
+  /* GitHub Primer-style aliases for dark mode */
+  --color-fg-default: var(--text-primary);
+  --color-fg-muted: var(--text-muted);
+  --color-fg-on-emphasis: var(--text-inverse);
+  --color-canvas-default: var(--bg-page);
+  --color-canvas-subtle: var(--bg-surface);
+  --color-canvas-inset: var(--bg-muted);
+  --color-border-default: var(--border-default);
+  --color-border-muted: var(--border-muted);
+  --color-accent-fg: var(--text-primary);
+  --color-accent-emphasis: var(--text-primary);
+  --color-accent-subtle: var(--bg-muted);
+  --color-danger-fg: var(--status-error);
+  --color-danger-emphasis: var(--status-error);
+  --color-danger-subtle: var(--status-error);
+  --color-success-fg: var(--status-success);
+  /* Brand primary, dark: SciTeX gold with navy text (7.0:1+). */
+  --color-primary: #d4a87a;
+  --color-primary-hover: #e0bb93;
+  --color-primary-active: #c49868;
+  --color-on-primary: #1a2a40;
+  --color-primary-subtle: rgba(212, 168, 122, 0.14);
+  --focus-ring-color: rgba(212, 168, 122, 0.45);
+  --primary-color: var(--color-primary);
+  --color-btn-primary-bg: var(--color-primary);
+  --color-btn-primary-text: var(--color-on-primary);
+  --color-btn-primary-border: var(--color-primary);
+  --color-btn-primary-hover-bg: var(--color-primary-hover);
+  --color-btn-bg: var(--bg-surface);
+  --color-btn-text: var(--text-primary);
+  --color-btn-border: var(--border-default);
+  --color-btn-hover-bg: var(--bg-muted);
+
+  /* Primer names the light block above explains. Every value here is EXACTLY
+   * the literal its call sites already rendered, so introducing the tokens is
+   * a no-op on this, the default theme — that equality is the evidence, and
+   * tests/develop/test_app_css_primer_color_holes.py asserts it. */
+  --color-attention-fg: #d29922;
+  --color-done-fg: #a371f7;
+  --color-canvas-overlay: #2d333b;
+  --color-success-emphasis: #2ea043;
+  --color-success-subtle: rgba(46, 160, 67, 0.2);
+
+  /* Dark half of the five. Four pin the exact literal their sites already
+   * rendered, so on this, the default theme, they are a provable no-op.
+   * --accent is the EXCEPTION and changes deliberately: #6d4cad measures
+   * 2.71:1 here and two of its three sites are `color:`, so the status quo
+   * fails AA on the DEFAULT theme — pinning it would codify that. #a371f7 is
+   * 5.16:1 and is already this palette's purple (--color-done-fg). */
+  --danger-color: #f85149; /* 5.16:1 */
+  --accent: #d4a87a; /* SciTeX gold, 7.97:1 on --bg-surface */
+  --workspace-text-muted: #888888; /* 4.88:1 */
+  --border-primary: #30363d;
+  --bg-hover: rgba(255, 255, 255, 0.08);
+
+  /* Compatibility aliases for tool templates */
+  --bg-primary: var(--workspace-bg-primary);
+  --bg-secondary: var(--workspace-bg-secondary);
+  --bg-tertiary: var(--workspace-bg-tertiary);
+  --border-color: var(--workspace-border-default);
+
+  /* ===========================================================================
+   * SEMANTIC ROLE COLOR CONTRACT (Primary / Secondary / Danger / Success)
+   * TODO #96 / #120 — dark palette. The SAME --role-* names as the light
+   * palette, aliasing THIS palette's values. Keeping the names identical across
+   * modes is the whole point: a leaf references --role-primary-bg and gets the
+   * brand navy in light, the brand green in dark — Decision C's mode split,
+   * resolved per-palette, with the leaf writing nothing theme-specific.
+   * See the light palette's block for the full rationale + migration.
+   * =========================================================================== */
+
+  /* Primary = the brand fill button. Dark: the brand gold. */
+  --role-primary-bg: var(--color-btn-primary-bg);
+  --role-primary-text: var(--color-btn-primary-text);
+  --role-primary-border: var(--color-btn-primary-border);
+  --role-primary-hover-bg: var(--color-btn-primary-hover-bg);
+
+  /* Secondary = the neutral default button. */
+  --role-secondary-bg: var(--color-btn-bg);
+  --role-secondary-text: var(--color-btn-text);
+  --role-secondary-border: var(--color-btn-border);
+  --role-secondary-hover-bg: var(--color-btn-hover-bg);
+
+  --role-danger-bg: var(--status-error);
+  --role-danger-text: var(--_white);
+  --role-danger-border: var(--status-error);
+  --role-danger-hover-bg: var(--status-error);
+
+  --role-success-bg: var(--status-success);
+  --role-success-text: var(--_white);
+  --role-success-border: var(--status-success);
+  --role-success-hover-bg: var(--status-success);
+}

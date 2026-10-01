@@ -7,7 +7,7 @@ Served from the SDK via ``scitex-sdk gui serve`` (see
 Django app through :mod:`scitex_sdk.creator.urls`.
 
 The appmaker ENGINE (scaffold, validate, publish, dev-install) still
-lives in ``scitex-app`` and is imported from there — per the facade
+lives in ``scitex_sdk.app`` and is owned by the SDK — per the shared
 pattern, the implementation consolidates into the SDK gradually. This
 package owns what is NEW: the starter cards, the wizard views, and the
 standalone-server adapter.

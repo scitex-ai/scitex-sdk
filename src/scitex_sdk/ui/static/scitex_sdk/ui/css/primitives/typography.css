@@ -1,0 +1,374 @@
+/* =============================================================================
+ * SciTeX Typography System
+ * =============================================================================
+ * Typography UTILITY RULES. The tokens they consume live in
+ * `primitives/typography-vars.css` — the file named for them — and are
+ * deliberately NOT redefined here.
+ *
+ * They used to be defined in BOTH files, with identical names and identical
+ * values. Two definitions that agree are indistinguishable from one definition
+ * until somebody edits one of them; then the winner is decided by bundle order
+ * and the loser's edit appears to do nothing. Measured 2026-08-18: every bundle
+ * that includes this file already includes typography-vars.css AHEAD of it —
+ * shell.css lines 57/58, all.css lines 41/42 — so this file's copy was the one
+ * that won, and an edit to typography-vars.css would have been the silent no-op.
+ *
+ * app.css pulls typography-vars.css via APP_TOKEN_PRIMITIVES in _build-index.ts
+ * and does NOT include this file at all, so app consumers were never affected.
+ * ============================================================================= */
+
+/* =============================================================================
+ * SciTeX Brand Typography
+ * =============================================================================
+ * The "e" in SciTeX is tilted -21deg (inspired by Google's inclined "e").
+ * Usage: SciT<span class="brand-e">e</span>X
+ * ============================================================================= */
+.brand-e {
+  display: inline-block;
+  transform: rotate(-21deg);
+  transform-origin: 50% 70%;
+  color: inherit;
+}
+
+/* =============================================================================
+ * SciTeX Web - Typography Utilities
+ * ============================================================================= */
+
+/* Base Typography */
+body {
+  font-family: var(--base-font-family);
+  font-size: var(--base-font-size);
+  line-height: var(--base-line-height);
+  color: var(--text-color);
+}
+
+/* Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--heading-font-family);
+  line-height: var(--heading-line-height);
+  margin-top: var(--spacing-xl); /* 32px top spacing */
+  margin-bottom: var(--spacing-md); /* 16px bottom spacing */
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* First heading in container should have less top margin */
+h1:first-child,
+h2:first-child,
+h3:first-child,
+h4:first-child,
+h5:first-child,
+h6:first-child {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-top: var(--spacing-xxl); /* 48px for h1 specifically */
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.75rem;
+}
+
+h4 {
+  font-size: 1.5rem;
+}
+
+h5 {
+  font-size: 1.25rem;
+}
+
+h6 {
+  font-size: 1rem;
+}
+
+/* Paragraph */
+p {
+  margin-bottom: var(--spacing-md);
+}
+
+/* Links
+ * --------------------------------------------------------------------------
+ * These read --text-link / --text-link-hover, NOT the legacy --secondary-*
+ * names they used until 2026-08-18. Those were declared NOWHERE, which made
+ * `color` invalid at computed-value time -> the property became `unset` ->
+ * INHERITED. Measured in chromium against the installed 0.16.0 package:
+ *
+ *     computed link colour   rgb(51,51,51)
+ *     computed body colour   rgb(51,51,51)   IDENTICAL
+ *     text-decoration        none
+ *
+ * i.e. a link in body content had NO visual distinction from surrounding text
+ * whatsoever. Not a contrast problem -- an invisible-affordance problem, and
+ * it does not fall back to the UA blue because an invalid var() inherits.
+ * --text-link (#2c5d8f light / #58a6ff dark) was declared in all three palette
+ * files the whole time and simply was not referenced here. */
+a {
+  /* The fallback is REQUIRED by test_app_css_text_link_token.py, whose rule is
+     that a fallback-free consumption "would render nothing if the token were
+     ever removed again". That policy predates this fix and I am complying with
+     it rather than narrowing a guard to make my own change pass.
+
+     NOTE THE TENSION IT CREATES, because a consumer hit it today: a literal
+     fallback CANNOT be correct for both themes. The literal below is the LIGHT
+     value, so were the palette ever absent in dark mode this renders
+     dark-on-dark. figrecipe carries the mirror image -- ten sites defaulting to
+     the DARK literal, which render light-on-light. Both shapes pass a
+     has-a-fallback check and both render wrong; the check tests presence, not
+     theme-correctness.
+
+     (This comment deliberately avoids writing the token-with-empty-parens form
+     in prose: that guard matches raw lines WITHOUT stripping comments, so
+     describing the pattern trips it. Carded.) */
+  color: var(--text-link, #2c5d8f);
+  text-decoration: none;
+  transition: color var(--transition-normal);
+}
+
+a:hover {
+  color: var(--text-link-hover, #24507c); /* light literal; see note above */
+}
+
+/* Font Weight Utilities */
+.font-light {
+  font-weight: 300;
+}
+
+.font-normal {
+  font-weight: 400;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+/* Text Alignment */
+.text-left {
+  text-align: left;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-justify {
+  text-align: justify;
+}
+
+/* Text Sizing */
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.text-sm {
+  font-size: var(--small-font-size);
+}
+
+.text-base {
+  font-size: 1rem;
+}
+
+.text-lg {
+  font-size: var(--large-font-size);
+}
+
+.text-xl {
+  font-size: 1.25rem;
+}
+
+.text-2xl {
+  font-size: 1.5rem;
+}
+
+.text-3xl {
+  font-size: 1.875rem;
+}
+
+.text-4xl {
+  font-size: 2.25rem;
+}
+
+/* Heading-equivalent Text Styles */
+.text-h1-style {
+  font-size: 2.5rem;
+  font-weight: 600;
+  line-height: var(--heading-line-height);
+  color: var(--text-primary);
+}
+
+.text-h2-style {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: var(--heading-line-height);
+  color: var(--text-primary);
+}
+
+.text-h3-style {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: var(--heading-line-height);
+  color: var(--text-primary);
+}
+
+.text-h4-style {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: var(--heading-line-height);
+  color: var(--text-primary);
+}
+
+.text-h5-style {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: var(--heading-line-height);
+  color: var(--text-primary);
+}
+
+.text-h6-style {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: var(--heading-line-height);
+  color: var(--text-primary);
+}
+
+/* Text Color */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-accent {
+  color: var(--accent);
+}
+
+/*
+ * .text-light and .text-dark were REMOVED here, not repaired.
+ *
+ * Both read tokens (--text-light / --text-dark) that no stylesheet in this
+ * package defines, so `color` was invalid at computed-value time and the
+ * element simply inherited. They therefore did nothing, in either palette,
+ * for as long as they have shipped.
+ *
+ * Removing them is behaviour-preserving for adopters: an undefined custom
+ * property and an absent rule both leave the colour inherited. Defining the
+ * two tokens instead would have CHANGED rendering for anyone already using
+ * the classes, on a guess about what "light" and "dark" text should mean in
+ * a themed system that already expresses that axis as --text-inverse.
+ */
+
+.text-white {
+  color: white;
+}
+
+.text-success {
+  color: var(--success-color);
+}
+
+.text-warning {
+  color: var(--warning-color);
+}
+
+.text-error {
+  color: var(--error-color);
+}
+
+.text-info {
+  color: var(--info-color);
+}
+
+/* Text Styling */
+.text-uppercase {
+  text-transform: uppercase;
+}
+
+.text-lowercase {
+  text-transform: lowercase;
+}
+
+.text-capitalize {
+  text-transform: capitalize;
+}
+
+.text-italic {
+  font-style: italic;
+}
+
+.text-underline {
+  text-decoration: underline;
+}
+
+.text-line-through {
+  text-decoration: line-through;
+}
+
+.text-nowrap {
+  white-space: nowrap;
+}
+
+.text-break {
+  word-break: break-word;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Line Height */
+.leading-none {
+  line-height: 1;
+}
+
+.leading-tight {
+  line-height: 1.25;
+}
+
+.leading-normal {
+  line-height: var(--base-line-height);
+}
+
+.leading-loose {
+  line-height: 2;
+}
+
+/* Lists */
+.list-disc {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+}
+
+.list-decimal {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+}
+
+.list-none {
+  list-style-type: none;
+  padding-left: 0;
+}

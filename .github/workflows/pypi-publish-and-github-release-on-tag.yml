@@ -1,14 +1,8 @@
 name: release
 
-# Tag-driven release pipeline — SELF-HOSTED (scitex-ci pool), copied from
-# scitex-app's release contract and trimmed of the scitex-app-specific
-# "verify skills docs are in the wheel" block (scitex-sdk ships no _skills).
-#
-# Operator flow:  git tag v0.1.0 && git push origin v0.1.0
-#   1. test    — pytest (the facade identity tests). Must pass or nothing publishes.
-#   2. build   — wheel + sdist.
-#   3. publish — PyPI via trusted publishing (pypa/gh-action-pypi-publish).
-#   4. release — GitHub Release with CHANGELOG notes.
+# SDK-owned App/UI source, frontend, and artifact gates precede publication.
+# [all] must resolve normally against published dependencies; unpublished
+# scitex-dev.project support deliberately holds this release.
 #
 # TRUSTED PUBLISHING matches on (repository, workflow FILENAME, environment).
 # This file must keep its name (pypi-p...-tag.yml) and the publish job must keep
@@ -27,6 +21,11 @@ on:
         type: string
 
 jobs:
+  frontend:
+    uses: ./.github/workflows/frontend.yml
+    with:
+      ref: ${{ github.event_name == 'push' && github.ref_name || inputs.version }}
+
   test:
     runs-on: [self-hosted, Linux, X64, scitex-ci]
     strategy:
@@ -54,15 +53,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # The facade installs both halves (scitex-app, scitex-ui) as
-          # dependencies, plus pytest. There is no [all] extra / dev group in
-          # this thin package, so a plain pip install is correct here.
-          pip install -e . pytest
+          # Contributor groups preserve runtime-only [all]. The project API
+          # has a separate real all-extra resolution gate below.
+          python -m pip install -e ".[gui,chat,mcp,cli]" --group dev
       - name: Run tests
-        run: pytest tests/
+        run: python -m pytest tests/
+      - name: Run strict project-access controls with synthetic in-memory data
+        env:
+          SCITEX_ACCESS_STRICT: "1"
+        run: >-
+          python -m pytest tests/scitex_sdk/app/test_access_django.py
+          tests/scitex_sdk/app/api_access/test___init__.py
 
   build:
-    needs: test
+    needs: [test, frontend]
     runs-on: [self-hosted, Linux, X64, scitex-ci]
     outputs:
       version: ${{ steps.ver.outputs.version }}
@@ -90,6 +94,28 @@ jobs:
           python -m build
           # fail-loud: an empty dist/ must stop the pipeline here.
           ls -1 dist/*.whl dist/*.tar.gz >/dev/null
+      - name: Verify source, sdist, wheel, and frontend package identity
+        run: >-
+          python scripts/verify-artifacts.py --source .
+          --wheel dist/scitex_sdk-*.whl --sdist dist/scitex_sdk-*.tar.gz
+          --tag "${{ steps.ver.outputs.version }}"
+      - name: Resolve the actual all-extra wheel with published dependencies
+        run: |
+          set -euo pipefail
+          # This is a release gate, not a metadata override or --no-deps install.
+          wheel=$(realpath dist/scitex_sdk-*.whl)
+          python -m venv "$RUNNER_TEMP/scitex-sdk-all-resolution"
+          py="$RUNNER_TEMP/scitex-sdk-all-resolution/bin/python"
+          "$py" -m pip install --upgrade pip
+          "$py" -m pip install "$wheel[all]"
+          "$py" -m pip check
+          "$py" - <<'PYTHON'
+          from importlib.metadata import distributions
+          names = {dist.metadata["Name"].lower().replace("_", "-") for dist in distributions()}
+          legacy = names & {"scitex-app", "scitex-ui"}
+          if legacy:
+              raise SystemExit("Retired distributions remain in all-extra dependencies: " + ", ".join(sorted(legacy)))
+          PYTHON
       - uses: actions/upload-artifact@v4
         with:
           name: dist

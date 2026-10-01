@@ -1,0 +1,102 @@
+/**
+ * File Browser — Search Box
+ *
+ * Ported from scitex-cloud stx-app-file-tree/search.css, and NO LONGER
+ * verbatim: the port carried scitex-cloud's token names, which do not exist in
+ * this package. `--workspace-bg-default` and `--workspace-bg-input` were
+ * declared nowhere under css/, so both backgrounds took their `#1e1e1e`
+ * fallback in EVERY theme — a dark surface rendered on the light palette, which
+ * is why this search box was black in light mode while its shell twin was not.
+ *
+ * The names here are now this package's own: --workspace-bg-primary for the box
+ * and --workspace-bg-elevated for the input, which is exactly what the shell
+ * twin (shell/workspace-files-tree/search.css) uses. They are defined in both
+ * palettes, so no fallback is written — a fallback on a defined token is dead
+ * code that would hide the next regression instead of failing on it.
+ *
+ * THE LESSON IS ABOUT PORTING, NOT ABOUT THESE TWO LINES: a verbatim port
+ * carries the SOURCE's vocabulary, and an unknown token name does not error in
+ * CSS — it silently takes the fallback. So a port fails quietly and looks fine
+ * in whichever theme the fallback happened to be written for.
+ */
+
+.stx-app-file-tree__search-box {
+  background: var(--workspace-bg-primary);
+  border-top: 1px solid
+    var(--workspace-border-default, rgba(110, 118, 129, 0.3));
+  padding: 6px 8px;
+  flex-shrink: 0;
+}
+
+.stx-app-file-tree__search-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--workspace-bg-elevated);
+  border: 1px solid var(--workspace-border-default, rgba(110, 118, 129, 0.3));
+  border-radius: 4px;
+  padding: 3px 8px;
+  gap: 6px;
+}
+
+.stx-app-file-tree__search-input-wrapper:focus-within {
+  border-color: var(--color-accent-fg, #58a6ff);
+  box-shadow: 0 0 0 1px var(--color-accent-fg, #58a6ff);
+}
+
+.stx-app-file-tree__search-icon {
+  color: var(--color-fg-muted, #768390);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.stx-app-file-tree__search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--color-fg-default, #e6edf3) !important;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+  padding: 2px 0;
+  -webkit-text-fill-color: var(--color-fg-default, #e6edf3);
+}
+
+.stx-app-file-tree__search-input::placeholder {
+  color: var(--color-fg-muted, #768390) !important;
+  opacity: 1;
+}
+
+.stx-app-file-tree__search-clear {
+  background: transparent;
+  border: none;
+  color: var(--color-fg-muted, #768390);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.stx-app-file-tree__search-clear:hover {
+  color: var(--color-fg-default, #e6edf3);
+  background: var(--workspace-bg-hover, rgba(127, 127, 127, 0.1));
+}
+
+/* Search highlighting: matching items stay white */
+.stx-app-file-tree__item.stx-app-file-tree__search-match .stx-app-file-tree__name {
+  color: var(--color-fg-default, #e6edf3);
+}
+
+/* Ancestor directories of matching items stay white */
+.stx-app-file-tree__item.stx-app-file-tree__search-ancestor .stx-app-file-tree__name {
+  color: var(--color-fg-default, #e6edf3);
+}
+
+/* Non-matching items heavily dimmed */
+.stx-app-file-tree__item.stx-app-file-tree__search-dim {
+  opacity: 0.25;
+}
