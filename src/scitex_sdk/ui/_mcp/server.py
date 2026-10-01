@@ -39,8 +39,8 @@ FASTMCP_AVAILABLE: bool = FastMCP is not None
 
 #: Shown when something tries to serve without the extra installed.
 INSTALL_HINT = (
-    "scitex-ui's MCP server needs the optional `mcp` extra: "
-    "pip install scitex-sdk[all]"
+    "The SDK UI MCP server needs the optional `mcp` extra: "
+    "pip install 'scitex-sdk[mcp]'"
 )
 
 

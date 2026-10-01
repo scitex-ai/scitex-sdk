@@ -67,7 +67,14 @@ def authenticated_user(request):
     return _provider("SCITEX_API_AUTHENTICATOR")(request)
 
 
-def project_access(request, *, write: bool = False) -> ProjectAccess:
+def project_access(
+    request, *, write: bool = False, remember: bool = True
+) -> ProjectAccess:
+    """Authorize a workspace; resource reads may leave navigation unchanged.
+
+    ``remember=False`` resolves explicit projects with the same authorization
+    and write checks without storing a new active-project selection.
+    """
     from django.conf import settings
 
     from scitex_sdk.app import project_context
@@ -79,7 +86,7 @@ def project_access(request, *, write: bool = False) -> ProjectAccess:
         getattr(request, "user", None), "is_authenticated", False
     ):
         raise AccessError("Authentication required", 401)
-    resolution = project_context.resolve_active_project(request)
+    resolution = project_context.resolve_active_project(request, remember=remember)
     if resolution.state == project_context.STATE_UNAVAILABLE:
         raise CapabilityUnavailable("Project provider is unavailable")
     if not resolution.ok:

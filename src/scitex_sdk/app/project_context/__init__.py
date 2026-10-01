@@ -35,7 +35,7 @@ __all__ = [
     "resolve_active_project",
 ]
 
-#: The query parameter carrying an explicit project, agreed with scitex-ui
+#: The query parameter carrying an explicit project, agreed with SDK UI
 #: (``scitex_sdk.ui.project_scope.PROJECT_QUERY_PARAM``). An explicit project wins
 #: over the stored one — that is the route/query half of persistence.
 PROJECT_QUERY_PARAM = "project"
@@ -65,15 +65,11 @@ VALID_STATES = (STATE_OK, STATE_NONE, STATE_DENIED, STATE_UNAVAILABLE)
 
 @runtime_checkable
 class _ProjectProvider(Protocol):
-    """The slice of scitex-ui's provider protocol this module consumes.
+    """Structural subset of the SDK UI project-provider protocol.
 
-    STRUCTURAL, not an import of ``scitex_sdk.ui.ProjectProvider``: scitex-ui is an
-    OPTIONAL dependency of scitex-sdk app (the launcher raises
-    ``ScitexUiRequiredError`` rather than requiring it), so this module must
-    work — and be testable — with scitex-ui absent. Declaring the three methods
-    the contract needs keeps that possible without importing the package, and
-    ``tests/scitex_sdk/app/test_project_context.py`` asserts this shape still
-    matches scitex-ui's, so the two cannot drift apart silently.
+    App and UI share one distribution. This module accepts an injected
+    provider without importing Django or configuring a host; the structural
+    contract is checked against ``scitex_sdk.ui.project_scope.ProjectProvider``.
     """
 
     def list_projects(self, request: Any) -> list:
@@ -93,7 +89,7 @@ class _ProjectProvider(Protocol):
 class ActiveProject:
     """A project as a LEAF APP is allowed to see it.
 
-    TWO FIELDS, and the omission is the point. scitex-ui's ``ProjectEntry``
+    TWO FIELDS, and the omission is the point. SDK UI's ``ProjectEntry``
     also carries ``detail``, which ``LocalProjectProvider`` fills with the
     project's filesystem path. That field is provider-internal: rendering it
     puts an internal path in front of a user, which the product rules forbid
@@ -174,7 +170,7 @@ class ProjectUnavailableError(RuntimeError):
 
 #: Where the standalone launcher registers its provider.
 #:
-#: A dotted path, because that is the channel scitex-ui reads
+#: A dotted path, because that is the channel SDK UI reads
 #: (``settings.SCITEX_PROJECT_PROVIDER``), so a standalone app resolves its
 #: project through the SAME code path a hosted app does. The name is public so
 #: the launcher and any consumer can agree on it without a second constant.
@@ -182,11 +178,10 @@ STANDALONE_PROVIDER_PATH = "scitex_sdk.app.project_context.StandaloneProjectProv
 
 
 def _host_provider() -> tuple[_ProjectProvider | None, str]:
-    """The host's registered provider, or ``(None, reason)``.
+    """Resolve the registered SDK provider without guessing a project.
 
-    Never guesses. When scitex-ui is absent, or no provider is configured, the
-    reason names WHICH of those it is, so an operator reading an
-    ``unavailable`` state learns the actual cause instead of a blank page.
+    Django and the host provider are optional runtime capabilities. A missing
+    or invalid provider yields an unavailable state rather than local access.
     """
     try:
         from scitex_sdk.ui.project_scope import host_project_provider
@@ -226,6 +221,8 @@ def resolve_active_project(
     request: Any,
     provider: _ProjectProvider | None = None,
     explicit: str | None = None,
+    *,
+    remember: bool = True,
 ) -> ProjectResolution:
     """Resolve the project this request should open, fail-closed.
 
@@ -239,6 +236,10 @@ def resolve_active_project(
     2. Otherwise the stored last-visited project, if it is still accessible.
     3. Otherwise ``none``: the app shows its picker. Nothing is auto-selected,
        and no example project is ever created or chosen on a user's behalf.
+
+    Navigation remembers an authorized explicit selection by default. Resource
+    requests use ``remember=False`` so late work for an earlier project cannot
+    overwrite a newer selection. Both modes apply the same access checks.
     """
     resolved_provider = provider
     if resolved_provider is None:
@@ -279,16 +280,17 @@ def resolve_active_project(
         # next navigation, or "selected once and carried across every leaf app"
         # holds only for as long as the query string is on the URL. Written
         # AFTER the access check, so a refused project is never persisted.
-        try:
-            resolved_provider.remember(request, explicit)
-        except Exception as exc:  # noqa: BLE001 - persistence provider is external
-            return ProjectResolution(
-                state=STATE_UNAVAILABLE,
-                reason=(
-                    "the project provider failed to store the selected "
-                    f"project: {exc}"
-                ),
-            )
+        if remember:
+            try:
+                resolved_provider.remember(request, explicit)
+            except Exception as exc:  # noqa: BLE001 - persistence provider is external
+                return ProjectResolution(
+                    state=STATE_UNAVAILABLE,
+                    reason=(
+                        "the project provider failed to store the selected "
+                        f"project: {exc}"
+                    ),
+                )
         return ProjectResolution(state=STATE_OK, project=accessible[explicit])
 
     try:
@@ -416,36 +418,12 @@ def change_project(
 
 
 def project_provider_endpoint() -> str:
-    """The URL a picker fetches projects from, or ``""`` when nothing is declared.
+    """Return the host-declared picker URL, or an empty unavailable slot.
 
-    THE SLOT, as opposed to the RESOLUTION this module already owns. Resolution
-    answers "which project is active"; the slot answers "where does anyone find
-    out" — and it is a slot rather than a fixed path because only the host knows
-    its own URL layout. scitex-ui owns both ends of it: the setting below and
-    the ``<meta name="stx-project-provider">`` that advertises the URL to client
-    code.
-
-    DELEGATED, NOT REDECLARED. The obvious implementation copies the setting
-    name (``SCITEX_PROJECT_PROVIDER_URL``) and its own reverse() call in here.
-    That would make scitex-sdk app a SECOND producer of a name scitex-ui already
-    owns — two copies with no link between them, drifting silently, which is the
-    forked-producer shape this contract exists to avoid. So the names are read
-    from scitex-ui when it is installed, and this module only exposes the answer.
-
-    FAIL-CLOSED: ``""`` when scitex-ui is absent, when no URL is declared, or
-    when the declared name does not reverse. An empty endpoint is the truth —
-    "no picker slot here" — whereas a guessed path or a self-link would render a
-    picker that fetches the wrong thing.
-
-    REQUEST-INDEPENDENT, deliberately — and NOT the same question scitex-ui's
-    ``{% scitex_project_provider_meta %}`` tag answers. Both call the same
-    ``host_project_provider_url()``, so they cannot disagree about the URL; the
-    tag additionally renders nothing unless the visitor is SIGNED IN, because
-    it will not advertise a project API to an anonymous visitor. This function
-    reports what the host DECLARED, which is what a leaf's own view needs, and
-    leaves the sign-in gate to the leaf if it renders a picker for signed-out
-    visitors. Silently inheriting the tag's gate here would make the value
-    empty for the one caller that per-request context cannot serve.
+    SDK UI owns ``SCITEX_PROJECT_PROVIDER_URL`` and its URL resolution. This
+    request-independent helper delegates to that owner; authentication remains
+    the responsibility of the leaf rendering the picker. The UI template tag
+    uses the same resolver and additionally requires a signed-in visitor.
     """
     try:
         from scitex_sdk.ui.project_scope import host_project_provider_url
@@ -460,23 +438,13 @@ def project_provider_endpoint() -> str:
 
 
 def _standalone_provider_class():
-    """``LocalProjectProvider`` bound to the standalone working directory.
+    """Bind the SDK local provider to the launcher's owned working directory.
 
-    EXISTS BECAUSE THE LAUNCHER HAD NO PROVIDER TO REGISTER. scitex-ui reads a
-    provider from ``settings.SCITEX_PROJECT_PROVIDER`` as a dotted path and
-    instantiates it with NO arguments (see ``host_project_provider``), so a
-    class needing a ``root`` — ``LocalProjectProvider`` — cannot be named there
-    directly. This binds the root the launcher already resolved
-    (``SCITEX_WORKING_DIR``, which ``run_standalone`` sets) and nothing else.
-
-    Nothing is selected by construction: ``LocalProjectProvider`` lists the
-    folders under the root and reports last-visited as absent until a user or a
-    command stores one, so a fresh standalone session resolves to ``none`` and
-    shows its picker. That is the documented standalone behaviour, and it is
-    what keeps this from being an implicit example selection.
-
-    Imported lazily: subclassing scitex-ui's provider must not make importing
-    this module require scitex-ui, which scitex-sdk app deliberately does not.
+    Host settings instantiate providers without arguments, so the class reads
+    ``SCITEX_WORKING_DIR`` supplied by the standalone launcher. Construction
+    selects nothing: the picker remains empty until an explicit selection.
+    The UI provider import stays lazy to keep pure project contracts independent
+    of Django configuration.
     """
     import os
 
@@ -484,8 +452,8 @@ def _standalone_provider_class():
         from scitex_sdk.ui.project_scope import LocalProjectProvider
     except ImportError as exc:
         raise ImportError(
-            "StandaloneProjectProvider needs the scitex-ui shell: "
-            "pip install scitex-sdk[all]"
+            "StandaloneProjectProvider needs the SDK UI capability: "
+            "pip install scitex-sdk[gui]"
         ) from exc
 
     class StandaloneProjectProvider(LocalProjectProvider):
@@ -500,14 +468,7 @@ def _standalone_provider_class():
 
 
 def __getattr__(name: str):
-    """Resolve ``StandaloneProjectProvider`` on first use (PEP 562).
-
-    A module-level attribute rather than a factory call, because
-    ``import_string(STANDALONE_PROVIDER_PATH)`` has to FIND it here — the
-    dotted path is the only channel the host setting offers. Defining the class
-    eagerly at import time is what this avoids: it would make scitex-ui a hard
-    import requirement of a module that must work without it.
-    """
+    """Resolve the provider lazily at the public host-setting dotted path."""
     if name == "StandaloneProjectProvider":
         return _standalone_provider_class()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

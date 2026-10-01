@@ -175,7 +175,7 @@ def build_rules() -> Mapping[str, Rule]:
             "var(--text-primary); border: 1px solid var(--border-default); }` "
             "rule. See _skills/scitex-ui/40_component-usage-doctrine.md."
         ),
-        requires="scitex-ui",
+        requires="scitex-sdk",
     )
 
     UI102 = Rule(
@@ -194,7 +194,7 @@ def build_rules() -> Mapping[str, Rule]:
             "var(--app-accent-<your-app>). See _skills/scitex-ui/"
             "34_frontend-components-theme.md for the full token table."
         ),
-        requires="scitex-ui",
+        requires="scitex-sdk",
     )
 
     UI103 = Rule(
@@ -211,7 +211,7 @@ def build_rules() -> Mapping[str, Rule]:
             "<link rel='stylesheet' href=\"{% static 'scitex_sdk/ui/css/shell/"
             "theme.css' %}\">. Copies drift; imports stay synced."
         ),
-        requires="scitex-ui",
+        requires="scitex-sdk",
     )
 
     UI104 = Rule(
@@ -230,7 +230,7 @@ def build_rules() -> Mapping[str, Rule]:
             "scitex-sdk ui itself. See _skills/scitex-ui/40_component-usage-"
             "doctrine.md §UI-104."
         ),
-        requires="scitex-ui",
+        requires="scitex-sdk",
     )
 
     UI105 = Rule(
@@ -252,7 +252,7 @@ def build_rules() -> Mapping[str, Rule]:
             "  .my-app ::-webkit-scrollbar-thumb { background: "
             "var(--scrollbar-thumb); }"
         ),
-        requires="scitex-ui",
+        requires="scitex-sdk",
     )
 
     UI106 = Rule(
@@ -276,7 +276,7 @@ def build_rules() -> Mapping[str, Rule]:
             "Fuzzy is subsequence matching, so `sui` finds `scitex-ui`. "
             "Needs scitex-sdk ui >= 0.12.1."
         ),
-        requires="scitex-ui",
+        requires="scitex-sdk",
     )
 
     UI107 = Rule(
@@ -290,7 +290,7 @@ def build_rules() -> Mapping[str, Rule]:
         ),
         suggestion=(
             "Join the path onto the mount prefix the server put in the page:\n"
-            '  import { apiUrl } from "@scitex/ui/ts/_base";\n'
+            '  import { apiUrl } from "@scitex/sdk/ui/ts/_base";\n'
             '  await fetch(apiUrl("/api/items"));\n'
             "and have the view declare the prefix:\n"
             "  from scitex_sdk.ui.mount import mount_context\n"
@@ -300,7 +300,7 @@ def build_rules() -> Mapping[str, Rule]:
             "fails only embedded. Needs scitex-sdk ui >= 0.13.0; see "
             "`scitex-sdk ui skills get 41_dual-mode-mounting`."
         ),
-        requires="scitex-ui",
+        requires="scitex-sdk",
     )
 
     return {

@@ -111,14 +111,14 @@ def test_ui104_message_documents_severity_flip_version_number():
 @pytest.mark.parametrize(
     "rule_id", ALL_RULE_IDS
 )
-def test_all_rules_carry_requires_scitex_ui_marker(rule_id):
+def test_all_rules_carry_requires_scitex_sdk_marker(rule_id):
     # Arrange — mirrors scitex-io's plugin convention so the linter knows
-    # the rules require the scitex-ui package to make sense.
+    # the rules require the SDK distribution that owns these UI components.
     rules = build_rules()
     # Act
     rule = rules[rule_id]
     # Assert
-    assert rule.requires == "scitex-ui"
+    assert rule.requires == "scitex-sdk"
 
 
 @pytest.mark.parametrize(

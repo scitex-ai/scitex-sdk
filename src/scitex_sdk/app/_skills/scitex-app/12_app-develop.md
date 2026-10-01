@@ -7,7 +7,7 @@ tags: [scitex-app-app-develop]
 
 # App Development Patterns
 
-Detailed patterns for Step 2 of the [app lifecycle](app-lifecycle.md).
+Detailed patterns for Step 2 of the [app lifecycle](10_app-lifecycle.md).
 
 ---
 

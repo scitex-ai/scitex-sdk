@@ -7,8 +7,8 @@ tags: [scitex-app-backend-validation]
 
 # Backend SDK — App Validation
 
-Companion to [02_backend-sdk.md](02_backend-sdk.md); path helpers are in
-[03_paths.md](03_paths.md).
+Companion to [02_backend-sdk.md](30_backend-sdk.md); path helpers are in
+[03_paths.md](31_paths.md).
 
 ## App Validation
 

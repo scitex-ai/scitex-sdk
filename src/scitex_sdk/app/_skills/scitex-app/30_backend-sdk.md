@@ -1,14 +1,11 @@
 ---
 description: |
-  [TOPIC] scitex_app — AI Agent Developer Guide
+  [TOPIC] scitex_sdk.app — AI Agent Developer Guide
   [DETAILS] Backend SDK reference — FilesBackend protocol, Django integration, manifest schema, app validation, path resolution.
 tags: [scitex-app-backend-sdk]
 ---
 
-#!/usr/bin/env python3
-# scitex_app — AI Agent Developer Guide
-# Timestamp: 2026-03-18
-# Audience: AI coding agents building SciTeX apps
+# scitex_sdk.app — AI Agent Developer Guide
 
 ---
 
@@ -84,12 +81,11 @@ adapter re-opens `app_content` as `scitex_app_content`):
 
 The adapter is a DELEGATE, not a shell — it has no content of its own; the
 workspace shell (sidebar, three-col layout, file tree, AI panel) is supplied
-by **scitex-ui**. A host may shadow `scitex_sdk/app/app_shell.html` with its own
+by **scitex_sdk.ui**. A host may shadow `scitex_sdk/app/app_shell.html` with its own
 project-dir template (project DIRS win) that maps `scitex_app_content` into
 its own chrome; app templates must not name `global_base.html` or extend the
-standalone shell directly. `run_standalone()` requires scitex-ui and fails
-loudly at startup (`ScitexUiRequiredError`) if absent — install alongside:
-`pip install scitex-sdk[gui,chat,mcp,cli] scitex-ui`.
+standalone shell directly. `run_standalone()` uses the SDK-owned UI and
+requires Django. Install the web capability with `pip install 'scitex-sdk[gui]'`.
 
 ### AppConfig
 
@@ -127,7 +123,7 @@ Every leaf app shows its OWN installed version, continuously, never hardcoded
 # {{ app_version }} on any page with no view change. Python: package_version("<pip_package>").
 ```
 
-**Adoption (Hub / Scholar / Writer / FigRecipe / Stats / Cards / SAC):** each package shows its OWN `pip_package` — never scitex-app's number (the SDK is `package_version()`, no arg). Render in the host / scitex-ui footer or badge slot; if scitex-ui adds a version-badge token, consume it, don't fork it.
+Each leaf app displays the installed version of its own `pip_package`. The SDK version is available through `package_version()` without an argument. Use the SDK UI footer or badge slot for this display.
 
 ### View factories + URLs
 
@@ -194,5 +190,5 @@ Valid privilege combinations:
 
 ## See also
 
-- [03_paths.md](03_paths.md) — Path resolution helpers
+- [03_paths.md](31_paths.md) — Path resolution helpers
 - [07_backend-validation.md](07_backend-validation.md) — App validation + checklist

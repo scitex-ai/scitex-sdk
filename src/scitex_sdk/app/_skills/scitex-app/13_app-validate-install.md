@@ -7,7 +7,7 @@ tags: [scitex-app-app-validate-install]
 
 # Validate, Dev-Install, and Test
 
-Steps 3–5 of the [app lifecycle](app-lifecycle.md).
+Steps 3–5 of the [app lifecycle](10_app-lifecycle.md).
 
 ---
 

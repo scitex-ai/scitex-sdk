@@ -1,45 +1,14 @@
-"""The answer to "may this actor do this?" — as a value, not a boolean.
+"""Authorization results shared by SDK App and UI components.
 
-TWO QUESTIONS, ONE VOCABULARY. `can()` answers for ONE resource ("may this
-actor do this?") and `scope_for()` answers for a LIST ("which rows may this
-actor see?"). Both return a value carrying the same five kinds — this module
-ships the VERDICT those answers are expressed in, because scitex-ui is building
-the display side against a shape agreed in conversation, and a contract that
-lives only in a message thread drifts. Shipping the type makes their fixtures
-real rather than a transcription of prose.
+``can()`` checks one resource; ``scope_for()`` describes accessible rows. Both
+use five verdicts: allowed, denied, denied-because-not-signed-in,
+denied-because-not-entitled, and unresolved. Unresolved means a provider could
+not answer; it must not be rendered as a denial or a grant.
 
-WHY A TAGGED VALUE RATHER THAN A BOOLEAN. Five things a caller must be able to
-tell apart, and only one of them means "no, and nothing you do changes that":
-
-    allowed                        yes
-    denied                         no, and signing in would not help
-    denied-because-not-signed-in   sign in, then ask again
-    denied-because-not-entitled    signed in, lacks the entitlement THIS hub
-                                   requires
-    unresolved                     WE DO NOT KNOW. Resolution was attempted and
-                                   failed. Not a denial, and must never be
-                                   rendered as one.
-
-A boolean collapses the last three into one, and the UI then has to reconstruct
-which it was — from a message string, or from state it fetches separately. Two
-places would know the reason, and they would disagree eventually. That is the
-drift the single-home rule exists to prevent, so the reason travels WITH the
-answer.
-
-WHY THE PAYLOAD TRAVELS TOO. `denied-because-not-signed-in` without a sign-in
-URL means the component hardcodes a route or the app passes it alongside — and
-then two places know where sign-in lives. Same argument, one level down.
-
-THE VERDICT CROSSES A PACKAGE BOUNDARY, so it is plain data. scitex-ui renders
-it and MUST NOT depend on scitex-app: a UI package importing the state package
-is the mirror of "the CLI and MCP surfaces must not pull scitex-ui", and
-accepting one while breaking the other turns a boundary into a cycle. Hence
-`to_dict()`, and hence nothing here needs scitex-sdk app installed to be understood.
-
-NOT DECIDED HERE, deliberately: HOW entitlement is determined. scitex-sdk app stores
-no plan, no tier, no price — it asks the hub's token API and reports the answer.
-A paywall compiled into the SDK would put one deployment's commercial policy
-into every self-hosted install.
+Each verdict carries its required display payload, such as a sign-in URL or
+entitlement. ``to_dict()`` supplies plain data to browser UI without importing
+Django or assuming a particular host. The host determines entitlement policy;
+the SDK reports its answer without defining plans, prices, or tiers.
 """
 
 from __future__ import annotations

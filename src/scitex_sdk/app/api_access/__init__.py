@@ -113,7 +113,7 @@ class AccessCoreMissingError(RuntimeError):
         super().__init__(
             "scitex_sdk.app.api_access needs scitex_dev.access to compose a declared "
             "(kind, action) pair, and it is not installed. "
-            "Run: pip install -U scitex-dev  (the access release is pending)."
+            "Run: pip install -U 'scitex-dev>=0.61.0'."
         )
 
 
@@ -129,7 +129,7 @@ class DjangoAdapterMissingError(RuntimeError):
         super().__init__(
             "scitex_sdk.app.api_access.compose_list_q needs the Django ORM "
             "(scitex_sdk.app.access_django imports django), and django is not "
-            "installed. Run: pip install -U 'scitex-app[all]', or compose the "
+            "installed. Run: pip install -U 'scitex-sdk[gui]', or compose the "
             "backend-neutral filter with compose_filter() instead."
         )
 

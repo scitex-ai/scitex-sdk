@@ -53,8 +53,8 @@ module exists to provide.
 
 DEPENDENCY GATE (hub review items 2 + 4): the adapter imports
 ``scitex_dev.access`` ONLY inside ``AccessScopedManager.scoped`` — never at
-module load — so this file imports cleanly in scitex-sdk app CI (which pins an
-older scitex-dev) and only the conformance test skips. The import guard is
+module load. The access primitive is available in scitex-dev>=0.61.0; a
+minimal SDK install can omit it. The import guard is
 NARROW: a genuine absence of the submodule raises
 :class:`ScitexDevAccessMissingError` (named, with the fix); an ``ImportError``
 raised *inside* the core (a transitive/version failure) is re-raised, not
@@ -73,7 +73,7 @@ try:
     from django.db.models import Q
 except ImportError as exc:
     raise ImportError(
-        "scitex_sdk.app.access_django needs django: pip install scitex-sdk[all]"
+        "scitex_sdk.app.access_django needs django: pip install 'scitex-sdk[gui]'"
     ) from exc
 
 # The core's filter object. Typed as Any here because scitex_dev.access is an
@@ -84,13 +84,12 @@ AccessFilter = Any
 
 class ScitexDevAccessMissingError(RuntimeError):
     """``scitex_dev.access`` is not installed, so the Django adapter cannot
-    translate a filter. The fix is ``pip install -U scitex-dev`` once the access
-    release ships — until then list scoping is unavailable, not broken."""
+    translate a filter. Install ``scitex-dev>=0.61.0`` to enable list scoping."""
 
     def __init__(self) -> None:
         super().__init__(
             "scitex_sdk.app.access_django needs scitex_dev.access, which is not installed. "
-            "Run: pip install -U scitex-dev  (the access release is pending)."
+            "Run: pip install -U 'scitex-dev>=0.61.0'."
         )
 
 

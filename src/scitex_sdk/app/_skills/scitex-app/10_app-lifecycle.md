@@ -14,13 +14,13 @@ scaffold → develop → validate → dev-install → test in browser → submit
 ```
 
 Prerequisites:
-- `pip install scitex-sdk[gui,chat,mcp,cli]` — installs the `scitex-app` CLI (click/rich are base dependencies)
+- `pip install 'scitex-sdk[gui,chat,mcp,cli]'` — installs the `scitex-sdk` CLI and its `app` group
 - A running SciTeX Cloud instance (for dev-install) at `http://127.0.0.1:8000`
 - A JWT token from your profile settings on the server
 
 **Detailed sub-guides:**
-- [app-develop](app-develop.md) — views.py, urls.py, templates, CSS, React patterns
-- [app-validate-install](app-validate-install.md) — validate, dev-install, test, troubleshoot
+- [app-develop](12_app-develop.md) — views.py, urls.py, templates, CSS, React patterns
+- [app-validate-install](13_app-validate-install.md) — validate, dev-install, test, troubleshoot
 
 ---
 
@@ -120,7 +120,7 @@ my_awesome_app/
 ## Step 2: Develop
 
 Edit `views.py`, `urls.py`, `templates/`, `static/`, and `manifest.json`.
-See [app-develop.md](app-develop.md) for full patterns.
+See [app-develop](12_app-develop.md) for full patterns.
 
 **Key files:**
 

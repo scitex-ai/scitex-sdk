@@ -403,7 +403,7 @@ def test_ui107_does_not_flag_the_fix_it_recommends(tmp_path: Path) -> None:
     # apiUrl("/api/items") IS the remedy and contains the flagged pattern; a
     # rule that fires on its own remedy tells a fully-migrated app it still
     # has violations.
-    body = 'import { apiUrl } from "@scitex/ui/ts/_base";\nawait fetch(apiUrl("/api/items"));\n'
+    body = 'import { apiUrl } from "@scitex/sdk/ui/ts/_base";\nawait fetch(apiUrl("/api/items"));\n'
     # Act
     fired = _ui107(tmp_path, "client.ts", body)
     # Assert
