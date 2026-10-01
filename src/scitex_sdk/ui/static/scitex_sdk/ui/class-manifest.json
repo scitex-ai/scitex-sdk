@@ -4,9 +4,9 @@
   "completeness_reason": "Class names added from caller-supplied values cannot be derived statically. Treat this manifest as a lower bound: everything listed IS rendered by scitex-ui, but scitex-ui may render names not listed.",
   "unenumerable_sites": [
     "shell/workspace-files-tree/_handlers/ClipboardHandler.ts:234",
-    "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:122",
-    "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:140",
-    "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:165",
+    "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:118",
+    "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:136",
+    "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:161",
     "shell/workspace-files-tree/_handlers/TreeInitHandler.ts:57"
   ],
   "modifiers_are_not_a_contract": "Modifiers are listed for fixtures only. Match them by grammar -- <entry>(?:--[\\w-]+)? -- because they are open-ended state.",
