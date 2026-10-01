@@ -46,6 +46,16 @@ jobs:
         with:
           ref: ${{ steps.ver.outputs.version }}
           fetch-depth: 0
+      - name: Isolate release state and caches
+        run: |
+          set -euo pipefail
+          release_state="$RUNNER_TEMP/scitex-sdk-release-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$release_state/scitex" "$release_state/pycache" \
+            "$release_state/pip-cache" "$release_state/tmp"
+          printf '%s\n' "SCITEX_DIR=$release_state/scitex" \
+            "PYTHONPYCACHEPREFIX=$release_state/pycache" \
+            "PIP_CACHE_DIR=$release_state/pip-cache" \
+            "TMPDIR=$release_state/tmp" >> "$GITHUB_ENV"
       - name: Use a job-owned Python tool cache
         run: |
           tool_cache="$RUNNER_TEMP/scitex-sdk-release-python-tools-${{ matrix.python-version }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
@@ -94,6 +104,16 @@ jobs:
         with:
           ref: ${{ steps.ver.outputs.version }}
           fetch-depth: 0
+      - name: Isolate release state and caches
+        run: |
+          set -euo pipefail
+          release_state="$RUNNER_TEMP/scitex-sdk-release-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$release_state/scitex" "$release_state/pycache" \
+            "$release_state/pip-cache" "$release_state/tmp"
+          printf '%s\n' "SCITEX_DIR=$release_state/scitex" \
+            "PYTHONPYCACHEPREFIX=$release_state/pycache" \
+            "PIP_CACHE_DIR=$release_state/pip-cache" \
+            "TMPDIR=$release_state/tmp" >> "$GITHUB_ENV"
       - name: Use a job-owned Python tool cache
         run: |
           tool_cache="$RUNNER_TEMP/scitex-sdk-release-build-python-tools-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
