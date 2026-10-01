@@ -133,11 +133,13 @@ def test_one_clean_graph_never_claims_complete_dependency_retirement():
 
 class FixtureDistribution:
     """Minimal real-shaped installed metadata, never a published version override."""
-    metadata = {"Name": "scitex-sdk"}
     version = "0.3.0"
-    entry_points = []
-    files = []
-    requires = []
+
+    def __init__(self):
+        self.metadata = {"Name": "scitex-sdk"}
+        self.entry_points = []
+        self.files = []
+        self.requires = []
 
     def locate_file(self, member):
         return member

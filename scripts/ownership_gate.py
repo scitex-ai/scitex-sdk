@@ -7,8 +7,8 @@ import ast
 import importlib.metadata
 import importlib.util
 import json
-from pathlib import Path
 import re
+from pathlib import Path
 
 RETIRED_DISTS = {"scitex-app", "scitex-ui"}
 RETIRED_MODULES = {"scitex_app", "scitex_ui"}

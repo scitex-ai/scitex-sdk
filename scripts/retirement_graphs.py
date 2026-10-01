@@ -5,10 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 from packaging.requirements import Requirement
 from packaging.version import Version
@@ -99,7 +99,7 @@ def run_graph(row: dict, scratch: Path) -> dict:
                   "--graph", row["name"], "--sdk-requirement", row["sdk_requirement"],
                   "--output", str(graph / "ownership.json")]]
     for index, command in enumerate(commands):
-        result = subprocess.run(command, env=env, cwd=graph, capture_output=True, text=True)
+        result = subprocess.run(command, env=env, cwd=graph, capture_output=True, text=True, check=False)
         (graph / f"phase-{index}.log").write_text(result.stdout + result.stderr)
         if result.returncode:
             return {"graph": row["name"], "status": "BLOCKED", "phase": index,
@@ -108,7 +108,7 @@ def run_graph(row: dict, scratch: Path) -> dict:
     # newer SDK and mask the consumer's own missing API floor.
     probe = subprocess.run([str(python), "-c",
                             "import importlib.metadata as m,json,sys;d=m.metadata(sys.argv[1]);print(json.dumps({'version':d['Version'],'requires_dist':d.get_all('Requires-Dist',[]),'provides_extra':d.get_all('Provides-Extra',[])}))",
-                            row["distribution"]], env=env, capture_output=True, text=True)
+                            row["distribution"]], env=env, capture_output=True, text=True, check=False)
     (graph / "root-metadata.log").write_text(probe.stdout + probe.stderr)
     if probe.returncode:
         return {"graph": row["name"], "status": "BLOCKED", "phase": "root-metadata", "exit_code": probe.returncode}
