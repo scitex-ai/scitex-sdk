@@ -33,10 +33,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.sha }}
-      - name: Use an owned npm cache and temporary directory
+      - name: Use job-owned Node tools, npm cache, and temporary directory
         run: |
-          mkdir -p "$RUNNER_TEMP/scitex-sdk-npm"
-          printf '%s\n' "NPM_CONFIG_CACHE=$RUNNER_TEMP/scitex-sdk-npm" \
+          tool_cache="$RUNNER_TEMP/scitex-sdk-node-tools-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          npm_cache="$RUNNER_TEMP/scitex-sdk-npm-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$tool_cache" "$npm_cache"
+          printf '%s\n' "RUNNER_TOOL_CACHE=$tool_cache" \
+            "AGENT_TOOLSDIRECTORY=$tool_cache" \
+            "NPM_CONFIG_CACHE=$npm_cache" \
             "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
@@ -75,10 +79,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.sha }}
-      - name: Use an owned npm cache and temporary directory
+      - name: Use job-owned Node tools, npm cache, and temporary directory
         run: |
-          mkdir -p "$RUNNER_TEMP/scitex-sdk-npm"
-          printf '%s\n' "NPM_CONFIG_CACHE=$RUNNER_TEMP/scitex-sdk-npm" \
+          tool_cache="$RUNNER_TEMP/scitex-sdk-node-tools-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          npm_cache="$RUNNER_TEMP/scitex-sdk-npm-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$tool_cache" "$npm_cache"
+          printf '%s\n' "RUNNER_TOOL_CACHE=$tool_cache" \
+            "AGENT_TOOLSDIRECTORY=$tool_cache" \
+            "NPM_CONFIG_CACHE=$npm_cache" \
             "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
@@ -118,10 +126,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.sha }}
-      - name: Use an owned npm cache and temporary directory
+      - name: Use job-owned Node tools, npm cache, and temporary directory
         run: |
-          mkdir -p "$RUNNER_TEMP/scitex-sdk-npm"
-          printf '%s\n' "NPM_CONFIG_CACHE=$RUNNER_TEMP/scitex-sdk-npm" \
+          tool_cache="$RUNNER_TEMP/scitex-sdk-node-tools-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          npm_cache="$RUNNER_TEMP/scitex-sdk-npm-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$tool_cache" "$npm_cache"
+          printf '%s\n' "RUNNER_TOOL_CACHE=$tool_cache" \
+            "AGENT_TOOLSDIRECTORY=$tool_cache" \
+            "NPM_CONFIG_CACHE=$npm_cache" \
             "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
