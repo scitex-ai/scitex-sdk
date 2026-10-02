@@ -47,6 +47,14 @@ msgstr "プロジェクトを読み込み中…"
 msgid "Could not load projects"
 msgstr "プロジェクトを読み込めませんでした"
 
+#: static/scitex_sdk/ui/ts/app/project-selector/_ProjectSelector.ts
+msgid "All Projects"
+msgstr "すべてのプロジェクト"
+
+#: static/scitex_sdk/ui/ts/app/project-selector/_ProjectSelector.ts
+msgid "Could not select scope"
+msgstr "スコープを選択できませんでした"
+
 #: static/scitex_sdk/ui/ts/app/panes/_Panes.ts
 msgid "Sections"
 msgstr "セクション"

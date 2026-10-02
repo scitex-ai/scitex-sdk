@@ -164,4 +164,68 @@ def test_unknown_scope_fails_loud():
         render()
 
 
+@pytest.mark.parametrize("capability", [None, False, "true", 1])
+def test_user_scope_capability_requires_explicit_boolean(capability):
+    # Arrange
+    source = (
+        "{% load scitex_project_picker %}"
+        '{% scitex_project_picker provider_url="/api/projects/" allow_user_scope=capability %}'
+    )
+    context = {"app_scope": "user", "capability": capability}
+    # Act
+    html = _render_source(source, context)
+    # Assert
+    assert html == ""
+
+
+def test_enabled_user_scope_tag_carries_explicit_capability_and_current_scope():
+    # Arrange
+    source = (
+        "{% load scitex_project_picker %}"
+        '{% scitex_project_picker provider_url="/api/projects/" allow_user_scope=True current_scope="user" %}'
+    )
+    context = {"app_scope": "user"}
+    # Act
+    html = _render_source(source, context)
+    # Assert
+    assert 'data-allow-user-scope="true" data-current-scope="user"' in html
+
+
+def test_disabled_project_capability_is_byte_identical_to_omitted():
+    # Arrange
+    source = (
+        "{% load scitex_project_picker %}"
+        '{% scitex_project_picker provider_url="/api/projects/" current="alice/paper" allow_user_scope=False %}'
+    )
+    context = {"app_scope": "project"}
+    # Act
+    actual, expected = _render_source(source, context), _render(context)
+    # Assert
+    assert actual == expected
+
+
+def test_enabled_picker_still_requires_signed_in_user():
+    # Arrange
+    from types import SimpleNamespace
+
+    source = (
+        "{% load scitex_project_picker %}"
+        '{% scitex_project_picker provider_url="/api/projects/" allow_user_scope=True %}'
+    )
+    context = {"app_scope": "user", "request": SimpleNamespace(user=SimpleNamespace(is_authenticated=False))}
+    # Act
+    html = _render_source(source, context)
+    # Assert
+    assert html == ""
+
+
+def test_enabled_picker_still_requires_host_provider():
+    # Arrange
+    source = "{% load scitex_project_picker %}{% scitex_project_picker allow_user_scope=True %}"
+    # Act
+    html = _render_source(source, {"app_scope": "user"})
+    # Assert
+    assert html == ""
+
+
 # EOF

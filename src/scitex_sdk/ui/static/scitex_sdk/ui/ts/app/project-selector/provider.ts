@@ -6,18 +6,24 @@
  * talks to this interface, so it never imports an access-control library.
  */
 
-import type { ProjectOption } from "./types";
+import type { ProjectOption, ProjectSelection } from "./types";
 
 export interface ProjectListing {
   projects: ProjectOption[];
   /** The host's default: the explicit project of this page, else the last visited one. */
   current?: string | null;
+  /** Optional explicit capability/current scope supplied by a supporting host. */
+  allow_user_scope?: boolean;
+  current_scope?: "user" | "project";
 }
 
 export interface ProjectProvider {
   listProjects(): Promise<ProjectListing>;
   /** Persist the choice as the user's last visited project. Optional. */
   rememberProject?(id: string): Promise<void>;
+  /** Opt-in host port. Resolve only after the explicit scope choice is accepted.
+   * Legacy POST {id} is not this contract; user scope must never go through it. */
+  rememberScope?(selection: ProjectSelection): Promise<void>;
 }
 
 /** A provider over a fixed list (tests, demos, apps that already hold the data). */
@@ -63,12 +69,14 @@ export function httpProjectProvider(url: string): ProjectProvider {
       return { projects: body.projects ?? [], current: body.current ?? null };
     },
     async rememberProject(id: string): Promise<void> {
-      await fetch(url, {
+      if (typeof id !== "string" || !id.trim()) throw new Error("project id required");
+      const response = await fetch(url, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
         body: JSON.stringify({ id }),
       });
+      if (!response.ok) throw new Error(`project selection failed: HTTP ${response.status}`);
     },
   };
 }

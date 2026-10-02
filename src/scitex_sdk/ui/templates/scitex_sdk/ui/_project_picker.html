@@ -1,4 +1,4 @@
 {% load static scitex_i18n %}<link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/app/project-selector.css' %}">
 {% scitex_js_catalog "scitex_sdk.ui" %}
-<div class="stx-app-project-selector" data-stx-project-picker data-provider-url="{{ provider_url }}" data-current="{{ current }}" data-navigate="{{ navigate }}"{% if placeholder %} data-placeholder="{{ placeholder }}"{% endif %}></div>
+<div class="stx-app-project-selector" data-stx-project-picker data-provider-url="{{ provider_url }}" data-current="{{ current }}" data-navigate="{{ navigate }}"{% if placeholder %} data-placeholder="{{ placeholder }}"{% endif %}{% if allow_user_scope %} data-allow-user-scope="true"{% if current_scope %} data-current-scope="{{ current_scope }}"{% endif %}{% endif %}></div>
 <script type="module" src="{% static 'scitex_sdk/ui/js/app/project-selector.js' %}"></script>

@@ -5,6 +5,14 @@
 
 import type { BaseComponentConfig } from "../../_base/types";
 import type { ProjectProvider } from "./provider";
+import type { CommandRegistry } from "../../shell/keymap/_registry";
+
+/** Explicit scopes; an absent project id never implies user scope. */
+export type ProjectSelection =
+  | { scope: "user"; id: null }
+  | { scope: "project"; id: string };
+
+export type ProjectChoice = ProjectSelection & { name: string; detail?: string };
 
 export interface ProjectOption {
   /** Stable project identifier (passed back via the change event). */
@@ -26,4 +34,12 @@ export interface ProjectSelectorConfig extends BaseComponentConfig {
   placeholder?: string;
   /** Hide the fuzzy search box (it is shown by default). */
   searchable?: boolean;
+  /** Opt in only when the provider supports rememberScope. Defaults off. */
+  allowUserScope?: boolean;
+  /** Explicit current scope. null/missing current project alone is never user scope. */
+  currentScope?: "user" | "project";
+  /** Optional host registry; otherwise each picker owns a private registry. */
+  commands?: CommandRegistry;
+  /** Stable command id within that registry. Defaults to project-selector:select. */
+  selectCommandId?: string;
 }
