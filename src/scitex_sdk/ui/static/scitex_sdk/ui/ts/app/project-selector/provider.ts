@@ -70,12 +70,13 @@ export function httpProjectProvider(url: string): ProjectProvider {
     },
     async rememberProject(id: string): Promise<void> {
       if (typeof id !== "string" || !id.trim()) throw new Error("project id required");
-      await fetch(url, {
+      const response = await fetch(url, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
         body: JSON.stringify({ id }),
       });
+      if (!response.ok) throw new Error(`project selection failed: HTTP ${response.status}`);
     },
   };
 }

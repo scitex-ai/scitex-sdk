@@ -208,6 +208,7 @@ var ProjectSelector = class extends BaseComponent {
   current;
   filtered = [];
   allowUserScope = false;
+  legacyPersistenceExpected;
   pending = false;
   generation = 0;
   destroyed = false;
@@ -233,6 +234,7 @@ var ProjectSelector = class extends BaseComponent {
     this.selectCommand = { id: this.selectCommandId, label: gettext("Select project"), action: (payload) => this.select(payload) };
     this.uid = "stx-project-picker-" + ++instanceCount;
     this.projects = this.validProjects(config.projects ?? []);
+    this.legacyPersistenceExpected = config.provider?.rememberProject !== void 0;
     this.allowUserScope = config.allowUserScope === true && typeof config.provider?.rememberScope === "function";
     this.current = this.choice(config.current, config.currentScope);
     this.commands.set(this.selectCommand);
@@ -275,7 +277,7 @@ var ProjectSelector = class extends BaseComponent {
     this.selectionError.hidden = true;
     this.container.appendChild(this.trigger);
     this.container.appendChild(this.panel);
-    if (this.allowUserScope) this.container.appendChild(this.selectionError);
+    if (this.allowUserScope || this.legacyPersistenceExpected) this.container.appendChild(this.selectionError);
     this.trigger.addEventListener("click", () => this.toggle());
     this.trigger.addEventListener("keydown", (e) => {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -480,8 +482,8 @@ var ProjectSelector = class extends BaseComponent {
       return false;
     }
     if (this.allowUserScope) {
-      const remember = this.config.provider?.rememberScope;
-      if (!this.allowUserScope || !remember) return false;
+      const remember2 = this.config.provider?.rememberScope;
+      if (!this.allowUserScope || !remember2) return false;
       this.pending = true;
       this.trigger.disabled = true;
       this.renderList();
@@ -490,9 +492,48 @@ var ProjectSelector = class extends BaseComponent {
       return true;
     }
     if (project.scope !== "project") return false;
+    const provider = this.config.provider;
+    let remember;
+    try {
+      remember = provider?.rememberProject;
+    } catch {
+      this.showSelectionError();
+      return false;
+    }
+    if (typeof remember === "function" && provider) {
+      this.legacyPersistenceExpected = true;
+      this.pending = true;
+      this.trigger.disabled = true;
+      this.renderList();
+      const generation = ++this.generation;
+      void this.acceptProject(project, generation, provider, remember);
+      return true;
+    }
+    if (this.legacyPersistenceExpected || remember !== void 0) {
+      this.showSelectionError();
+      return false;
+    }
     this.applyChoice(project);
-    this.config.provider?.rememberProject?.(project.id).catch(() => void 0);
     return true;
+  }
+  showSelectionError() {
+    if (!this.selectionError.parentNode) this.container.appendChild(this.selectionError);
+    this.selectionError.textContent = translate("Could not select scope", "scopeSelectionFailed");
+    this.selectionError.hidden = false;
+  }
+  async acceptProject(project, generation, provider, remember) {
+    try {
+      await remember.call(provider, project.id);
+      if (!this.destroyed && generation === this.generation && this.config.provider === provider && provider.rememberProject === remember) this.applyChoice(project);
+    } catch {
+      if (!this.destroyed && generation === this.generation) this.showSelectionError();
+    } finally {
+      if (!this.destroyed && generation === this.generation) {
+        this.pending = false;
+        this.trigger.disabled = false;
+        this.renderList();
+      }
+    }
   }
   async acceptScope(project, generation) {
     try {
@@ -500,8 +541,7 @@ var ProjectSelector = class extends BaseComponent {
       if (!this.destroyed && generation === this.generation) this.applyChoice(project);
     } catch {
       if (!this.destroyed && generation === this.generation) {
-        this.selectionError.textContent = translate("Could not select scope", "scopeSelectionFailed");
-        this.selectionError.hidden = false;
+        this.showSelectionError();
       }
     } finally {
       if (!this.destroyed && generation === this.generation) {
@@ -557,12 +597,13 @@ function httpProjectProvider(url) {
     },
     async rememberProject(id) {
       if (typeof id !== "string" || !id.trim()) throw new Error("project id required");
-      await fetch(url, {
+      const response = await fetch(url, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
         body: JSON.stringify({ id })
       });
+      if (!response.ok) throw new Error(`project selection failed: HTTP ${response.status}`);
     }
   };
 }

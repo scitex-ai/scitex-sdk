@@ -341,3 +341,147 @@ describe("canonical user capability", () => {
     expect(url).toBeNull();
   });
 });
+
+describe("legacy project persistence acceptance", () => {
+  it.each([403, 500])("rejects actual HTTP %s before treating a project POST as accepted", async (status) => {
+    // Arrange
+    const posts: unknown[] = [];
+    const server = createServer(async (request, response) => {
+      const chunks = []; for await (const chunk of request) chunks.push(chunk);
+      posts.push(JSON.parse(Buffer.concat(chunks).toString()));
+      response.statusCode = status; response.end("explicit synthetic rejection");
+    });
+    await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+    const provider = httpProjectProvider(`http://127.0.0.1:${(server.address() as { port: number }).port}/projects`);
+    // Act
+    let failure: unknown;
+    try { await provider.rememberProject!("b"); } catch (error) { failure = error; }
+    await new Promise<void>((done, reject) => server.close((error) => error ? reject(error) : done()));
+    // Assert
+    expect([posts, failure instanceof Error ? failure.message : null]).toEqual([[{ id: "b" }], `project selection failed: HTTP ${status}`]);
+  });
+
+  it("waits for the optional legacy port before changing local state or the legacy event", async () => {
+    // Arrange
+    let accept!: () => void;
+    const accepted = new Promise<void>((resolve) => { accept = resolve; });
+    const ids: string[] = [];
+    const provider: ProjectProvider = { listProjects: async () => ({ projects, current: "a" }), rememberProject: async (id) => { ids.push(id); await accepted; } };
+    const f = fixture({ provider }); await f.selector.ready;
+    // Act
+    (f.container.querySelectorAll('[role="option"]')[1] as HTMLButtonElement).click();
+    const before = [f.selector.getSelection(), [...f.events], (f.container.querySelector("button") as HTMLButtonElement).disabled];
+    accept(); await settle();
+    // Assert
+    expect([before, f.selector.getSelection(), f.events, ids, (f.container.querySelector("button") as HTMLButtonElement).disabled]).toEqual([
+      [{ scope: "project", id: "a" }, [], true], { scope: "project", id: "b" }, [{ id: "b", name: "Authorized B" }], ["b"], false,
+    ]);
+  });
+
+  it("a rejected legacy port preserves selection and exposes the existing error surface", async () => {
+    // Arrange
+    const provider: ProjectProvider = { listProjects: async () => ({ projects, current: "a" }), rememberProject: async () => { throw Error("explicit rejection"); } };
+    const f = fixture({ provider }); await f.selector.ready;
+    // Act
+    f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" }); await settle();
+    // Assert
+    const error = f.container.querySelector('[role="status"]') as HTMLElement | null;
+    expect([f.selector.getSelection(), f.events, error?.hidden, error?.textContent, (f.container.querySelector("button") as HTMLButtonElement).disabled]).toEqual([
+      { scope: "project", id: "a" }, [], false, "Could not select scope", false,
+    ]);
+  });
+
+  it.each(["replace", "destroy"])("late legacy acknowledgement cannot overwrite %s", async (mutation) => {
+    // Arrange
+    let accept!: () => void;
+    const accepted = new Promise<void>((resolve) => { accept = resolve; });
+    const provider: ProjectProvider = { listProjects: async () => ({ projects, current: "a" }), rememberProject: () => accepted };
+    const f = fixture({ provider }); await f.selector.ready;
+    // Act
+    f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" });
+    if (mutation === "replace") f.selector.setProjects(projects, "a", "project"); else f.selector.destroy();
+    accept(); await settle();
+    // Assert
+    expect([f.selector.getSelection(), f.events, mutation === "destroy" ? f.container.childElementCount : (f.container.querySelector("button") as HTMLButtonElement).disabled]).toEqual([
+      { scope: "project", id: "a" }, [], mutation === "destroy" ? 0 : false,
+    ]);
+  });
+
+  it("an old legacy completion does not reenable a newer pending request", async () => {
+    // Arrange
+    const accepts: (() => void)[] = [];
+    const provider: ProjectProvider = { listProjects: async () => ({ projects, current: "a" }), rememberProject: () => new Promise<void>((resolve) => accepts.push(resolve)) };
+    const f = fixture({ provider }); await f.selector.ready;
+    // Act
+    f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" });
+    f.selector.setProjects(projects, "a", "project");
+    f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" });
+    accepts[0](); await settle();
+    const old = [f.selector.getSelection(), [...f.events], (f.container.querySelector("button") as HTMLButtonElement).disabled];
+    accepts[1](); await settle();
+    // Assert
+    expect([old, f.events, (f.container.querySelector("button") as HTMLButtonElement).disabled]).toEqual([
+      [{ scope: "project", id: "a" }, [], true], [{ id: "b", name: "Authorized B" }], false,
+    ]);
+  });
+
+  it("a replaced persistence port cannot attribute its old acknowledgement to the new port", async () => {
+    // Arrange
+    let accept!: () => void;
+    const accepted = new Promise<void>((resolve) => { accept = resolve; });
+    const provider: ProjectProvider = { listProjects: async () => ({ projects, current: "a" }), rememberProject: () => accepted };
+    const f = fixture({ provider }); await f.selector.ready;
+    // Act
+    f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" });
+    provider.rememberProject = async () => {};
+    accept(); await settle();
+    // Assert
+    expect([f.selector.getSelection(), f.events, (f.container.querySelector("button") as HTMLButtonElement).disabled]).toEqual([{ scope: "project", id: "a" }, [], false]);
+  });
+
+  it.each(["unknown", null, false, undefined])("a configured legacy port becoming %s fails closed instead of masquerading as static", async (port) => {
+    // Arrange
+    const provider: ProjectProvider = { listProjects: async () => ({ projects, current: "a" }), rememberProject: async () => {} };
+    const f = fixture({ provider }); await f.selector.ready;
+    provider.rememberProject = port as unknown as ProjectProvider["rememberProject"];
+    // Act
+    const accepted = f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" }); await settle();
+    // Assert
+    const error = f.container.querySelector('[role="status"]') as HTMLElement | null;
+    expect([accepted, f.selector.getSelection(), f.events, error?.hidden]).toEqual([false, { scope: "project", id: "a" }, [], false]);
+  });
+
+  it("a static provider without persistence retains synchronous legacy project selection", async () => {
+    // Arrange
+    const provider = sourcePicker.staticProjectProvider(projects, "a");
+    const f = fixture({ provider }); await f.selector.ready;
+    // Act
+    const accepted = f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" });
+    // Assert
+    expect([accepted, f.selector.getSelection(), f.events, f.container.childElementCount]).toEqual([true, { scope: "project", id: "b" }, [{ id: "b", name: "Authorized B" }], 2]);
+  });
+
+  it("a synchronous persistence throw preserves selection and releases the trigger", async () => {
+    // Arrange
+    const provider: ProjectProvider = { listProjects: async () => ({ projects, current: "a" }), rememberProject: () => { throw Error("explicit synchronous failure"); } };
+    const f = fixture({ provider }); await f.selector.ready;
+    // Act
+    f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" }); await settle();
+    // Assert
+    expect([f.selector.getSelection(), f.events, (f.container.querySelector("button") as HTMLButtonElement).disabled, (f.container.querySelector('[role="status"]') as HTMLElement).hidden]).toEqual([{ scope: "project", id: "a" }, [], false, false]);
+  });
+
+  it("acceptance keeps the provider method receiver and project-only event shape", async () => {
+    // Arrange
+    const ids: string[] = [];
+    const provider: ProjectProvider = {
+      listProjects: async () => ({ projects, current: "a" }),
+      async rememberProject(id) { if (this !== provider) throw Error("provider receiver lost"); ids.push(id); },
+    };
+    const f = fixture({ provider }); await f.selector.ready;
+    // Act
+    f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" }); await settle();
+    // Assert
+    expect([ids, f.selector.getSelection(), f.events]).toEqual([["b"], { scope: "project", id: "b" }, [{ id: "b", name: "Authorized B" }]]);
+  });
+});

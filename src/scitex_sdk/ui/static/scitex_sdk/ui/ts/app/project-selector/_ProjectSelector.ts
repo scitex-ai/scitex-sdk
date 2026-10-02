@@ -26,6 +26,7 @@ import { shellTranslate } from "../../_base/i18n";
 import type { ShellStringKey } from "../../_base/i18n";
 import { fuzzyFilter } from "./fuzzy";
 import type { ProjectSelectorConfig, ProjectOption, ProjectChoice, ProjectSelection } from "./types";
+import type { ProjectProvider } from "./provider";
 import { CommandRegistry } from "../../shell/keymap/_registry";
 import type { CommandDef } from "../../shell/keymap/_registry";
 
@@ -54,6 +55,7 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
   private current: ProjectChoice | null;
   private filtered: ProjectChoice[] = [];
   private allowUserScope = false;
+  private legacyPersistenceExpected: boolean;
   private pending = false;
   private generation = 0;
   private destroyed = false;
@@ -80,6 +82,7 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
     this.selectCommand = { id: this.selectCommandId, label: gettext("Select project"), action: (payload) => this.select(payload) };
     this.uid = "stx-project-picker-" + ++instanceCount;
     this.projects = this.validProjects(config.projects ?? []);
+    this.legacyPersistenceExpected = config.provider?.rememberProject !== undefined;
     this.allowUserScope = config.allowUserScope === true && typeof config.provider?.rememberScope === "function";
     this.current = this.choice(config.current, config.currentScope);
     this.commands.set(this.selectCommand);
@@ -130,7 +133,7 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
 
     this.container.appendChild(this.trigger);
     this.container.appendChild(this.panel);
-    if (this.allowUserScope) this.container.appendChild(this.selectionError);
+    if (this.allowUserScope || this.legacyPersistenceExpected) this.container.appendChild(this.selectionError);
 
     this.trigger.addEventListener("click", () => this.toggle());
     this.trigger.addEventListener("keydown", (e) => {
@@ -367,9 +370,51 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
       return true;
     }
     if (project.scope !== "project") return false;
+    const provider = this.config.provider;
+    let remember: ProjectProvider["rememberProject"];
+    try { remember = provider?.rememberProject; } catch { this.showSelectionError(); return false; }
+    if (typeof remember === "function" && provider) {
+      this.legacyPersistenceExpected = true;
+      this.pending = true;
+      this.trigger.disabled = true;
+      this.renderList();
+      const generation = ++this.generation;
+      void this.acceptProject(project, generation, provider, remember);
+      return true;
+    }
+    if (this.legacyPersistenceExpected || remember !== undefined) {
+      this.showSelectionError();
+      return false;
+    }
     this.applyChoice(project);
-    this.config.provider?.rememberProject?.(project.id).catch(() => undefined);
     return true;
+  }
+
+  private showSelectionError(): void {
+    if (!this.selectionError.parentNode) this.container.appendChild(this.selectionError);
+    this.selectionError.textContent = translate("Could not select scope", "scopeSelectionFailed");
+    this.selectionError.hidden = false;
+  }
+
+  private async acceptProject(
+    project: ProjectChoice & { scope: "project" },
+    generation: number,
+    provider: ProjectProvider,
+    remember: (id: string) => Promise<void>,
+  ): Promise<void> {
+    try {
+      await remember.call(provider, project.id);
+      if (!this.destroyed && generation === this.generation &&
+          this.config.provider === provider && provider.rememberProject === remember) this.applyChoice(project);
+    } catch {
+      if (!this.destroyed && generation === this.generation) this.showSelectionError();
+    } finally {
+      if (!this.destroyed && generation === this.generation) {
+        this.pending = false;
+        this.trigger.disabled = false;
+        this.renderList();
+      }
+    }
   }
 
   private async acceptScope(project: ProjectChoice, generation: number): Promise<void> {
@@ -378,8 +423,7 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
       if (!this.destroyed && generation === this.generation) this.applyChoice(project);
     } catch {
       if (!this.destroyed && generation === this.generation) {
-        this.selectionError.textContent = translate("Could not select scope", "scopeSelectionFailed");
-        this.selectionError.hidden = false;
+        this.showSelectionError();
       }
     } finally {
       if (!this.destroyed && generation === this.generation) {
