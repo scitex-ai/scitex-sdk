@@ -2,6 +2,7 @@
 """scitex_sdk.ui.i18n: a leaf app's djangojs catalog, embedded for the TS gettext module."""
 
 import django
+import pytest
 from django.conf import settings
 
 if not settings.configured:
@@ -101,3 +102,19 @@ def test_js_catalog_element_id_is_derived_from_the_package():
     element_id = js_catalog_element_id(package)
     # Assert
     assert element_id == "scitex-i18n-catalog-figrecipe--django"
+
+
+@pytest.mark.parametrize("language", ["en", "ja", "fr"])
+@pytest.mark.parametrize("msgid, japanese", [
+    ("All Projects", "すべてのプロジェクト"),
+    ("Could not select scope", "スコープを選択できませんでした"),
+])
+def test_picker_scope_catalog_preserves_translation_and_default(language, msgid, japanese):
+    # Arrange
+    package = "scitex_sdk.ui"
+    expected = japanese if language == "ja" else msgid
+    # Act
+    payload = js_catalog(package, language=language)
+    translated = payload["catalog"].get(msgid, msgid)
+    # Assert
+    assert translated == expected

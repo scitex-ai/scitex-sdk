@@ -1,9 +1,12 @@
-/** Entry for the pre-built `js/app/project-picker.js` the template tag loads. */
+/** Entry for the canonical pre-built `js/app/project-selector.js`. */
 
 import { mountProjectPickers } from "./mount";
+export * from "./index";
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => mountProjectPickers());
-} else {
-  mountProjectPickers();
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => mountProjectPickers());
+  } else {
+    mountProjectPickers();
+  }
 }

@@ -1,4 +1,5 @@
-/* AUTO-GENERATED from ts/app/project-selector/auto-mount.ts via esbuild — do not edit by hand. Rebuild: npx esbuild ts/app/project-selector/auto-mount.ts --bundle --format=esm --outfile=js/app/project-selector.js */
+/* AUTO-GENERATED from ts/app/project-selector/auto-mount.ts via esbuild — do not edit by hand. Rebuild: npm run build:ui -- --only js/app/project-selector.js */
+
 // ts/_base/BaseComponent.ts
 var BaseComponent = class {
   container;
@@ -63,13 +64,17 @@ var SHELL_STRINGS = {
     apps: "Apps",
     noAppsAvailable: "No apps available",
     selectProject: "Select project",
-    noProjects: "No projects"
+    noProjects: "No projects",
+    allProjects: "All Projects",
+    scopeSelectionFailed: "Could not select scope"
   },
   ja: {
     apps: "\u30A2\u30D7\u30EA",
     noAppsAvailable: "\u5229\u7528\u53EF\u80FD\u306A\u30A2\u30D7\u30EA\u304C\u3042\u308A\u307E\u305B\u3093",
     selectProject: "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044",
-    noProjects: "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u304C\u3042\u308A\u307E\u305B\u3093"
+    noProjects: "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u304C\u3042\u308A\u307E\u305B\u3093",
+    allProjects: "\u3059\u3079\u3066\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8",
+    scopeSelectionFailed: "\u30B9\u30B3\u30FC\u30D7\u3092\u9078\u629E\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F"
   }
 };
 function normalize(lang) {
@@ -110,9 +115,83 @@ function fuzzyFilter(items, query, textOf) {
   return items.map((item, order) => ({ item, order, score: fuzzyScore(query, textOf(item)) })).filter((entry) => entry.score !== null).sort((a, b) => b.score - a.score || a.order - b.order).map((entry) => entry.item);
 }
 
+// ts/shell/keymap/_registry.ts
+var CommandRegistry = class {
+  commands = /* @__PURE__ */ new Map();
+  /** The active page/app mode, or null when none is active (global only). */
+  mode = null;
+  /** Register or REPLACE a command. Returns false when the ID is taken by a
+   *  DIFFERENT definition (a re-registration with the same ID is allowed —
+   *  it is how an app updates its own command without clearing the world). */
+  set(def) {
+    const existing = this.commands.get(def.id);
+    if (existing && existing !== def) {
+      this.commands.set(def.id, def);
+      return false;
+    }
+    this.commands.set(def.id, def);
+    return true;
+  }
+  /** Unregister by ID. Returns true if something was removed. */
+  unset(id) {
+    return this.commands.delete(id);
+  }
+  /** True if a command with this ID is registered (regardless of mode). */
+  has(id) {
+    return this.commands.has(id);
+  }
+  /** Look up a command, reporting whether it is active in the current mode. */
+  get(id) {
+    const def = this.commands.get(id);
+    if (!def) return null;
+    return { def, active: this.isActive(def) };
+  }
+  /** All registered command IDs, sorted — a stable introspection surface. */
+  ids() {
+    return [...this.commands.keys()].sort();
+  }
+  /**
+   * The full introspection model for the help UI / agent: every command with
+   * its label, group, current-mode activeness, and the bindings that point at
+   * it (resolved by the caller, since bindings live in the Keymap, not here).
+   */
+  list() {
+    return this.ids().map((id) => {
+      const def = this.commands.get(id);
+      return {
+        id,
+        label: def.label,
+        group: def.group,
+        active: this.isActive(def),
+        modes: def.modes ? [...def.modes].sort() : null
+      };
+    });
+  }
+  /** Activate a page/app mode. Global commands stay active; mode-scoped
+   *  commands become active only when their mode matches. */
+  setMode(mode) {
+    this.mode = mode;
+  }
+  get currentMode() {
+    return this.mode;
+  }
+  isActive(def) {
+    if (!def.modes) return true;
+    return this.mode !== null && def.modes.has(this.mode);
+  }
+  run(id, ...dispatch) {
+    const def = this.commands.get(id);
+    if (!def || !this.isActive(def)) return false;
+    const consumed = def.action(dispatch[1]);
+    return consumed !== false;
+  }
+};
+var globalRegistry = new CommandRegistry();
+
 // ts/app/project-selector/_ProjectSelector.ts
 var CLS = "stx-app-project-selector";
 var PROJECT_SELECTOR_CHANGE = "stx-project-selector:change";
+var PROJECT_SELECTOR_SELECT = "project-selector:select";
 var instanceCount = 0;
 function translate(msgid, shellKey) {
   const translated = gettext(msgid);
@@ -122,9 +201,17 @@ function translate(msgid, shellKey) {
 var ProjectSelector = class extends BaseComponent {
   /** Settles once the provider's listing has been rendered (immediately without one). */
   ready;
+  commands;
+  selectCommandId;
+  selectCommand;
   projects;
   current;
   filtered = [];
+  allowUserScope = false;
+  pending = false;
+  generation = 0;
+  destroyed = false;
+  selectionError;
   activeIndex = 0;
   status = "ready";
   uid;
@@ -138,9 +225,17 @@ var ProjectSelector = class extends BaseComponent {
   keyHandler;
   constructor(config) {
     super(config);
+    this.commands = config.commands ?? new CommandRegistry();
+    this.selectCommandId = config.selectCommandId ?? PROJECT_SELECTOR_SELECT;
+    if (!this.selectCommandId || this.commands.has(this.selectCommandId)) {
+      throw new Error(`project selector command already registered: ${this.selectCommandId}`);
+    }
+    this.selectCommand = { id: this.selectCommandId, label: gettext("Select project"), action: (payload) => this.select(payload) };
     this.uid = "stx-project-picker-" + ++instanceCount;
-    this.projects = config.projects ?? [];
-    this.current = this.projects.find((p) => p.id === config.current) ?? null;
+    this.projects = this.validProjects(config.projects ?? []);
+    this.allowUserScope = config.allowUserScope === true && typeof config.provider?.rememberScope === "function";
+    this.current = this.choice(config.current, config.currentScope);
+    this.commands.set(this.selectCommand);
     this.container.className = CLS;
     this.trigger = document.createElement("button");
     this.trigger.type = "button";
@@ -174,8 +269,13 @@ var ProjectSelector = class extends BaseComponent {
       this.panel.appendChild(this.search);
     }
     this.panel.appendChild(this.list);
+    this.selectionError = document.createElement("div");
+    this.selectionError.className = `${CLS}__empty`;
+    this.selectionError.setAttribute("role", "status");
+    this.selectionError.hidden = true;
     this.container.appendChild(this.trigger);
     this.container.appendChild(this.panel);
+    if (this.allowUserScope) this.container.appendChild(this.selectionError);
     this.trigger.addEventListener("click", () => this.toggle());
     this.trigger.addEventListener("keydown", (e) => {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -200,13 +300,43 @@ var ProjectSelector = class extends BaseComponent {
   }
   /** The selected project, or null. */
   getCurrent() {
-    return this.current;
+    const project = this.current?.scope === "project" ? this.projects.find((p) => p.id === this.current?.id) : void 0;
+    return project ? { ...project } : null;
+  }
+  /** Explicit selection, or null when no supported scope has been selected. */
+  getSelection() {
+    return this.current ? { scope: this.current.scope, id: this.current.id } : null;
+  }
+  validProjects(projects) {
+    if (!Array.isArray(projects)) throw new Error("project listing must be an array");
+    const seen = /* @__PURE__ */ new Set();
+    return projects.filter((p) => {
+      if (!p || typeof p.id !== "string" || !p.id.trim() || typeof p.name !== "string" || seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    }).map((p) => ({ id: p.id, name: p.name, ...typeof p.detail === "string" ? { detail: p.detail } : {} }));
+  }
+  choices() {
+    const projects = this.projects.map((p) => ({ ...p, scope: "project" }));
+    if (this.allowUserScope) projects.unshift({ scope: "user", id: null, name: translate("All Projects", "allProjects") });
+    return projects;
+  }
+  choice(id, scope) {
+    if (scope === "user") return this.allowUserScope ? this.choices()[0] : null;
+    if (scope !== void 0 && scope !== "project") return null;
+    return this.choices().find((p) => p.scope === "project" && p.id === id) ?? null;
   }
   /** Replace the project list, keeping the selection when it is still present. */
-  setProjects(projects, currentId) {
-    this.projects = projects;
+  setProjects(projects, currentId, currentScope) {
+    const validated = this.validProjects(projects);
+    this.generation++;
+    this.pending = false;
+    this.trigger.disabled = false;
+    this.projects = validated;
+    this.status = "ready";
     const wanted = currentId === void 0 ? this.current?.id : currentId;
-    this.current = projects.find((p) => p.id === wanted) ?? null;
+    const scope = currentScope ?? (currentId === void 0 ? this.current?.scope : void 0);
+    this.current = this.choice(wanted, scope);
     this.renderLabel();
     this.renderList();
   }
@@ -214,11 +344,19 @@ var ProjectSelector = class extends BaseComponent {
     const provider = this.config.provider;
     if (!provider) return;
     this.status = "loading";
+    const generation = this.generation;
     try {
       const listing = await provider.listProjects();
+      if (this.destroyed || generation !== this.generation) return;
+      const projects = this.validProjects(listing.projects);
+      if (listing.current_scope !== void 0 && listing.current_scope !== "user" && listing.current_scope !== "project") throw new Error("invalid current scope");
+      if (listing.current_scope === "user" && listing.current != null) throw new Error("user scope requires null project id");
+      this.allowUserScope = (this.config.allowUserScope === true || this.config.allowUserScope === void 0 && listing.allow_user_scope === true) && typeof provider.rememberScope === "function";
+      if (this.allowUserScope && !this.selectionError.parentNode) this.container.appendChild(this.selectionError);
       this.status = "ready";
-      this.setProjects(listing.projects, this.config.current ?? listing.current ?? null);
+      this.setProjects(projects, this.config.current ?? listing.current ?? null, this.config.currentScope ?? listing.current_scope);
     } catch {
+      if (this.destroyed || generation !== this.generation) return;
       this.status = "error";
       this.renderList();
     }
@@ -235,7 +373,7 @@ var ProjectSelector = class extends BaseComponent {
   renderList() {
     this.list.innerHTML = "";
     const query = this.search?.value ?? "";
-    this.filtered = fuzzyFilter(this.projects, query, (p) => `${p.name} ${p.detail ?? ""}`);
+    this.filtered = fuzzyFilter(this.choices(), query, (p) => `${p.name} ${p.detail ?? ""}`);
     this.activeIndex = Math.min(this.activeIndex, Math.max(this.filtered.length - 1, 0));
     const emptyText = this.emptyText(query);
     if (emptyText) {
@@ -254,7 +392,7 @@ var ProjectSelector = class extends BaseComponent {
   emptyText(query) {
     if (this.status === "loading") return gettext("Loading projects\u2026");
     if (this.status === "error") return gettext("Could not load projects");
-    if (this.projects.length === 0) return translate("No projects", "noProjects");
+    if (this.projects.length === 0 && !this.allowUserScope) return translate("No projects", "noProjects");
     if (this.filtered.length === 0 && query.trim() !== "") return gettext("No matching projects");
     return null;
   }
@@ -262,7 +400,7 @@ var ProjectSelector = class extends BaseComponent {
     const option = document.createElement("button");
     option.type = "button";
     option.id = `${this.uid}-opt-${index}`;
-    const isCurrent = this.current?.id === project.id;
+    const isCurrent = this.current?.scope === project.scope && this.current?.id === project.id;
     const classes = [`${CLS}__option`];
     if (isCurrent) classes.push(`${CLS}__option--current`);
     if (index === this.activeIndex) classes.push(`${CLS}__option--active`);
@@ -271,6 +409,7 @@ var ProjectSelector = class extends BaseComponent {
     option.setAttribute("role", "option");
     option.setAttribute("aria-selected", String(isCurrent));
     option.tabIndex = -1;
+    option.disabled = this.pending;
     const name = document.createElement("span");
     name.className = `${CLS}__option-name`;
     name.textContent = project.name;
@@ -281,7 +420,9 @@ var ProjectSelector = class extends BaseComponent {
       detail.textContent = project.detail;
       option.appendChild(detail);
     }
-    option.addEventListener("click", () => this.select(project));
+    option.addEventListener("click", () => {
+      if (this.commands.get(this.selectCommandId)?.def === this.selectCommand) this.commands.run(this.selectCommandId, { via: "button", source: option }, { scope: project.scope, id: project.id });
+    });
     return option;
   }
   onSearchKey(e) {
@@ -295,7 +436,7 @@ var ProjectSelector = class extends BaseComponent {
     } else if (e.key === "Enter") {
       e.preventDefault();
       const project = this.filtered[this.activeIndex];
-      if (project) this.select(project);
+      if (project && this.commands.get(this.selectCommandId)?.def === this.selectCommand) this.commands.run(this.selectCommandId, { via: "keyboard", source: this.search }, { scope: project.scope, id: project.id });
     } else if (e.key === "Tab") {
       this.close();
     }
@@ -309,7 +450,7 @@ var ProjectSelector = class extends BaseComponent {
     if (this.open) return;
     this.open = true;
     if (this.search) this.search.value = "";
-    const currentIndex = this.projects.findIndex((p) => p.id === this.current?.id);
+    const currentIndex = this.choices().findIndex((p) => p.scope === this.current?.scope && p.id === this.current?.id);
     this.activeIndex = Math.max(currentIndex, 0);
     this.renderList();
     this.container.classList.add(`${CLS}--open`);
@@ -325,17 +466,62 @@ var ProjectSelector = class extends BaseComponent {
     this.search?.setAttribute("aria-expanded", "false");
   }
   /** Select a project: update the trigger, remember it, close, and emit the change. */
-  select(project) {
-    const changed = this.current?.id !== project.id;
+  select(payload) {
+    if (this.destroyed || this.status !== "ready" || this.pending || !payload || typeof payload !== "object") return false;
+    const value = payload;
+    if (value.scope !== "user" && value.scope !== "project") return false;
+    if (value.scope === "user" ? value.id !== null : typeof value.id !== "string" || !value.id.trim()) return false;
+    const project = this.choices().find((p) => p.scope === value.scope && p.id === value.id);
+    if (!project) return false;
+    this.selectionError.hidden = true;
+    const changed = this.current?.scope !== project.scope || this.current?.id !== project.id;
+    if (!changed) {
+      this.close();
+      return false;
+    }
+    if (this.allowUserScope) {
+      const remember = this.config.provider?.rememberScope;
+      if (!this.allowUserScope || !remember) return false;
+      this.pending = true;
+      this.trigger.disabled = true;
+      this.renderList();
+      const generation = ++this.generation;
+      void this.acceptScope(project, generation);
+      return true;
+    }
+    if (project.scope !== "project") return false;
+    this.applyChoice(project);
+    this.config.provider?.rememberProject?.(project.id).catch(() => void 0);
+    return true;
+  }
+  async acceptScope(project, generation) {
+    try {
+      await this.config.provider.rememberScope({ scope: project.scope, id: project.id });
+      if (!this.destroyed && generation === this.generation) this.applyChoice(project);
+    } catch {
+      if (!this.destroyed && generation === this.generation) {
+        this.selectionError.textContent = translate("Could not select scope", "scopeSelectionFailed");
+        this.selectionError.hidden = false;
+      }
+    } finally {
+      if (!this.destroyed && generation === this.generation) {
+        this.pending = false;
+        this.trigger.disabled = false;
+        this.renderList();
+      }
+    }
+  }
+  applyChoice(project) {
     this.current = project;
     this.renderLabel();
     this.renderList();
     this.close();
-    if (!changed) return;
-    this.config.provider?.rememberProject?.(project.id).catch(() => void 0);
-    this.emit(PROJECT_SELECTOR_CHANGE, { id: project.id, name: project.name });
+    this.emit(PROJECT_SELECTOR_CHANGE, this.allowUserScope ? { scope: project.scope, id: project.id, name: project.name } : { id: project.id, name: project.name });
   }
   destroy() {
+    this.destroyed = true;
+    this.generation++;
+    if (this.commands.get(this.selectCommandId)?.def === this.selectCommand) this.commands.unset(this.selectCommandId);
     document.removeEventListener("click", this.outsideClickHandler);
     document.removeEventListener("keydown", this.keyHandler);
     super.destroy();
@@ -343,10 +529,20 @@ var ProjectSelector = class extends BaseComponent {
 };
 
 // ts/app/project-selector/provider.ts
+function staticProjectProvider(projects, current = null) {
+  return {
+    listProjects: async () => ({ projects, current })
+  };
+}
 function csrfToken() {
   if (typeof document === "undefined" || typeof document.cookie !== "string") return "";
   const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : "";
+}
+var PROJECT_PROVIDER_META_NAME = "stx-project-provider";
+function hostProjectProvider(doc = document) {
+  const url = doc.querySelector(`meta[name="${PROJECT_PROVIDER_META_NAME}"]`)?.getAttribute("content");
+  return url ? httpProjectProvider(url) : null;
 }
 function httpProjectProvider(url) {
   return {
@@ -360,6 +556,7 @@ function httpProjectProvider(url) {
       return { projects: body.projects ?? [], current: body.current ?? null };
     },
     async rememberProject(id) {
+      if (typeof id !== "string" || !id.trim()) throw new Error("project id required");
       await fetch(url, {
         method: "POST",
         credentials: "same-origin",
@@ -374,26 +571,32 @@ function httpProjectProvider(url) {
 var PROJECT_PICKER_ATTRIBUTE = "data-stx-project-picker";
 var MOUNTED_ATTRIBUTE = "data-stx-project-picker-mounted";
 function projectNavigationUrl(template, id) {
-  if (!template) return null;
+  if (!template || typeof id !== "string" || !id.trim()) return null;
   return template.split("{id}").join(encodeURIComponent(id));
 }
-function mountProjectPickers(root = document) {
+function mountProjectPickers(root = document, providerFor = httpProjectProvider) {
   const mounted = [];
   const elements = root.querySelectorAll(`[${PROJECT_PICKER_ATTRIBUTE}]`);
   for (const element of Array.from(elements)) {
     if (element.hasAttribute(MOUNTED_ATTRIBUTE)) continue;
     const providerUrl = element.getAttribute("data-provider-url");
     if (!providerUrl) continue;
-    element.setAttribute(MOUNTED_ATTRIBUTE, "");
+    const scope = element.getAttribute("data-current-scope");
     const selector = new ProjectSelector({
       container: element,
-      provider: httpProjectProvider(providerUrl),
+      provider: providerFor(providerUrl, element),
       current: element.getAttribute("data-current") || null,
-      placeholder: element.getAttribute("data-placeholder") || void 0
+      placeholder: element.getAttribute("data-placeholder") || void 0,
+      allowUserScope: element.getAttribute("data-allow-user-scope") === "true",
+      currentScope: scope === "user" || scope === "project" ? scope : void 0
     });
+    element.setAttribute(MOUNTED_ATTRIBUTE, "");
     const navigate = element.getAttribute("data-navigate");
     element.addEventListener(PROJECT_SELECTOR_CHANGE, (event) => {
-      const { id } = event.detail;
+      const detail = event.detail;
+      if (!detail || detail.scope !== void 0 && detail.scope !== "project") return;
+      const { id } = detail;
+      if (typeof id !== "string") return;
       const url = projectNavigationUrl(navigate, id);
       if (url) window.location.assign(url);
     });
@@ -403,8 +606,24 @@ function mountProjectPickers(root = document) {
 }
 
 // ts/app/project-selector/auto-mount.ts
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => mountProjectPickers());
-} else {
-  mountProjectPickers();
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => mountProjectPickers());
+  } else {
+    mountProjectPickers();
+  }
 }
+export {
+  PROJECT_PICKER_ATTRIBUTE,
+  PROJECT_PROVIDER_META_NAME,
+  PROJECT_SELECTOR_CHANGE,
+  PROJECT_SELECTOR_SELECT,
+  ProjectSelector,
+  fuzzyFilter,
+  fuzzyScore,
+  hostProjectProvider,
+  httpProjectProvider,
+  mountProjectPickers,
+  projectNavigationUrl,
+  staticProjectProvider
+};
