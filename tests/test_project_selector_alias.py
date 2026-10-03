@@ -198,7 +198,7 @@ def test_host_storage_sees_only_canonical_authorized_ids(monkeypatch, tmp_path):
     req.GET["project"] = "17"
     with override_settings(SCITEX_APP_MODE="hub", SCITEX_PROJECT_STORAGE=storage):
         access = host.project_access(req, write=True, remember=False)
-    assert access.id == "alice/alpha" and calls == ["alice/alpha", "alice/alpha"]
+    assert access.id == "alice/alpha" and calls == ["alice/alpha", "alice/alpha", "alice/alpha"]
     assert provider.remembered == []
 
 
