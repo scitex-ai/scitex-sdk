@@ -800,3 +800,51 @@ class TestListEntriesContainment:
         backend = FileSystemBackend(tmp_path / "project")
         entries = _list_entries(backend, "sub")
         assert {"path": "sub/ok.txt", "type": "file"} in entries
+
+
+class TestBuildTreeContainment:
+    """Public build_tree against an owned root with an outward symlink child."""
+
+    def _owned(self, tmp_path):
+        import os
+        (tmp_path / "owned" / "sub").mkdir(parents=True)
+        (tmp_path / "owned" / "own.txt").write_text("own")
+        (tmp_path / "owned" / "sub" / "ok.txt").write_text("ok")
+        (tmp_path / "sibling").mkdir()
+        (tmp_path / "sibling" / "secret.txt").write_text("secret")
+        try:
+            os.symlink(tmp_path / "sibling", tmp_path / "owned" / "outward-dir")
+        except OSError:
+            __import__("pytest").skip("symlinks unavailable")
+        return FileSystemBackend(tmp_path / "owned")
+
+    def _paths(self, tree):
+        found = []
+        for node in tree:
+            found.append(node["path"])
+            found.extend(self._paths(node.get("children", [])))
+        return found
+
+    def test_valid_entries_kept_outward_child_refused(self, tmp_path):
+        tree = build_tree(self._owned(tmp_path))
+        paths = self._paths(tree)
+        assert "own.txt" in paths
+        assert "sub/ok.txt" in paths
+        assert not any("secret" in p or "outward-dir" in p for p in paths)
+
+    def test_explicit_escaping_top_level_still_raises(self, tmp_path):
+        backend = self._owned(tmp_path)
+        with __import__("pytest").raises(ValueError, match="Path traversal"):
+            build_tree(backend, "../sibling")
+
+    def test_alias_dir_keeps_logical_namespace(self, tmp_path):
+        import os
+        (tmp_path / "owned" / "real").mkdir(parents=True)
+        (tmp_path / "owned" / "real" / "f.txt").write_text("f")
+        try:
+            os.symlink(tmp_path / "owned" / "real", tmp_path / "owned" / "alias")
+        except OSError:
+            __import__("pytest").skip("symlinks unavailable")
+        backend = FileSystemBackend(tmp_path / "owned")
+        tree = build_tree(backend, "alias")
+        assert self._paths(tree) == ["alias/f.txt"]

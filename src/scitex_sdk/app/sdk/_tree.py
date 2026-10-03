@@ -10,6 +10,7 @@ Reusable by any app that needs a file browser UI.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -71,8 +72,12 @@ def build_tree(
                     skip_hidden=skip_hidden,
                     max_depth=max_depth - 1,
                 )
-            except PermissionError:
-                continue  # skip directories we can't read
+            except (PermissionError, ValueError):
+                # Skip unreadable directories AND outward children refused by
+                # backend containment; valid sibling entries are kept. An
+                # explicitly escaping top-level `directory` still raises from
+                # _list_entries above — it is a caller error, not a child.
+                continue
             if children:  # only include non-empty directories
                 items.append(
                     {
@@ -117,16 +122,19 @@ def _list_entries(
     # Fallback: use list() for files, try to discover directories
     # via the backend's internal structure
     if hasattr(backend, "_root"):
-        # FileSystemBackend — resolve through the backend's own containment
+        # FileSystemBackend — validate through the backend's own containment
         # (component comparison, not string prefix) so a traversal directory
-        # is refused exactly like read/write/list refuse it. A symlink child
-        # pointing outside is still LISTED by name (its link path is inside
-        # root) but any read through it hits the same refusal — listing names
-        # is not operating on targets.
+        # is refused exactly like read/write/list refuse it; then iterate the
+        # LOGICAL requested path (lexically normalized, links unfollowed) so
+        # metadata keeps the alias namespace instead of the real path. A
+        # symlink child pointing outside is still LISTED by name (its link
+        # path is inside root) but any read through it hits the same refusal
+        # — listing names is not operating on targets.
         _resolve = getattr(backend, "_resolve", None)
         root = backend._root
         if directory and _resolve is not None:
-            target = _resolve(directory)
+            _resolve(directory)  # validation only; raises on escape
+            target = Path(os.path.normpath(root / directory))
         else:
             target = (root / directory) if directory else root
         if not target.is_dir():
