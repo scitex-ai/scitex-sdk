@@ -341,7 +341,12 @@ def _explicit_from_request(request: Any) -> str | None:
     return value or None
 
 
-def project_context(request: Any, provider: _ProjectProvider | None = None) -> dict:
+def project_context(
+    request: Any,
+    provider: _ProjectProvider | None = None,
+    *,
+    remember: bool = True,
+) -> dict:
     """Context processor: hand every leaf template its project context.
 
     Register once and a mounted app renders its project surface without the
@@ -359,8 +364,12 @@ def project_context(request: Any, provider: _ProjectProvider | None = None) -> d
 
     Keys: ``active_project`` (dict or None), ``project_state`` (a declared
     state), ``project_command``.
+
+    By default an authorized explicit navigation is remembered, preserving
+    the existing context-processor contract. Use ``remember=False`` for a
+    read-only render when the view already owns navigation persistence.
     """
-    resolution = resolve_active_project(request, provider)
+    resolution = resolve_active_project(request, provider, remember=remember)
     return {
         "active_project": (
             resolution.project.as_dict() if resolution.project else None
