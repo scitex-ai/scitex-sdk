@@ -32,6 +32,8 @@ from scitex_sdk.ui.project_scope import (
     project_id_for,
 )
 
+from .scitex_i18n import _document_catalog_state
+
 register = template.Library()
 
 SCOPE_USER = "user"
@@ -76,17 +78,47 @@ def scitex_project_picker(
     provider_url = provider_url or host_project_provider_url()
     if not provider_url:
         return ""
-    return render_to_string(
-        "scitex_sdk/ui/_project_picker.html",
-        {
-            "provider_url": provider_url,
-            "current": project_id_for(current),
-            "navigate": navigate,
-            "placeholder": placeholder,
-            "allow_user_scope": allow_user_scope,
-            "current_scope": current_scope if allow_user_scope else None,
-        },
-    )
+    values = {
+        "provider_url": provider_url,
+        "current": project_id_for(current),
+        "navigate": navigate,
+        "placeholder": placeholder,
+        "allow_user_scope": allow_user_scope,
+        "current_scope": current_scope if allow_user_scope else None,
+    }
+    template_name = "scitex_sdk/ui/_project_picker.html"
+    if context.template is not None:
+        # Keep isolated picker variables while sharing this document's render
+        # state, so the catalog tag also sees the shell's earlier emission.
+        page = context.template.engine.get_template(template_name)
+        picker_context = context.new(values)
+        # The prior isolated fragment escaped its attribute values even inside
+        # an outer autoescape-off block. Keep that boundary while sharing state.
+        picker_context.autoescape = True
+        return page.render(picker_context)
+    return render_to_string(template_name, values)
+
+
+_compile_picker = register.tags["scitex_project_picker"]
+
+
+class _PickerNode(template.Node):
+    def __init__(self, node):
+        self.node = node
+
+    def render(self, context):
+        if self.node.target_var is not None:
+            # A captured picker also captures its nested catalog. Its eventual
+            # interpolation cannot be tracked, so preserve later catalog output.
+            state = _document_catalog_state(context)
+            if state is not None:
+                state["captured"] = True
+        return self.node.render(context)
+
+
+@register.tag("scitex_project_picker")
+def _picker_tag(parser, token):
+    return _PickerNode(_compile_picker(parser, token))
 
 
 @register.simple_tag(takes_context=True)

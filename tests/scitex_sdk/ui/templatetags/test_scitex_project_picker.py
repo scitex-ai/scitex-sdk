@@ -228,4 +228,45 @@ def test_enabled_picker_still_requires_host_provider():
     assert html == ""
 
 
+@pytest.mark.parametrize(
+    "opening,closing,autoescape",
+    [("", "", False), ("{% autoescape off %}", "{% endautoescape %}", True)],
+)
+def test_picker_fragment_preserves_escaping_when_caller_disables_it(
+    opening, closing, autoescape
+):
+    # Arrange
+    page = engines["django"].from_string(
+        opening + "{% load scitex_project_picker %}"
+        '{% scitex_project_picker scope="project" provider_url=endpoint placeholder=hint %}'
+        + closing
+    )
+    context = Context(
+        {"endpoint": '/api" data-probe="injected', "hint": "<b>placeholder</b>"},
+        autoescape=autoescape,
+    )
+    # Act
+    html = page.template.render(context)
+    # Assert
+    assert (
+        'data-provider-url="/api&quot; data-probe=&quot;injected"' in html
+        and 'data-placeholder="&lt;b&gt;placeholder&lt;/b&gt;"' in html
+        and 'data-probe="injected"' not in html
+    )
+
+
+def test_direct_picker_helper_keeps_standalone_rendering_without_active_template():
+    # Arrange
+    from scitex_sdk.ui.templatetags.scitex_project_picker import scitex_project_picker
+
+    context = Context({"app_scope": "project"})
+    expected = _render({"app_scope": "project"})
+    # Act
+    html = scitex_project_picker(
+        context, provider_url="/api/projects/", current="alice/paper"
+    )
+    # Assert
+    assert html == expected and context.template is None
+
+
 # EOF
