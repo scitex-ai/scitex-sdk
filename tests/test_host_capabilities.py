@@ -401,7 +401,7 @@ def test_read_without_grant_still_resolves_path(hosted):
     assert access.can_write is False and storage.calls == ["owned"]
 
 
-def test_allowed_write_observes_permission_exactly_once(hosted):
+def test_allowed_write_validates_permission_before_and_after_resolution(hosted):
     # Arrange
     _, storage = hosted
     permission_calls = []
@@ -411,7 +411,7 @@ def test_allowed_write_observes_permission_exactly_once(hosted):
     # Act
     access = project_access(req, write=True)
     # Assert
-    assert access.can_write is True and permission_calls == ["owned"]
+    assert access.can_write is True and permission_calls == ["owned", "owned"]
 
 
 def test_missing_permission_check_maps_to_capability_failure(hosted, tmp_path, monkeypatch):
