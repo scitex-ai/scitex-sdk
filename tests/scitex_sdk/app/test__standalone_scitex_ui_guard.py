@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -86,3 +91,175 @@ def test_run_standalone_raises_the_named_error_when_the_shell_is_absent(monkeypa
     monkeypatch.setattr("scitex_sdk.app._standalone._scitex_ui_present", lambda: False)
     with pytest.raises(ScitexUiRequiredError):
         run_standalone(app_module="some_app._django")
+
+
+@pytest.fixture
+def real_standalone_configuration(tmp_path):
+    """Observe genuine fresh settings and parsed development-server options.
+
+    A profile callback stops the real Django command before it binds. No
+    product callable or provider is replaced, and each configuration owns
+    a fresh interpreter so the host control cannot inherit standalone state.
+    """
+    directory = tmp_path
+    source_root = Path(__file__).resolve().parents[3] / "src"
+    program = r'''
+import json
+import sys
+
+def refuse_database(frame, event, _argument):
+    path = frame.f_code.co_filename.replace("\\", "/")
+    if event == "call" and "/django/db/backends/" in path:
+        if frame.f_code.co_name in {"connect", "get_new_connection"}:
+            raise RuntimeError("standalone configuration attempted a database")
+
+sys.setprofile(refuse_database)
+from django.conf import settings
+
+host = sys.argv[1] == "host"
+if host:
+    settings.configure(
+        SECRET_KEY="disposable-host-contract", DEBUG=False,
+        SCITEX_APP_MODE="hub", SCITEX_PROJECT_PROVIDER="host.owned.Provider",
+        ALLOWED_HOSTS=["host.example.test"], DATABASES={},
+        MIDDLEWARE=["host.owned.Middleware"], ROOT_URLCONF="host.owned.urls",
+    )
+
+from scitex_sdk.app._standalone import _configure_django, _run_server
+_configure_django("django.contrib.contenttypes")
+observed = {
+    "mode": getattr(settings, "SCITEX_APP_MODE", None),
+    "debug": settings.DEBUG,
+    "databases": settings.DATABASES,
+    "provider": getattr(settings, "SCITEX_PROJECT_PROVIDER", None),
+    "middleware": settings.MIDDLEWARE,
+    "allowed_hosts": settings.ALLOWED_HOSTS,
+    "root_urlconf": settings.ROOT_URLCONF,
+}
+
+if not host:
+    import django
+    django.setup()
+
+    class ObservedBeforeBind(RuntimeError):
+        pass
+
+    def observe(frame, event, _argument):
+        refuse_database(frame, event, _argument)
+        path = frame.f_code.co_filename.replace("\\", "/")
+        if event == "call" and frame.f_code.co_name == "handle":
+            if path.endswith("/django/core/management/commands/runserver.py"):
+                observed["insecure_serving"] = frame.f_locals["options"].get("insecure_serving")
+                observed["use_reloader"] = frame.f_locals["options"].get("use_reloader")
+                raise ObservedBeforeBind
+
+    sys.setprofile(observe)
+    try:
+        _run_server("127.0.0.1", 8050, False)
+    except ObservedBeforeBind:
+        pass
+    finally:
+        sys.setprofile(None)
+
+sys.setprofile(None)
+
+print("STANDALONE_OBSERVATION=" + json.dumps(observed))
+'''
+    results = {}
+    for mode in ("standalone", "host"):
+        environment = dict(os.environ)
+        environment.pop("DJANGO_SETTINGS_MODULE", None)
+        environment.update(
+            PYTHONPATH=str(source_root),
+            PYTHONDONTWRITEBYTECODE="1",
+            SCITEX_DIR=str(directory / mode),
+            DJANGO_DEBUG="false",
+        )
+        completed = subprocess.run(
+            [sys.executable, "-c", program, mode],
+            cwd=directory,
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=20,
+        )
+        line = next(
+            line for line in completed.stdout.splitlines()
+            if line.startswith("STANDALONE_OBSERVATION=")
+        )
+        results[mode] = json.loads(line.partition("=")[2])
+    return results
+
+
+def test_fresh_launcher_declares_standalone_mode(real_standalone_configuration):
+    # Arrange
+    configured = real_standalone_configuration["standalone"]
+    # Act
+    mode = configured["mode"]
+    # Assert
+    assert mode == "standalone"
+
+
+def test_fresh_launcher_uses_no_database(real_standalone_configuration):
+    # Arrange
+    configured = real_standalone_configuration["standalone"]
+    # Act
+    databases = configured["databases"]
+    # Assert
+    assert databases == {}
+
+
+def test_fresh_launcher_preserves_debug_false(real_standalone_configuration):
+    # Arrange
+    configured = real_standalone_configuration["standalone"]
+    # Act
+    debug = configured["debug"]
+    # Assert
+    assert debug is False
+
+
+def test_development_static_works_without_debug(real_standalone_configuration):
+    # Arrange
+    configured = real_standalone_configuration["standalone"]
+    # Act
+    permitted = configured["insecure_serving"]
+    # Assert
+    assert permitted is True
+
+
+def test_nonreload_launch_does_not_spawn_a_reloader(real_standalone_configuration):
+    # Arrange
+    configured = real_standalone_configuration["standalone"]
+    # Act
+    reloads = configured["use_reloader"]
+    # Assert
+    assert reloads is False
+
+
+def test_fresh_launcher_uses_the_genuine_provider(real_standalone_configuration):
+    # Arrange
+    configured = real_standalone_configuration["standalone"]
+    # Act
+    provider = configured["provider"]
+    # Assert
+    assert provider == "scitex_sdk.app.project_context.StandaloneProjectProvider"
+
+
+@pytest.mark.parametrize(
+    ("key", "expected"),
+    [
+        ("mode", "hub"),
+        ("provider", "host.owned.Provider"),
+        ("middleware", ["host.owned.Middleware"]),
+        ("allowed_hosts", ["host.example.test"]),
+        ("root_urlconf", "host.owned.urls"),
+    ],
+)
+def test_configured_host_is_not_reconfigured(real_standalone_configuration, key, expected):
+    # Arrange
+    configured = real_standalone_configuration["host"]
+    # Act
+    retained = configured[key]
+    # Assert
+    assert retained == expected
