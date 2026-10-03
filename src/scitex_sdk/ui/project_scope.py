@@ -36,7 +36,7 @@ import json
 from collections.abc import Collection
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional, Protocol, runtime_checkable
+from typing import Any, Callable, Optional, Protocol, cast, runtime_checkable
 
 __all__ = [
     "PROJECT_PROVIDER_META_NAME",
@@ -46,12 +46,16 @@ __all__ = [
     "LocalProjectProvider",
     "ProjectEntry",
     "ProjectProvider",
+    "ProjectSelection",
+    "ScopedProjectProvider",
     "canonical_project_selector",
     "host_project_provider",
     "host_project_provider_url",
     "project_id_for",
     "project_listing_view",
     "resolve_project",
+    "scoped_project_listing_view",
+    "supports_scoped_capability",
 ]
 
 PROJECT_QUERY_PARAM = "project"
@@ -233,6 +237,166 @@ def project_listing_view(
             if selected is None:
                 return JsonResponse({"error": "project not accessible"}, status=403)
             return JsonResponse({"current": selected})
+        return HttpResponseNotAllowed(["GET", "POST"])
+
+    return view
+
+
+@dataclass(frozen=True)
+class ProjectSelection:
+    """One authorized tagged selection: explicit user scope or a project.
+
+    ``{"scope": "user", "id": None}`` is the explicit All selection;
+    ``{"scope": "project", "id": <canonical id>}`` is a project selection.
+    Anything else (unknown scope, user-with-id, empty project id) is refused
+    at construction. ``None`` (no selection) is represented by the absence
+    of a pair, never by a null scope — the wire contract omits
+    ``current_scope`` for unselected state.
+    """
+
+    scope: str
+    id: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if self.scope == "user":
+            if self.id is not None:
+                raise ValueError("a user selection carries no project id")
+        elif self.scope == "project":
+            if not isinstance(self.id, str) or not self.id:
+                raise ValueError("a project selection needs a nonempty id")
+        else:
+            raise ValueError(f"unknown selection scope: {self.scope!r}")
+
+
+@runtime_checkable
+class ScopedProjectProvider(Protocol):
+    """Optional tagged-scope capability for a project provider.
+
+    Detected separately via :func:`supports_scoped_capability`; never added
+    to :class:`ProjectProvider`, whose three methods and legacy
+    ``remember(project_id)`` stay the only required surface. The provider
+    owns one committed scope/ID pair plus its legacy project projection and
+    persists them atomically; the SDK never writes scope and project apart.
+    """
+
+    def current_scope(self, request: Any) -> Optional[ProjectSelection]:
+        """The committed tagged selection, or None when unselected."""
+
+    def remember_scope(self, request: Any, selection: ProjectSelection) -> None:
+        """Atomically commit one authorized tagged selection."""
+
+
+def supports_scoped_capability(provider: Any) -> bool:
+    """Whether ``provider`` offers the optional tagged-scope capability."""
+    return isinstance(provider, ScopedProjectProvider)
+
+
+def _tagged_selection(payload: Any) -> ProjectSelection:
+    """Build the requested tagged selection, refusing anything else."""
+    if not isinstance(payload, dict):
+        raise ValueError("selection must be an object")
+    scope = payload.get("scope")
+    if scope == "user":
+        return ProjectSelection(scope="user", id=payload.get("id"))
+    if scope == "project":
+        return ProjectSelection(scope="project", id=payload.get("id"))
+    raise ValueError("unknown selection scope")
+
+
+def scoped_project_listing_view(
+    provider: ProjectProvider | Callable[[Any], ProjectProvider],
+) -> Callable:
+    """A Django view serving the picker's HTTP contract plus tagged scope.
+
+    Default-off: the tagged ``{scope, id}`` payload is accepted only when
+    the resolved provider offers :class:`ScopedProjectProvider`; otherwise
+    only the legacy ``POST {id}`` shape works, byte-for-byte compatible with
+    :func:`project_listing_view` (same shapes, same 403s). ``GET`` adds
+    ``allow_user_scope`` (true only for a supporting provider) plus
+    ``current_scope`` for a committed tagged selection, omitted when
+    unselected. Stale, unknown, or null scopes are never accepted as
+    All; an explicit user selection requires the provider's support.
+    ``provider`` may be a factory taking the request.
+    """
+    from django.http import HttpResponseNotAllowed, JsonResponse
+
+    def resolve_provider(request: Any) -> ProjectProvider:
+        return provider if isinstance(provider, ProjectProvider) else provider(request)
+
+    def view(request: Any):
+        if request.method == "GET":
+            chosen = resolve_provider(request)
+            entries = chosen.list_projects(request)
+            scoped = supports_scoped_capability(chosen)
+            body: dict = {
+                "projects": [entry.as_option() for entry in entries],
+                "current": resolve_project(request, chosen),
+                "allow_user_scope": scoped,
+            }
+            if scoped:
+                selection = cast(ScopedProjectProvider, chosen).current_scope(request)
+                valid = isinstance(selection, ProjectSelection) and (
+                    (selection.scope == "user" and selection.id is None)
+                    or (
+                        selection.scope == "project"
+                        and isinstance(selection.id, str)
+                        and selection.id
+                    )
+                )
+                if valid:
+                    assert isinstance(selection, ProjectSelection)
+                    body["current_scope"] = selection.scope
+                    body["current"] = selection.id
+                else:
+                    # Unselected is always {current: null} with current_scope
+                    # omitted: a stale legacy projection must never stand in
+                    # for an explicit tagged selection.
+                    body["current"] = None
+            return JsonResponse(body)
+        if request.method == "POST":
+            try:
+                payload = json.loads(request.body or b"{}")
+            except ValueError:
+                payload = None
+            if isinstance(payload, dict) and "scope" not in payload:
+                project_id = payload.get("id")
+                if not isinstance(project_id, str) or not project_id:
+                    return JsonResponse(
+                        {"error": "project not accessible"}, status=403
+                    )
+                chosen = resolve_provider(request)
+                selected = resolve_project(request, chosen, explicit=project_id)
+                if selected is None:
+                    return JsonResponse(
+                        {"error": "project not accessible"}, status=403
+                    )
+                return JsonResponse({"current": selected})
+            try:
+                selection = _tagged_selection(payload)
+            except ValueError:
+                return JsonResponse(
+                    {"error": "project not accessible"}, status=403
+                )
+            chosen = resolve_provider(request)
+            if not supports_scoped_capability(chosen):
+                return JsonResponse(
+                    {"error": "project not accessible"}, status=403
+                )
+            scoped = cast(ScopedProjectProvider, chosen)
+            if selection.scope == "user":
+                scoped.remember_scope(request, selection)
+                return JsonResponse({"current": None, "current_scope": "user"})
+            accessible = {entry.id for entry in chosen.list_projects(request)}
+            selected = canonical_project_selector(
+                request, chosen, selection.id or "", accessible
+            )
+            if selected is None:
+                return JsonResponse(
+                    {"error": "project not accessible"}, status=403
+                )
+            committed = ProjectSelection(scope="project", id=selected)
+            scoped.remember_scope(request, committed)
+            return JsonResponse({"current": selected, "current_scope": "project"})
         return HttpResponseNotAllowed(["GET", "POST"])
 
     return view
