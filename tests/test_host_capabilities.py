@@ -437,3 +437,20 @@ def test_missing_permission_check_maps_to_capability_failure(hosted, tmp_path, m
         outcome = type(exc).__name__
     # Assert
     assert outcome == "CapabilityUnavailable"
+
+
+def test_revocation_during_path_resolution_denies_without_capability(hosted):
+    # Arrange
+    _, storage = hosted
+    grants = [True, False]
+    real_can_write = storage.can_write
+    storage.can_write = lambda project_id, req: grants.pop(0) and real_can_write(project_id, req)
+    req = request()
+    # Act
+    try:
+        project_access(req, write=True)
+        outcome = "admitted"
+    except Exception as exc:
+        outcome = type(exc).__name__ + ":" + str(getattr(exc, "status", ""))
+    # Assert
+    assert outcome == "AccessError:403"
