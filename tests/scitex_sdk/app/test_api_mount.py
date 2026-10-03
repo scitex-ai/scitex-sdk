@@ -83,7 +83,7 @@ def test_discovery_never_imports_leaf(tmp_path):
     try:
         # Act
         ref = _ref()
-        admission = admit(ref, source="review-1", enabled=[])
+        admission = admit(ref, review_ref="review-1", enabled=[])
     finally:
         _unpath(tmp_path)
     # Assert
@@ -97,7 +97,7 @@ def test_denied_path_imports_nothing(tmp_path):
         # Act
         # Assert
         with pytest.raises(AdmissionDenied):
-            resolve_handler(_ref(), admit(_ref(), source="review-1", enabled=[]), "ping")
+            resolve_handler(_ref(), admit(_ref(), review_ref="review-1", enabled=[]), "ping")
     finally:
         _unpath(tmp_path)
     # Assert
@@ -113,7 +113,7 @@ def test_changed_target_refused_before_import(tmp_path):
         with pytest.raises(AdmissionDenied):
             resolve_handler(
                 ApiPluginRef(name="leafprobe", target=LEAF_PKG + ".views:OTHER", distribution="leafprobe-dist"),
-                admit(_ref(), source="review-1", enabled=["ping"]),
+                admit(_ref(), review_ref="review-1", enabled=["ping"]),
                 "ping",
             )
     finally:
@@ -127,7 +127,7 @@ def test_admitted_reference_resolves_only_enabled_path(tmp_path):
     _write_leaf(tmp_path)
     try:
         # Act
-        handler = resolve_handler(_ref(), admit(_ref(), source="review-1", enabled=["ping"]), "ping")
+        handler = resolve_handler(_ref(), admit(_ref(), review_ref="review-1", enabled=["ping"]), "ping")
         # Assert
         assert handler({"m": "GET"}, None) == {"ok": True}
     finally:
@@ -141,7 +141,7 @@ def test_undeclared_path_denied_after_admission(tmp_path):
         # Act
         # Assert
         with pytest.raises(AdmissionDenied):
-            resolve_handler(_ref(), admit(_ref(), source="review-1", enabled=["ping"]), "other")
+            resolve_handler(_ref(), admit(_ref(), review_ref="review-1", enabled=["ping"]), "other")
     finally:
         _unpath(tmp_path)
 
@@ -206,3 +206,117 @@ def test_inert_round_trip_restores_equal_plugin(tmp_path):
 
 
 # EOF
+
+
+def _write_dual_leaf(tmp_path):
+    # Arrange
+    pkg = tmp_path / "dualpkg"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "views.py").write_text(
+        "from scitex_sdk.app.api_plugin import ApiPlugin, ApiRoute, AuthScope, RateLimit\n"
+        "PUBLIC = AuthScope(public=True, project_scope='none')\n"
+        "class Handlers:\n"
+        "    @staticmethod\n"
+        "    def get_thing(request, editor):\n"
+        "        return {'side': 'get'}\n"
+        "    @staticmethod\n"
+        "    def post_thing(request, editor):\n"
+        "        return {'side': 'post'}\n"
+        "NOT_A_HANDLER = 42\n"
+        "PLUGIN = ApiPlugin(id='dual', title='Dual', api_version='1.0.0', routes=[\n"
+        "    ApiRoute(path='thing', methods=['GET'], rate=RateLimit(rate_class='free', compute_cost='low'), auth=PUBLIC, handler='dualpkg.views:Handlers.get_thing'),\n"
+        "    ApiRoute(path='thing', methods=['POST'], rate=RateLimit(rate_class='free', compute_cost='low'), auth=PUBLIC, handler='dualpkg.views:Handlers.post_thing', read_only=True),\n"
+        "    ApiRoute(path='data', methods=['GET'], rate=RateLimit(rate_class='free', compute_cost='low'), auth=PUBLIC, handler='dualpkg.views:NOT_A_HANDLER'),\n"
+        "])\n",
+        encoding="utf-8",
+    )
+    # Act
+    import sys
+    sys.path.insert(0, str(tmp_path))
+    # Assert
+    assert True
+
+
+def _dual_ref():
+    # Arrange
+    from scitex_sdk.app.api_plugin import ApiPluginRef
+    # Act
+    # Assert
+    return ApiPluginRef(name="dual", target="dualpkg.views:PLUGIN", distribution="dual-dist")
+
+
+def test_method_disjoint_routes_resolve_each_side(tmp_path):
+    # Arrange
+    _write_dual_leaf(tmp_path)
+    try:
+        # Act
+        admission = admit(_dual_ref(), review_ref="review-1", enabled=["thing", "data"])
+        get_handler = resolve_handler(_dual_ref(), admission, "thing", method="GET")
+        post_handler = resolve_handler(_dual_ref(), admission, "thing", method="POST")
+    finally:
+        import sys
+        sys.path.remove(str(tmp_path))
+        sys.modules.pop("dualpkg.views", None)
+        sys.modules.pop("dualpkg", None)
+    # Assert
+    assert get_handler(None, None) == {"side": "get"} and post_handler(None, None) == {"side": "post"}
+
+
+def test_undeclared_method_refused(tmp_path):
+    # Arrange
+    _write_dual_leaf(tmp_path)
+    try:
+        # Act
+        # Assert
+        with pytest.raises(AdmissionDenied):
+            resolve_handler(_dual_ref(), admit(_dual_ref(), review_ref="review-1", enabled=["thing"]), "thing", method="DELETE")
+    finally:
+        import sys
+        sys.path.remove(str(tmp_path))
+        sys.modules.pop("dualpkg.views", None)
+        sys.modules.pop("dualpkg", None)
+
+
+def test_non_callable_handler_refused(tmp_path):
+    # Arrange
+    _write_dual_leaf(tmp_path)
+    try:
+        # Act
+        # Assert
+        with pytest.raises(AdmissionDenied):
+            resolve_handler(_dual_ref(), admit(_dual_ref(), review_ref="review-1", enabled=["data"]), "data")
+    finally:
+        import sys
+        sys.path.remove(str(tmp_path))
+        sys.modules.pop("dualpkg.views", None)
+        sys.modules.pop("dualpkg", None)
+
+
+def test_session_and_read_only_declare_natively():
+    # Arrange
+    from scitex_sdk.app.api_plugin import ApiPlugin, ApiRoute, AuthScope, RateLimit
+    # Act
+    route = ApiRoute(path="query", methods=["POST"], rate=RateLimit(rate_class="free", compute_cost="low"), auth=AuthScope(session=True), read_only=True, handler="m:h")
+    # Assert
+    assert route.auth.session is True and route.read_only is True
+
+
+def test_read_only_with_put_refused():
+    # Arrange
+    import pytest as _pytest
+    from scitex_sdk.app.api_plugin import ApiPluginContractError, ApiRoute, AuthScope, RateLimit
+    # Act
+    # Assert
+    with _pytest.raises(ApiPluginContractError):
+        ApiRoute(path="query", methods=["PUT"], rate=RateLimit(rate_class="free", compute_cost="low"), auth=AuthScope(public=True, project_scope="none"), read_only=True, handler="m:h")
+
+
+def test_session_with_scopes_refused():
+    # Arrange
+    import pytest as _pytest
+    from scitex_sdk.app.api_plugin import ApiPluginContractError, AuthScope
+    # Act
+    # Assert
+    with _pytest.raises(ApiPluginContractError):
+        AuthScope(session=True, scopes=["read"])

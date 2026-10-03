@@ -35,16 +35,22 @@ class AdmissionDenied(Exception):
 
 @dataclass(frozen=True)
 class ApiAdmission:
-    """The host's authoritative enablement for one discovered plugin ref."""
+    """The host's authoritative enablement for one discovered plugin ref.
+
+    ``review_ref`` is the host's opaque review identifier (which review
+    granted this) — deliberately NOT an artifact attestation: it names the
+    decision, never the bytes. Artifact identity stays with the
+    distribution/target strings the host verified out of band.
+    """
 
     name: str
     distribution: str
     target: str
-    source: str
+    review_ref: str
     enabled: tuple[str, ...] = field(default_factory=tuple)
 
     def __post_init__(self) -> None:
-        for slot in ("name", "target", "source"):
+        for slot in ("name", "target", "review_ref"):
             value = getattr(self, slot)
             if not isinstance(value, str) or not value.strip():
                 raise AdmissionDenied(f"admission {slot} must be a nonempty string")
@@ -57,43 +63,55 @@ class ApiAdmission:
 
 
 def admit(
-    ref: ApiPluginRef, *, source: str, enabled: Iterable[str]
+    ref: ApiPluginRef, *, review_ref: str, enabled: Iterable[str]
 ) -> ApiAdmission:
     """Bind the host decision for one discovered ref. No imports happen here."""
     return ApiAdmission(
         name=ref.name,
         distribution=ref.distribution,
         target=ref.target,
-        source=source,
+        review_ref=review_ref,
         enabled=tuple(enabled),
     )
 
 
-def _import_dotted(target: str) -> Any:
-    """Import ``module:attribute`` with failures mapped to denial, not bare errors."""
+def _import_dotted(target: str, *, expect_callable: bool = False) -> Any:
+    """Import ``module:attr.path`` with failures mapped to denial, not bare errors.
+
+    Nested attributes (``Class.method``) walk down from the module. With
+    ``expect_callable``, the final object must be callable, otherwise a data
+    object could be returned under the handler contract; plugin declaration
+    objects themselves are data and must not pass through that gate.
+    """
     from importlib import import_module
 
-    module_name, _, attr = target.partition(":")
-    if not module_name or not attr:
+    module_name, _, attr_path = target.partition(":")
+    if not module_name or not attr_path:
         raise AdmissionDenied(f"unresolvable handler target: {target!r}")
     try:
-        module = import_module(module_name)
+        obj: Any = import_module(module_name)
     except ImportError as exc:
         raise AdmissionDenied(f"cannot import {module_name!r}") from exc
     try:
-        return getattr(module, attr)
+        for part in attr_path.split("."):
+            obj = getattr(obj, part)
     except AttributeError as exc:
-        raise AdmissionDenied(f"{module_name!r} has no {attr!r}") from exc
+        raise AdmissionDenied(f"{module_name!r} has no {attr_path!r}") from exc
+    if expect_callable and not callable(obj):
+        raise AdmissionDenied(f"{target!r} is not callable")
+    return obj
 
 
 def resolve_handler(
-    ref: ApiPluginRef, admission: ApiAdmission, path: str
+    ref: ApiPluginRef, admission: ApiAdmission, path: str, method: str = "GET"
 ) -> Callable:
-    """Return the handler callable for ``path`` under an explicit admission.
+    """Return the handler callable for one ``(path, method)`` route.
 
-    Order is the contract: ref/admission identity, then path membership,
-    then — and only then — the first import. Anything else (identity
-    drift, disabled path, unknown route, unresolvable handler) raises
+    Routes are keyed by path AND method: a method-disjoint GET/POST pair on
+    one path resolves each side separately. Order is the contract:
+    ref/admission identity, then path membership, then — and only then —
+    the first import. Anything else (identity drift, disabled path,
+    undeclared pair, unresolvable or non-callable handler) raises
     :class:`AdmissionDenied` before or without running leaf code beyond
     the admitted target.
     """
@@ -109,10 +127,11 @@ def resolve_handler(
     plugin = _import_dotted(ref.target)
     if not isinstance(plugin, ApiPlugin):
         raise AdmissionDenied(f"{ref.target!r} is not an API plugin declaration")
+    wanted_method = method.upper()
     for route in plugin.routes:
-        if route.path == wanted:
-            return _import_dotted(route.handler)
-    raise AdmissionDenied(f"path {wanted!r} is not declared")
+        if route.path == wanted and wanted_method in route.methods:
+            return _import_dotted(route.handler, expect_callable=True)
+    raise AdmissionDenied(f"route {(wanted, wanted_method)!r} is not declared")
 
 
 def _convert(hint: Any, value: Any, what: str) -> Any:
@@ -137,6 +156,16 @@ def _convert(hint: Any, value: Any, what: str) -> Any:
                 continue
         raise AdmissionDenied(f"no union option fits {what}")
     if origin is not None:
+        import collections.abc as _abc
+
+        if issubclass(origin, _abc.Mapping):
+            if not isinstance(value, dict):
+                raise AdmissionDenied(f"{what} must be an object")
+            key_type, _, value_type = args + (Any, Any, Any)
+            return {
+                _convert(key_type, k, f"{what}<key>"): _convert(value_type, v, f"{what}[{k}]")
+                for k, v in value.items()
+            }
         if not isinstance(value, list):
             raise AdmissionDenied(f"{what} must be a list")
         items = [_convert(args[0], v, f"{what}[]") for v in value] if args else list(value)
