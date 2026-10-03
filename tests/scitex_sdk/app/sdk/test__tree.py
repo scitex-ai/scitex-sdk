@@ -848,3 +848,40 @@ class TestBuildTreeContainment:
         backend = FileSystemBackend(tmp_path / "owned")
         tree = build_tree(backend, "alias")
         assert self._paths(tree) == ["alias/f.txt"]
+
+
+class TestGuardedTargetMatchesEnumeratedTarget:
+    """Guard and enumeration use the SAME physical target.
+
+    alias -> root/nested/a, request "alias/../..": physical target is
+    root/nested (valid) while the lexical path points at root.parent
+    (outside). The guarded target must be enumerated, with metadata in the
+    requested logical namespace — never the lexical outside path.
+    """
+
+    def test_dotdot_through_inward_alias_enumerates_guarded_target(self, tmp_path):
+        import os
+        (tmp_path / "owned" / "nested" / "a").mkdir(parents=True)
+        (tmp_path / "owned" / "nested" / "x.txt").write_text("x")
+        (tmp_path / "owned" / "nested" / "a" / "y.txt").write_text("y")
+        try:
+            os.symlink(
+                tmp_path / "owned" / "nested" / "a",
+                tmp_path / "owned" / "alias",
+            )
+        except OSError:
+            __import__("pytest").skip("symlinks unavailable")
+        backend = FileSystemBackend(tmp_path / "owned")
+        # alias/../.. resolves physically to root itself (valid); lexically it
+        # points at root.parent (outside). The guarded target must win: root's
+        # own children in the requested namespace, no raise, no outside names.
+        entries = _list_entries(backend, "alias/../..")
+        paths = sorted(e["path"] for e in entries)
+        assert paths == ["alias/../../alias", "alias/../../nested"]
+
+    def test_dotdot_escaping_root_still_refused(self, tmp_path):
+        (tmp_path / "owned").mkdir()
+        (tmp_path / "outside.txt").write_text("secret")
+        backend = FileSystemBackend(tmp_path / "owned")
+        with __import__("pytest").raises(ValueError, match="Path traversal"):
+            _list_entries(backend, "..")

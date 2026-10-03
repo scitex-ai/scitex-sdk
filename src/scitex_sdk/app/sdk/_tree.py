@@ -10,7 +10,6 @@ Reusable by any app that needs a file browser UI.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -122,21 +121,25 @@ def _list_entries(
     # Fallback: use list() for files, try to discover directories
     # via the backend's internal structure
     if hasattr(backend, "_root"):
-        # FileSystemBackend — validate through the backend's own containment
-        # (component comparison, not string prefix) so a traversal directory
-        # is refused exactly like read/write/list refuse it; then iterate the
-        # LOGICAL requested path (lexically normalized, links unfollowed) so
-        # metadata keeps the alias namespace instead of the real path. A
-        # symlink child pointing outside is still LISTED by name (its link
-        # path is inside root) but any read through it hits the same refusal
-        # — listing names is not operating on targets.
+        # FileSystemBackend — guard AND enumerate the SAME physical target:
+        # validate through the backend's own containment (component
+        # comparison, not string prefix) and iterate the validated result, so
+        # the guarded path and the enumerated path can never differ (a
+        # lexical normpath of e.g. "alias/../.." could point outside while
+        # the resolved target is valid, or vice versa). Returned metadata is
+        # built from the original logical request plus child name, so the
+        # alias namespace is preserved instead of the real path. A symlink
+        # child pointing outside is still LISTED by name (its link path is
+        # inside root) but any read through it hits the same refusal —
+        # listing names is not operating on targets.
         _resolve = getattr(backend, "_resolve", None)
         root = backend._root
         if directory and _resolve is not None:
-            _resolve(directory)  # validation only; raises on escape
-            target = Path(os.path.normpath(root / directory))
+            target = _resolve(directory)  # raises on escape
+            logical_base = directory
         else:
             target = (root / directory) if directory else root
+            logical_base = None
         if not target.is_dir():
             return []
         entries = []
@@ -146,7 +149,10 @@ def _list_entries(
             return []
         for item in children:
             try:
-                rel = str(item.relative_to(root))
+                if logical_base is not None:
+                    rel = str(Path(logical_base) / item.name)
+                else:
+                    rel = str(item.relative_to(root))
                 if item.is_dir():
                     entries.append({"path": rel, "type": "directory"})
                 elif item.is_file():
