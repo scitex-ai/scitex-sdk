@@ -175,12 +175,46 @@ jobs:
     permissions:
       id-token: write
     steps:
+      - name: Prepare an exclusive mounted-workspace artifact directory
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          [[ "$GITHUB_JOB" == "publish" || "$GITHUB_JOB" == "release" ]]
+          packages_dir=".scitex-sdk-release-dist-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}"
+          # Atomic exclusive creation: no residual files or existing symlink is reused.
+          mkdir -- "$GITHUB_WORKSPACE/$packages_dir"
+          printf '%s\n' "SDK_RELEASE_PACKAGES_DIR=$packages_dir" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v4
         with:
           name: dist
-          path: dist
+          path: ${{ env.SDK_RELEASE_PACKAGES_DIR }}
+      - name: Verify the exact current distributions before delivery
+        env:
+          SDK_RELEASE_TAG: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          expected_dir=".scitex-sdk-release-dist-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}"
+          [[ "$SDK_RELEASE_PACKAGES_DIR" == "$expected_dir" ]]
+          folder="$GITHUB_WORKSPACE/$expected_dir"
+          [[ -d "$folder" && ! -L "$folder" ]]
+          [[ "$SDK_RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([A-Za-z0-9.+-]*)$ ]]
+          version="${SDK_RELEASE_TAG#v}"
+          wheel_name="scitex_sdk-${version}-py3-none-any.whl"
+          sdist_name="scitex_sdk-${version}.tar.gz"
+          # Include hidden entries: stale attestations, directories and extra files refuse.
+          shopt -s nullglob dotglob
+          files=("$folder"/*)
+          [[ "${#files[@]}" -eq 2 ]]
+          for path in "${files[@]}"; do
+            [[ "$path" == "$folder/$wheel_name" || "$path" == "$folder/$sdist_name" ]]
+            [[ -f "$path" && ! -L "$path" ]]
+          done
+          printf 'Verified exact distributions: %s %s\n' "$wheel_name" "$sdist_name"
       - name: Publish to PyPI (trusted publishing)
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ${{ env.SDK_RELEASE_PACKAGES_DIR }}
 
   release:
     needs: [build, publish]
@@ -191,10 +225,42 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.build.outputs.version }}
+      - name: Prepare an exclusive mounted-workspace artifact directory
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          [[ "$GITHUB_JOB" == "publish" || "$GITHUB_JOB" == "release" ]]
+          packages_dir=".scitex-sdk-release-dist-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}"
+          # Atomic exclusive creation: no residual files or existing symlink is reused.
+          mkdir -- "$GITHUB_WORKSPACE/$packages_dir"
+          printf '%s\n' "SDK_RELEASE_PACKAGES_DIR=$packages_dir" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v4
         with:
           name: dist
-          path: dist
+          path: ${{ env.SDK_RELEASE_PACKAGES_DIR }}
+      - name: Verify the exact current distributions before delivery
+        env:
+          SDK_RELEASE_TAG: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          expected_dir=".scitex-sdk-release-dist-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}"
+          [[ "$SDK_RELEASE_PACKAGES_DIR" == "$expected_dir" ]]
+          folder="$GITHUB_WORKSPACE/$expected_dir"
+          [[ -d "$folder" && ! -L "$folder" ]]
+          [[ "$SDK_RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([A-Za-z0-9.+-]*)$ ]]
+          version="${SDK_RELEASE_TAG#v}"
+          wheel_name="scitex_sdk-${version}-py3-none-any.whl"
+          sdist_name="scitex_sdk-${version}.tar.gz"
+          # Include hidden entries: stale attestations, directories and extra files refuse.
+          shopt -s nullglob dotglob
+          files=("$folder"/*)
+          [[ "${#files[@]}" -eq 2 ]]
+          for path in "${files[@]}"; do
+            [[ "$path" == "$folder/$wheel_name" || "$path" == "$folder/$sdist_name" ]]
+            [[ -f "$path" && ! -L "$path" ]]
+          done
+          printf 'Verified exact distributions: %s %s\n' "$wheel_name" "$sdist_name"
       - name: Extract release notes from CHANGELOG.md
         run: |
           VERSION="${{ needs.build.outputs.version }}"
@@ -211,7 +277,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ needs.build.outputs.version }}" \
-            --title "${{ needs.build.outputs.version }}" \
+          version="${{ needs.build.outputs.version }}"
+          package_version="${version#v}"
+          gh release create "$version" \
+            --title "$version" \
             --notes-file release-notes.md \
-            dist/*
+            "$SDK_RELEASE_PACKAGES_DIR/scitex_sdk-${package_version}-py3-none-any.whl" \
+            "$SDK_RELEASE_PACKAGES_DIR/scitex_sdk-${package_version}.tar.gz"
