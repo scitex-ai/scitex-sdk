@@ -178,9 +178,10 @@ def _convert(hint: Any, value: Any, what: str) -> Any:
         if issubclass(origin, _abc.Mapping):
             if not isinstance(value, dict):
                 raise AdmissionDenied(f"{what} must be an object")
-            key_type, _, value_type = args + (Any, Any, Any)
+            key_hint = args[0] if len(args) > 0 else Any
+            value_hint = args[1] if len(args) > 1 else Any
             return {
-                _convert(key_type, k, f"{what}<key>"): _convert(value_type, v, f"{what}[{k}]")
+                _convert(key_hint, k, f"{what}<key>"): _convert(value_hint, v, f"{what}[{k}]")
                 for k, v in value.items()
             }
         if not isinstance(value, list):
@@ -245,11 +246,15 @@ def read_inert_descriptor(distribution: str) -> Optional[ApiPlugin]:
     except ImportError as exc:
         raise AdmissionDenied("importlib.metadata is unavailable") from exc
     try:
-        text = _metadata.distribution(distribution).read_text(
-            INERT_DESCRIPTOR_FILENAME
-        )
+        dist = _metadata.distribution(distribution)
     except Exception:
         return None
+    try:
+        text = dist.read_text(INERT_DESCRIPTOR_FILENAME)
+    except FileNotFoundError:
+        return None
+    except (OSError, UnicodeDecodeError) as exc:
+        raise AdmissionDenied(f"cannot read inert descriptor: {exc}") from exc
     if text is None:
         return None
     try:

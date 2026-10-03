@@ -1127,12 +1127,12 @@ class ApiRoute:
         read-only route declaring them is refused outright.
         """
         mutating = [m for m in self.methods if m in MUTATING_METHODS]
+        if not isinstance(self.read_only, bool):
+            raise ApiPluginContractError(
+                f"route {self.path!r} declares read_only {self.read_only!r}; "
+                "expected a boolean"
+            )
         if self.read_only:
-            if not isinstance(self.read_only, bool):
-                raise ApiPluginContractError(
-                    f"route {self.path!r} declares read_only {self.read_only!r}; "
-                    "expected a boolean"
-                )
             stubborn = [m for m in mutating if m != "POST"]
             if stubborn:
                 raise ApiPluginContractError(

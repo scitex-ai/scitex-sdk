@@ -349,3 +349,50 @@ def test_require_admitted_refuses_drift_without_import(tmp_path):
         _unpath(tmp_path)
     # Assert
     assert _marker_absent(tmp_path)
+
+
+def test_oauth_scoped_plugin_round_trip():
+    # Arrange
+    from scitex_sdk.app.api_plugin import ApiPlugin, ApiRoute, AuthScope, OAuthProvider, RateLimit
+    plugin = ApiPlugin(id="scoped", title="Scoped", api_version="1.0.0", routes=[
+        ApiRoute(path="data", methods=["GET"], rate=RateLimit(rate_class="free", compute_cost="low"), auth=AuthScope(scopes=["read"]), handler="m:h"),
+    ], oauth=OAuthProvider(authorization_url="https://auth.example.com/authorize", token_url="https://auth.example.com/token", scopes={"read": "Read access"}))
+    # Act
+    restored = _build_for_test(plugin)
+    # Assert
+    assert restored == plugin
+
+
+def _build_for_test(plugin):
+    # Arrange
+    import json
+    from scitex_sdk.app import api_mount
+    # Act
+    # Assert
+    return api_mount._build(api_mount.ApiPlugin, json.loads(api_mount.dump_inert_descriptor(plugin)))
+
+
+def test_invalid_utf8_descriptor_denied(tmp_path):
+    # Arrange
+    dist_info = tmp_path / "baddist-1.0.dist-info"
+    dist_info.mkdir()
+    (dist_info / "METADATA").write_text("Metadata-Version: 2.1\nName: baddist\nVersion: 1.0\n", encoding="utf-8")
+    (dist_info / "scitex_api.json").write_bytes(b"\xff\xfe invalid \xff")
+    sys.path.insert(0, str(tmp_path))
+    try:
+        # Act
+        # Assert
+        with pytest.raises(AdmissionDenied):
+            read_inert_descriptor("baddist")
+    finally:
+        sys.path.remove(str(tmp_path))
+
+
+def test_read_only_falsy_non_bool_refused():
+    # Arrange
+    import pytest as _pytest
+    from scitex_sdk.app.api_plugin import ApiPluginContractError, ApiRoute, AuthScope, RateLimit
+    # Act
+    # Assert
+    with _pytest.raises(ApiPluginContractError):
+        ApiRoute(path="query", methods=["POST"], rate=RateLimit(rate_class="free", compute_cost="low"), auth=AuthScope(public=True, project_scope="none"), read_only=0, handler="m:h")
