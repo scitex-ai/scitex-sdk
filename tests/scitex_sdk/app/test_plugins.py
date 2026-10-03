@@ -91,3 +91,61 @@ def test_mount_route_honours_manifest_url():
     route = mount_route(config)
     # Assert
     assert route == "apps/u/x/"
+
+
+def _leaf_module(tmp_path, name, body):
+    # Arrange
+    (tmp_path / f"{name}.py").write_text(body, encoding="utf-8")
+    # Act
+    import sys
+    sys.path.insert(0, str(tmp_path))
+    # Assert
+    return name
+
+
+def _unpath(tmp_path):
+    # Arrange
+    import sys
+    # Act
+    sys.path.remove(str(tmp_path))
+    # Assert
+    assert True
+
+
+def test_leaf_declarations_reads_existing_exports(tmp_path):
+    # Arrange
+    from collections.abc import Callable
+
+    from scitex_sdk.app.plugins import leaf_declarations
+    mod = _leaf_module(tmp_path, "leaf_a", "def context_builder(r): return {}\npartial_template = 'leaf/page.html'\n")
+    try:
+        # Act
+        found = leaf_declarations(mod, {"context_builder": Callable, "partial_template": str, "missing": str})
+    finally:
+        _unpath(tmp_path)
+    # Assert
+    assert sorted(found) == ["context_builder", "partial_template"]
+
+
+def test_leaf_declarations_absent_module_yields_empty():
+    # Arrange
+    from scitex_sdk.app.plugins import leaf_declarations
+    # Act
+    found = leaf_declarations("no_such_leaf_module_xyz", {"context_builder": object})
+    # Assert
+    assert found == {}
+
+
+def test_leaf_declarations_wrong_type_refused(tmp_path):
+    # Arrange
+    import pytest
+
+    from scitex_sdk.app.plugins import LeafContractError, leaf_declarations
+    mod = _leaf_module(tmp_path, "leaf_b", "partial_template = 42\n")
+    try:
+        # Act
+        # Assert
+        with pytest.raises(LeafContractError, match="leaf_b.partial_template"):
+            leaf_declarations(mod, {"partial_template": str})
+    finally:
+        _unpath(tmp_path)

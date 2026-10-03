@@ -39,6 +39,7 @@ GUI layout contract (all Django-side code in one place):
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib import import_module
 from typing import Iterable, List, Optional
 
 ENTRY_POINT_GROUP = "scitex.apps"
@@ -134,13 +135,52 @@ def mount_route(config) -> str:
     return f"{url}/" if url else f"apps/{slug}/"
 
 
+class LeafContractError(Exception):
+    """A leaf declares a generic contract attribute with an unusable value."""
+
+
+def leaf_declarations(app_module: str, expected: dict) -> dict:
+    """Read a leaf app's existing declaration attributes, generically.
+
+    ``expected`` maps attribute name to the type (or tuple of types) a
+    generic consumer needs, e.g. ``{"context_builder": Callable,
+    "partial_template": str}``. The module is imported once; an attribute
+    that is absent is simply left out (old plugins without declarations
+    keep working unchanged); a present attribute of the wrong type raises
+    :class:`LeafContractError` naming the module and attribute, so a bad
+    declaration fails loudly at discovery instead of deep in a consumer.
+    A module that cannot be imported at all yields ``{}`` — absence, not
+    an error. No manifest keys are invented and no leaf endpoint lists,
+    callables, or project/write logic are copied here; the returned values
+    are the leaf's own objects for the consumer to call.
+    """
+    try:
+        module = import_module(app_module)
+    except ImportError:
+        return {}
+    found = {}
+    for name, want in expected.items():
+        if not hasattr(module, name):
+            continue
+        value = getattr(module, name)
+        if not isinstance(value, want if isinstance(want, tuple) else (want,)):
+            raise LeafContractError(
+                f"{app_module}.{name} must be {getattr(want, '__name__', want)}, "
+                f"got {type(value).__name__}"
+            )
+        found[name] = value
+    return found
+
+
 __all__ = [
     "ENTRY_POINT_GROUP",
+    "LeafContractError",
     "PluginApp",
     "app_config_path",
     "app_module_of",
     "discover_plugin_apps",
     "installed_app_paths",
+    "leaf_declarations",
     "loaded_plugin_configs",
     "mount_route",
 ]
