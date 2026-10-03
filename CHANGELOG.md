@@ -4,6 +4,29 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-10-03
+
+### Fixed
+- FileSystemBackend containment is component-based: sibling-prefix escapes
+  (`../project-other/`) are refused on read/write/list/delete/rename/copy,
+  and the tree-listing fallback validates through the same containment while
+  iterating the validated target with logical alias-namespace metadata.
+- `get_files(backend="local"/"filesystem")` selects the filesystem backend
+  explicitly, even under ambient `SCITEX_API_TOKEN`; custom registration
+  still wins and cloud auto-selection is unchanged.
+- `project_access(write=True)` refuses a non-explicit-True grant before
+  project-path resolution and revalidates after; missing/raising permission
+  checks map to `CapabilityUnavailable`.
+
+### Added
+- Optional tagged project-scope capability: `ProjectSelection`,
+  `ScopedProjectProvider`, `supports_scoped_capability`, and
+  `scoped_project_listing_view` (allow_user_scope advertisement, tagged
+  commit via one `remember_scope`, legacy paths byte-compatible).
+- Narrow generic `plugins.leaf_declarations` accessor for Hub consumers
+  (caller-named attributes, absence tolerated, `LeafContractError` on
+  invalid values).
+
 ## [0.3.1] — 2026-10-03
 
 ### Fixed
