@@ -443,7 +443,7 @@ def test_revocation_during_path_resolution_denies_without_capability(hosted, tmp
     # Arrange
     projects, storage = hosted
     real_project_path = storage.project_path
-    marker = tmp_path / "owned" / "marker.txt"
+    marker = storage.root / "marker.txt"
 
     def revoking_path(project_id, req):
         # Genuine revocation inside resolution: resolve, then revoke grant
