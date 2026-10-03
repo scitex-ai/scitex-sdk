@@ -226,6 +226,24 @@ def _build(cls: Any, data: Any) -> Any:
         ) from exc
 
 
+def admitted_routes(plugin: ApiPlugin, admission: ApiAdmission) -> list:
+    """Declared ``(path, methods)`` pairs covered by an admission, no imports.
+
+    Pure data intersection for mount planning and generic Hub listing: the
+    plugin declaration (from an admitted resolution or an inert read) crossed
+    with the admission's enabled paths. Mount prefix itself stays with
+    :func:`plugins.mount_route`; this function never invents routes, only
+    admits declared ones.
+    """
+    if not isinstance(plugin, ApiPlugin):
+        raise AdmissionDenied("can only intersect an ApiPlugin declaration")
+    return [
+        (route.path, tuple(route.methods))
+        for route in plugin.routes
+        if route.path in admission.enabled
+    ]
+
+
 def dump_inert_descriptor(plugin: ApiPlugin) -> str:
     """Serialize a validated plugin declaration to inert JSON text."""
     if not isinstance(plugin, ApiPlugin):
@@ -273,6 +291,7 @@ __all__ = [
     "AdmissionDenied",
     "ApiAdmission",
     "admit",
+    "admitted_routes",
     "dump_inert_descriptor",
     "read_inert_descriptor",
     "require_admitted",

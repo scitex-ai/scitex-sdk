@@ -421,3 +421,28 @@ def test_lookup_failure_denied_not_absent(monkeypatch):
     # Assert
     with pytest.raises(AdmissionDenied):
         read_inert_descriptor("broken-dist")
+
+
+def test_admitted_routes_intersects_declaration_with_admission():
+    # Arrange
+    from scitex_sdk.app.api_mount import admitted_routes
+    from scitex_sdk.app.api_plugin import ApiPlugin, ApiRoute, AuthScope, RateLimit
+    plugin = ApiPlugin(id="p", title="P", api_version="1.0.0", routes=[
+        ApiRoute(path="a", methods=["GET"], rate=RateLimit(rate_class="free", compute_cost="low"), auth=AuthScope(public=True, project_scope="none"), handler="m:h"),
+        ApiRoute(path="b", methods=["POST"], rate=RateLimit(rate_class="free", compute_cost="low"), auth=AuthScope(public=True, project_scope="none"), handler="m:h", read_only=True),
+    ])
+    admission = admit(_ref(), review_ref="review-1", enabled=["a"])
+    # Act
+    pairs = admitted_routes(plugin, admission)
+    # Assert
+    assert pairs == [("a", ("GET",))]
+
+
+def test_admitted_routes_refuses_non_plugin():
+    # Arrange
+    import pytest as _pytest
+    from scitex_sdk.app.api_mount import admitted_routes
+    # Act
+    # Assert
+    with _pytest.raises(AdmissionDenied):
+        admitted_routes(object(), admit(_ref(), review_ref="review-1", enabled=[]))
