@@ -116,4 +116,37 @@
       }
     });
   }
+
+  /* ── Readiness fallback for bare shell pages ──────────
+   * The shared workspace-panel-resizer module marks containers panels-ready
+   * and drops the body.no-transition visibility guard when an app bundle
+   * loads it. Pages served with only the shell scripts never get that call,
+   * so their panes stay hidden and the body keeps the guard. After load, if
+   * containers exist but none is marked, apply the same two DOM operations.
+   * The marked check runs again at mutation time inside the animation frames:
+   * a module that marks between scheduling and paint still wins, so this
+   * never overrides the shared initializer. No-op when no containers exist. */
+  function markReadyFallback() {
+    var containers = document.querySelectorAll(
+      ".workspace-three-col, .workspace-shell",
+    );
+    if (!containers.length) return;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        var marked = document.querySelectorAll(
+          ".workspace-three-col.panels-ready, .workspace-shell.panels-ready",
+        );
+        if (marked.length) return;
+        containers.forEach(function (el) {
+          el.classList.add("panels-ready");
+        });
+        document.body.classList.remove("no-transition");
+      });
+    });
+  }
+  if (document.readyState === "complete") {
+    markReadyFallback();
+  } else {
+    window.addEventListener("load", markReadyFallback);
+  }
 })();
