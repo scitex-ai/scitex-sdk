@@ -393,6 +393,11 @@ def test_read_only_falsy_non_bool_refused():
     import pytest as _pytest
     from scitex_sdk.app.api_plugin import ApiPluginContractError, ApiRoute, AuthScope, RateLimit
     # Act
+    refused = 0
+    for bad in (0, None, ""):
+        try:
+            ApiRoute(path="query", methods=["GET"], rate=RateLimit(rate_class="free", compute_cost="low"), auth=AuthScope(public=True, project_scope="none"), read_only=bad, handler="m:h")
+        except ApiPluginContractError:
+            refused += 1
     # Assert
-    with _pytest.raises(ApiPluginContractError):
-        ApiRoute(path="query", methods=["POST"], rate=RateLimit(rate_class="free", compute_cost="low"), auth=AuthScope(public=True, project_scope="none"), read_only=0, handler="m:h")
+    assert refused == 3
