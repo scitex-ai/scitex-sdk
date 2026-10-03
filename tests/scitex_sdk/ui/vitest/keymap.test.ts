@@ -8,7 +8,7 @@
  * attach() on isolated elements, so prior document listeners cannot interfere.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CommandRegistry,
@@ -672,5 +672,247 @@ describe("Keymap overrides (write-only defect fix)", () => {
     expect(seeded.bind("global", "C-s", "save")).toBeNull();
     expect(seeded.resolve(parseSequence("M-s"))!.commandId).toBe("save");
     expect(seeded.resolve(parseSequence("C-s"))).toBeNull();
+  });
+});
+
+describe("Keymap composition and event ownership", () => {
+  let registry: CommandRegistry;
+  let map: Keymap;
+  let target: HTMLElement;
+  let detach: () => void;
+
+  beforeEach(() => {
+    registry = new CommandRegistry();
+    map = new Keymap({ registry });
+    // An isolated event tree exercises the attached listener without unrelated
+    // document shortcuts participating in these event-ownership controls.
+    target = document.createElement("div");
+    detach = map.attach(target);
+  });
+
+  afterEach(() => detach());
+
+  const guardedCases: Array<{
+    name: string;
+    chord: string;
+    init: KeyboardEventInit;
+    legacyField?: "keyCode" | "which";
+    altGraph?: boolean;
+    prevented?: boolean;
+  }> = [
+    { name: "isComposing", chord: "C-s", init: { key: "s", ctrlKey: true, isComposing: true } },
+    { name: "legacy keyCode 229", chord: "C-s", init: { key: "s", ctrlKey: true }, legacyField: "keyCode" },
+    { name: "legacy which 229", chord: "C-s", init: { key: "s", ctrlKey: true }, legacyField: "which" },
+    { name: "Dead", chord: "C-Dead", init: { key: "Dead", ctrlKey: true } },
+    { name: "Process", chord: "C-Process", init: { key: "Process", ctrlKey: true } },
+    { name: "held AltGraph", chord: "C-M-s", init: { key: "s", ctrlKey: true, altKey: true }, altGraph: true },
+    { name: "AltGraph modifier", chord: "AltGraph", init: { key: "AltGraph" } },
+    { name: "already prevented", chord: "C-s", init: { key: "s", ctrlKey: true }, prevented: true },
+  ];
+
+  it.each(guardedCases)("ignores $name and cancels an existing prefix", (scenario) => {
+    const single = vi.fn();
+    const completedPrefix = vi.fn();
+    const stalePrefix = vi.fn();
+    const ordinary = vi.fn();
+    registry.set({ id: "single", label: "Single", action: single });
+    registry.set({ id: "completed-prefix", label: "Completed prefix", action: completedPrefix });
+    registry.set({ id: "stale-prefix", label: "Stale prefix", action: stalePrefix });
+    registry.set({ id: "ordinary", label: "Ordinary", action: ordinary });
+    map.bind("global", scenario.chord, "single", true);
+    map.bind("global", `C-x ${scenario.chord}`, "completed-prefix", true);
+    map.bind("global", "C-x C-f", "stale-prefix", true);
+    map.bind("global", "C-f", "ordinary", true);
+
+    const blockedEvent = () => {
+      const event = new KeyboardEvent("keydown", { ...scenario.init, bubbles: true, cancelable: true });
+      if (scenario.legacyField) Object.defineProperty(event, scenario.legacyField, { value: 229 });
+      if (scenario.altGraph) Object.defineProperty(event, "getModifierState", { value: (name: string) => name === "AltGraph" });
+      if (scenario.prevented) event.preventDefault();
+      const prevent = vi.spyOn(event, "preventDefault");
+      target.dispatchEvent(event);
+      return { event, prevent };
+    };
+
+    const first = blockedEvent();
+    const prefix = new KeyboardEvent("keydown", { key: "x", ctrlKey: true, bubbles: true, cancelable: true });
+    target.dispatchEvent(prefix);
+    const second = blockedEvent();
+    const next = new KeyboardEvent("keydown", { key: "f", ctrlKey: true, bubbles: true, cancelable: true });
+    target.dispatchEvent(next);
+
+    expect({
+      single: single.mock.calls.length,
+      completedPrefix: completedPrefix.mock.calls.length,
+      stalePrefix: stalePrefix.mock.calls.length,
+      ordinary: ordinary.mock.calls.length,
+      firstPreventCalls: first.prevent.mock.calls.length,
+      secondPreventCalls: second.prevent.mock.calls.length,
+      blockedDefaultPrevented: [first.event.defaultPrevented, second.event.defaultPrevented],
+      prefixPrevented: prefix.defaultPrevented,
+      ordinaryPrevented: next.defaultPrevented,
+    }).toEqual({
+      single: 0, completedPrefix: 0, stalePrefix: 0, ordinary: 1,
+      firstPreventCalls: 0, secondPreventCalls: 0,
+      blockedDefaultPrevented: [!!scenario.prevented, !!scenario.prevented],
+      prefixPrevented: true, ordinaryPrevented: true,
+    });
+  });
+
+  it.each(["div", "input", "textarea", "contenteditable", "plaintext-only"])(
+    "preserves composing text in %s even when its binding opts into inputs",
+    (kind) => {
+      const action = vi.fn();
+      registry.set({ id: "save", label: "Save", action });
+      map.bind("global", "C-s", "save", true);
+      const editor = document.createElement(kind === "contenteditable" || kind === "plaintext-only" ? "div" : kind);
+      if (kind === "contenteditable" || kind === "plaintext-only") editor.setAttribute("contenteditable", kind === "contenteditable" ? "true" : kind);
+      target.appendChild(editor);
+
+      editor.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+      // Some IME keydowns omit the flag; the composition lifecycle still owns it.
+      const composing = new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true, cancelable: true });
+      editor.dispatchEvent(composing);
+      editor.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+      const ordinary = new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true, cancelable: true });
+      editor.dispatchEvent(ordinary);
+
+      expect({ calls: action.mock.calls.length, composingPrevented: composing.defaultPrevented, ordinaryPrevented: ordinary.defaultPrevented })
+        .toEqual({ calls: 1, composingPrevented: false, ordinaryPrevented: true });
+    },
+  );
+
+  it("cancels a prefix when composition starts and ends without a keydown", () => {
+    const stale = vi.fn();
+    const ordinary = vi.fn();
+    registry.set({ id: "stale", label: "Stale", action: stale });
+    registry.set({ id: "ordinary", label: "Ordinary", action: ordinary });
+    map.bind("global", "C-x C-f", "stale");
+    map.bind("global", "C-f", "ordinary");
+    target.dispatchEvent(new KeyboardEvent("keydown", { key: "x", ctrlKey: true, bubbles: true }));
+    target.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    target.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+    target.dispatchEvent(new KeyboardEvent("keydown", { key: "f", ctrlKey: true, bubbles: true }));
+    expect([stale.mock.calls.length, ordinary.mock.calls.length]).toEqual([0, 1]);
+  });
+
+  it("detaches composition listeners before reattaching the same keymap", () => {
+    const action = vi.fn();
+    registry.set({ id: "save", label: "Save", action });
+    map.bind("global", "C-s", "save");
+    detach();
+    target.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    detach = map.attach(target);
+    target.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true }));
+    expect(action).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Keymap factory presence and override prefix conflicts", () => {
+  let registry: CommandRegistry;
+  let map: Keymap;
+
+  beforeEach(() => {
+    registry = new CommandRegistry();
+    map = new Keymap({ registry });
+    registry.set({ id: "a", label: "A", action: vi.fn() });
+    registry.set({ id: "b", label: "B", action: vi.fn() });
+  });
+
+  it.each([
+    { name: "shorter override", other: "C-x C-b", override: "C-x" },
+    { name: "longer override", other: "C-x", override: "C-x C-a" },
+  ])("reports a $name without changing sequence dispatch", (scenario) => {
+    map.bind("global", "M-a", "a");
+    map.bind("global", scenario.other, "b");
+    map.setOverride("a", scenario.override);
+    expect({
+      conflicts: map.overrideConflicts(),
+      overridden: map.dispatchSequence(scenario.override),
+      other: map.dispatchSequence(scenario.other),
+    }).toEqual({
+      conflicts: [{ sequenceKey: "C-X", scope: "global", existingCommandId: "b", newCommandId: "a" }],
+      overridden: "a", other: "b",
+    });
+  });
+
+  it.each([
+    { name: "mode override before global prefix", overrideScope: "editor", otherScope: "global", other: "C-x C-b", override: "C-x" },
+    { name: "global override after mode prefix", overrideScope: "global", otherScope: "editor", other: "C-x", override: "C-x C-a" },
+  ])("reports $name before the mode is activated", (scenario) => {
+    map.bind(scenario.overrideScope, "M-a", "a");
+    map.bind(scenario.otherScope, scenario.other, "b");
+    map.setOverride("a", scenario.override);
+    const beforeActivation = map.overrideConflicts();
+    map.activateMode("editor");
+    expect({ beforeActivation, afterActivation: map.overrideConflicts() }).toEqual({
+      beforeActivation: [{ sequenceKey: "C-X", scope: "editor", existingCommandId: "b", newCommandId: "a" }],
+      afterActivation: [{ sequenceKey: "C-X", scope: "editor", existingCommandId: "b", newCommandId: "a" }],
+    });
+  });
+
+  it("checks future definition modes and excludes commands that cannot be active together", () => {
+    registry.set({ id: "a", label: "A", action: vi.fn(), modes: new Set(["editor"]) });
+    registry.set({ id: "b", label: "B", action: vi.fn(), modes: new Set(["editor"]) });
+    map.bind("global", "M-a", "a");
+    map.bind("global", "C-x C-b", "b");
+    map.setOverride("a", "C-x");
+    const sharedMode = map.overrideConflicts();
+    registry.set({ id: "b", label: "B", action: vi.fn(), modes: new Set(["review"]) });
+    expect({ sharedMode, separateModes: map.overrideConflicts() }).toEqual({
+      sharedMode: [{ sequenceKey: "C-X", scope: "editor", existingCommandId: "b", newCommandId: "a" }],
+      separateModes: [],
+    });
+  });
+
+  it("preserves exact mode shadowing while checking prefix conflicts", () => {
+    registry.set({ id: "mode", label: "Mode", action: vi.fn() });
+    map.bind("global", "M-a", "a");
+    map.bind("global", "C-x C-b", "b");
+    map.bind("editor", "C-x", "mode");
+    map.setOverride("a", "C-x");
+    map.activateMode("editor");
+    expect({ conflicts: map.overrideConflicts(), shorter: map.dispatchSequence("C-x") }).toEqual({
+      conflicts: [{ sequenceKey: "C-X", scope: "global", existingCommandId: "b", newCommandId: "a" }],
+      shorter: "mode",
+    });
+  });
+
+  it("finds a factory binding when its effective chord is mode-shadowed", () => {
+    map.bind("global", "C-s", "a");
+    map.bind("editor", "C-s", "b");
+    map.activateMode("editor");
+    expect({ chords: map.help().commands.find((command) => command.id === "a")!.chords, factory: map.hasFactoryBinding("a"), missing: map.hasFactoryBinding("missing") })
+      .toEqual({ chords: [], factory: true, missing: false });
+  });
+
+  it("retains factory presence after an override displaces or disables a command", () => {
+    map.bind("global", "M-a", "a");
+    map.bind("global", "C-s", "b");
+    map.setOverride("a", "C-s");
+    const displaced = { chords: map.help().commands.find((command) => command.id === "b")!.chords, factory: map.hasFactoryBinding("b") };
+    map.unbind("b");
+    expect({ displaced, disabled: map.hasFactoryBinding("b"), stillBound: map.hasFactoryBinding("a") }).toEqual({
+      displaced: { chords: [], factory: true }, disabled: true, stillBound: true,
+    });
+  });
+
+  it("reports no new conflict for factory prefixes and preserves their keyboard dispatch", () => {
+    const shorter = vi.fn();
+    const longer = vi.fn();
+    registry.set({ id: "a", label: "A", action: shorter });
+    registry.set({ id: "b", label: "B", action: longer });
+    map.bind("global", "C-x", "a");
+    map.bind("global", "C-x C-b", "b");
+    const target = document.createElement("div");
+    const detach = map.attach(target);
+    try {
+      target.dispatchEvent(new KeyboardEvent("keydown", { key: "x", ctrlKey: true, bubbles: true, cancelable: true }));
+      target.dispatchEvent(new KeyboardEvent("keydown", { key: "b", ctrlKey: true, bubbles: true, cancelable: true }));
+    } finally {
+      detach();
+    }
+    expect({ conflicts: map.overrideConflicts(), shorter: shorter.mock.calls.length, longer: longer.mock.calls.length })
+      .toEqual({ conflicts: [], shorter: 1, longer: 0 });
   });
 });

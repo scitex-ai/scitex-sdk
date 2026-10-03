@@ -1,0 +1,40 @@
+.stx-workspace-commands {
+  color: var(--text-primary, #333);
+  font: inherit;
+}
+.stx-workspace-commands__panel {
+  padding: 12px;
+  border: 1px solid var(--border-default, #999);
+  border-radius: var(--radius-md, 4px);
+  background: var(--bg-surface, #f8f7f5);
+  max-width: 640px;
+}
+.stx-workspace-commands__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.stx-workspace-commands button,
+.stx-workspace-commands input {
+  box-sizing: border-box;
+  min-height: 36px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-default, #999);
+  border-radius: var(--radius-sm, 3px);
+  background: var(--bg-primary, #fff);
+  color: inherit;
+  font: inherit;
+}
+.stx-workspace-commands button { cursor: pointer; }
+.stx-workspace-commands input { font-size: 16px; }
+.stx-workspace-commands :focus-visible {
+  outline: 2px solid var(--color-primary, #4a6fa5);
+  outline-offset: 2px;
+}
+@media (max-width: 600px), (pointer: coarse) {
+  .stx-workspace-commands button,
+  .stx-workspace-commands input { min-height: 44px; }
+}
