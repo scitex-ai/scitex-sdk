@@ -129,14 +129,16 @@ def test_malformed_tagged_payloads_refused():
     provider = ScopedProvider()
     view = scope.scoped_project_listing_view(provider)
     # Act
-    statuses = [_post(view, payload).status_code for payload in ({"scope": "bogus"}, {"scope": "user", "id": "alpha"}, {"scope": "project", "id": ""}, {"scope": "project"}, "not-an-object", {"id": None})]
+    statuses = [_post(view, payload).status_code for payload in ({"scope": "bogus"}, {"scope": "user"}, {"scope": "user", "id": "alpha"}, {"scope": "project", "id": ""}, {"scope": "project"}, "not-an-object", {"id": None})]
     # Assert
-    assert statuses == [403, 403, 403, 403, 403, 403] and provider.tag is None
+    assert statuses == [403, 403, 403, 403, 403, 403, 403] and provider.tag is None
 
 
 def test_get_omits_scope_when_unselected():
     # Arrange
     provider = ScopedProvider()
+    provider.remember(None, "alpha")
+    provider.tag = None
     view = scope.scoped_project_listing_view(provider)
     # Act
     body = _body(view(RequestFactory().get("/")))
@@ -155,16 +157,16 @@ def test_get_reflects_committed_tag():
     assert body["current"] is None and body["current_scope"] == "user"
 
 
-def test_get_unselected_forces_null_despite_stale_legacy_projection():
+def test_get_stale_tagged_project_reads_unselected_without_writes():
     # Arrange
     provider = ScopedProvider()
-    provider.remember(None, "alpha")
-    provider.tag = None
+    provider.tag = scope.ProjectSelection(scope="project", id="foreign")
+    provider.stored = "foreign"
     view = scope.scoped_project_listing_view(provider)
     # Act
     body = _body(view(RequestFactory().get("/")))
     # Assert
-    assert body["current"] is None and "current_scope" not in body
+    assert body["current"] is None and "current_scope" not in body and provider.scope_commits == []
 
 
 def test_selection_validation_rejects_bad_pairs():

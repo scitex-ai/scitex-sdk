@@ -292,12 +292,20 @@ def supports_scoped_capability(provider: Any) -> bool:
 
 
 def _tagged_selection(payload: Any) -> ProjectSelection:
-    """Build the requested tagged selection, refusing anything else."""
+    """Build the requested tagged selection, refusing anything else.
+
+    The explicit pair shape is enforced: ``user`` requires the ``id`` key
+    present with a literal null; ``project`` requires a nonempty string id.
+    A missing key is not an explicit null — it is refused like any other
+    malformed selection.
+    """
     if not isinstance(payload, dict):
         raise ValueError("selection must be an object")
     scope = payload.get("scope")
     if scope == "user":
-        return ProjectSelection(scope="user", id=payload.get("id"))
+        if "id" not in payload or payload["id"] is not None:
+            raise ValueError("a user selection needs an explicit null id")
+        return ProjectSelection(scope="user", id=None)
     if scope == "project":
         return ProjectSelection(scope="project", id=payload.get("id"))
     raise ValueError("unknown selection scope")
@@ -341,6 +349,8 @@ def scoped_project_listing_view(
                         selection.scope == "project"
                         and isinstance(selection.id, str)
                         and selection.id
+                        and selection.id
+                        in {entry.id for entry in entries}
                     )
                 )
                 if valid:
