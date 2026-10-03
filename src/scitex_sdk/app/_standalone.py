@@ -475,6 +475,7 @@ def _configure_django(
     django.conf.settings.configure(
         SECRET_KEY=os.environ.get("DJANGO_SECRET_KEY", "scitex-standalone-dev-key"),
         DEBUG=os.environ.get("DJANGO_DEBUG", "true").lower() == "true",
+        SCITEX_APP_MODE="standalone",
         ALLOWED_HOSTS=_allowed_hosts(
             host, os.environ.get("SCITEX_ALLOWED_HOSTS", "")
         ),
@@ -540,7 +541,9 @@ def _run_server(host: str, port: int, hot_reload: bool) -> None:
         ) from exc
 
     noreload = [] if hot_reload else ["--noreload"]
-    call_command("runserver", f"{host}:{port}", *noreload)
+    # This launcher is a development server, including when DEBUG is false.
+    # Use Django's explicit staticfiles option rather than forcing debug mode.
+    call_command("runserver", f"{host}:{port}", "--insecure", *noreload)
 
 
 # EOF
