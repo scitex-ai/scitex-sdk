@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 """Opt-in admission for leaf API plugins: declare first, enable explicitly, import last.
 
+Mount semantics (generic renderer contract, alongside ``plugins.mount_route``):
+
+* The app mount (``stx_mount``) is the leaf URLconf root as mounted — script
+  prefix with trailing slash, no Hub domain suffix. It addresses navigation
+  and content links, never an API family.
+* A leaf's API mount is a SEPARATE server-bound prefix the leaf declares
+  (e.g. Writer derives ``/v2`` internally from its app mount); native API
+  compatibility lives with the leaf's guarded dispatcher, never inferred
+  from the navigation prefix. API path strings in declarations must not
+  become admission by themselves.
+
 A host decision binds an exact discovered :class:`ApiPluginRef` (name,
 target, distribution) plus the accepted source to an explicit enabled path
 set. Only an admitted reference may be resolved to a callable, and only for
