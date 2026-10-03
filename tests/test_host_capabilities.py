@@ -439,18 +439,28 @@ def test_missing_permission_check_maps_to_capability_failure(hosted, tmp_path, m
     assert outcome == "CapabilityUnavailable"
 
 
-def test_revocation_during_path_resolution_denies_without_capability(hosted):
+def test_revocation_during_path_resolution_denies_without_capability(hosted, tmp_path):
     # Arrange
-    _, storage = hosted
-    grants = [True, False]
-    real_can_write = storage.can_write
-    storage.can_write = lambda project_id, req: grants.pop(0) and real_can_write(project_id, req)
+    projects, storage = hosted
+    real_project_path = storage.project_path
+    marker = tmp_path / "owned" / "marker.txt"
+
+    def revoking_path(project_id, req):
+        # Genuine revocation inside resolution: resolve, then revoke grant
+        root = real_project_path(project_id, req)
+        storage.writable = False
+        return root
+
+    storage.project_path = revoking_path
     req = request()
     # Act
     try:
-        project_access(req, write=True)
+        cap = project_access(req, write=True, remember=False)
         outcome = "admitted"
     except Exception as exc:
+        cap = None
         outcome = type(exc).__name__ + ":" + str(getattr(exc, "status", ""))
+    if cap is not None:
+        marker.write_text("backend-effect", encoding="utf-8")
     # Assert
-    assert outcome == "AccessError:403"
+    assert outcome == "AccessError:403" and cap is None and not marker.exists() and projects.selections == []
