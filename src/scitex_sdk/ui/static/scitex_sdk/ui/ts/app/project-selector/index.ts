@@ -7,5 +7,5 @@ export {
   staticProjectProvider,
   PROJECT_PROVIDER_META_NAME,
 } from "./provider";
-export type { ProjectListing, ProjectProvider } from "./provider";
+export type { ProjectListing, ProjectProvider, HttpProjectProviderOptions } from "./provider";
 export { mountProjectPickers, projectNavigationUrl, PROJECT_PICKER_ATTRIBUTE } from "./mount";
