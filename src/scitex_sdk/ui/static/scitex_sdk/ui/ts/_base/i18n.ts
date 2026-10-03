@@ -37,12 +37,16 @@ export const SHELL_STRINGS = {
     noAppsAvailable: "No apps available",
     selectProject: "Select project",
     noProjects: "No projects",
+    allProjects: "All Projects",
+    scopeSelectionFailed: "Could not select scope",
   },
   ja: {
     apps: "アプリ",
     noAppsAvailable: "利用可能なアプリがありません",
     selectProject: "プロジェクトを選択してください",
     noProjects: "プロジェクトがありません",
+    allProjects: "すべてのプロジェクト",
+    scopeSelectionFailed: "スコープを選択できませんでした",
   },
 } as const;
 

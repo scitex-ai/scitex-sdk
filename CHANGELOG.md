@@ -4,6 +4,17 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-10-03
+
+### Fixed
+- Serve packaged static assets from the standalone Django development server
+  when DEBUG is false, using the existing `--insecure` runserver option.
+- Allow read-only template context resolution with explicit `remember=False`.
+  Omitted arguments retain the existing project-selection persistence behavior.
+- Preserve the selected user/application scope and wait for successful project
+  persistence before updating the active project.
+- Avoid duplicate shared project-picker catalogs while retaining translations.
+
 ## [0.3.0]
 
 ### Changed

@@ -61,6 +61,9 @@ export interface AppScopeSelectorOptions {
   scope?: AppScope;
   /** Navigate on pick, e.g. "?project={id}". Omit to only emit the change event. */
   navigate?: string;
+  /** Explicit opt-in; a scoped provider must also support rememberScope. */
+  allowUserScope?: boolean;
+  currentScope?: AppScope;
 }
 
 /** The host's project list, when the host advertises a provider. */
@@ -79,20 +82,23 @@ export function mountProjectSelectorByScope(
   options: AppScopeSelectorOptions,
   doc: Document = document,
 ): ProjectSelector | null {
-  if ((options.scope ?? appScope(doc)) !== SCOPE_PROJECT) {
+  const provider =
+    options.provider ?? (options.projects ? undefined : hostProjectProvider(doc) ?? undefined);
+  if ((options.scope ?? appScope(doc)) !== SCOPE_PROJECT &&
+      !(options.allowUserScope === true && typeof provider?.rememberScope === "function")) {
     // user-scoped / absent: do not render a selector. The container is left
     // exactly as given — nothing appended — which is what "renders with no
     // switcher" means structurally.
     return null;
   }
-  const provider =
-    options.provider ?? (options.projects ? undefined : hostProjectProvider(doc) ?? undefined);
   const selector = new ProjectSelector({
     container: options.container,
     projects: options.projects,
     provider,
     current: options.current,
     placeholder: options.placeholder,
+    allowUserScope: options.allowUserScope,
+    currentScope: options.currentScope,
   });
   const navigate = options.navigate;
   const container =
@@ -101,7 +107,9 @@ export function mountProjectSelectorByScope(
       : options.container;
   if (navigate && container) {
     container.addEventListener(PROJECT_SELECTOR_CHANGE, (event) => {
-      const url = projectNavigationUrl(navigate, (event as CustomEvent<{ id: string }>).detail.id);
+      const detail = (event as CustomEvent<{ id: string; scope?: string }>).detail;
+      if (!detail || (detail.scope !== undefined && detail.scope !== "project")) return;
+      const url = projectNavigationUrl(navigate, detail.id);
       if (url) window.location.assign(url);
     });
   }
