@@ -117,9 +117,18 @@ def _list_entries(
     # Fallback: use list() for files, try to discover directories
     # via the backend's internal structure
     if hasattr(backend, "_root"):
-        # FileSystemBackend — access pathlib directly for directory info
+        # FileSystemBackend — resolve through the backend's own containment
+        # (component comparison, not string prefix) so a traversal directory
+        # is refused exactly like read/write/list refuse it. A symlink child
+        # pointing outside is still LISTED by name (its link path is inside
+        # root) but any read through it hits the same refusal — listing names
+        # is not operating on targets.
+        _resolve = getattr(backend, "_resolve", None)
         root = backend._root
-        target = (root / directory) if directory else root
+        if directory and _resolve is not None:
+            target = _resolve(directory)
+        else:
+            target = (root / directory) if directory else root
         if not target.is_dir():
             return []
         entries = []

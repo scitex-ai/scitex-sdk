@@ -758,3 +758,45 @@ class TestCustomBackend:
 
 
 # EOF
+
+
+class TestListEntriesContainment:
+    """The _root fallback resolves through backend._resolve.
+
+    A traversal directory is refused (ValueError, same as read/write/list);
+    a symlink child pointing outside is listed by name but unreadable —
+    listing names is not operating on targets.
+    """
+
+    def test_traversal_directory_refused(self, tmp_path):
+        (tmp_path / "project").mkdir()
+        (tmp_path / "project-other").mkdir()
+        (tmp_path / "project-other" / "sentinel.txt").write_text("secret")
+        backend = FileSystemBackend(tmp_path / "project")
+        with __import__("pytest").raises(ValueError, match="Path traversal"):
+            _list_entries(backend, "../project-other")
+
+    def test_symlink_child_listed_by_name_but_unreadable(self, tmp_path):
+        import os
+        (tmp_path / "project").mkdir()
+        (tmp_path / "project-other").mkdir()
+        (tmp_path / "project-other" / "sentinel.txt").write_text("secret")
+        try:
+            os.symlink(
+                tmp_path / "project-other" / "sentinel.txt",
+                tmp_path / "project" / "link.txt",
+            )
+        except OSError:
+            __import__("pytest").skip("symlinks unavailable")
+        backend = FileSystemBackend(tmp_path / "project")
+        entries = _list_entries(backend, "")
+        assert {"path": "link.txt", "type": "file"} in entries
+        with __import__("pytest").raises(ValueError, match="Path traversal"):
+            backend.read("link.txt")
+
+    def test_valid_directory_still_listed(self, tmp_path):
+        (tmp_path / "project" / "sub").mkdir(parents=True)
+        (tmp_path / "project" / "sub" / "ok.txt").write_text("fine")
+        backend = FileSystemBackend(tmp_path / "project")
+        entries = _list_entries(backend, "sub")
+        assert {"path": "sub/ok.txt", "type": "file"} in entries
