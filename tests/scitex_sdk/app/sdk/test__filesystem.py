@@ -242,3 +242,67 @@ class TestProtocolCompliance:
 
         # Assert
         assert isinstance(backend, FilesBackend)
+
+
+class TestSiblingRootContainment:
+    """Two sibling owned roots: ``project`` vs ``project-other``.
+
+    The old string-prefix check let ``../project-other/sentinel.txt`` escape
+    (``<root>-other`` shares the prefix). Component containment refuses it on
+    read/write/list/resolve while valid in-root requests keep working, and a
+    symlink inside root pointing outside stays refused (resolve-first policy).
+    """
+
+    @pytest.fixture
+    def siblings(self, tmp_path):
+        (tmp_path / "project").mkdir()
+        (tmp_path / "project-other").mkdir()
+        (tmp_path / "project-other" / "sentinel.txt").write_text("secret")
+        return tmp_path
+
+    def test_read_sibling_escape_refused(self, siblings):
+        fs = FileSystemBackend(siblings / "project")
+        with pytest.raises(ValueError, match="Path traversal"):
+            fs.read("../project-other/sentinel.txt")
+
+    def test_write_sibling_escape_refused(self, siblings):
+        fs = FileSystemBackend(siblings / "project")
+        with pytest.raises(ValueError, match="Path traversal"):
+            fs.write("../project-other/evil.txt", "x")
+        assert not (siblings / "project-other" / "evil.txt").exists()
+
+    def test_list_sibling_escape_refused(self, siblings):
+        fs = FileSystemBackend(siblings / "project")
+        with pytest.raises(ValueError, match="Path traversal"):
+            fs.list("../project-other")
+
+    def test_delete_rename_copy_sibling_escape_refused(self, siblings):
+        fs = FileSystemBackend(siblings / "project")
+        (siblings / "project" / "own.txt").write_text("own")
+        with pytest.raises(ValueError, match="Path traversal"):
+            fs.delete("../project-other/sentinel.txt")
+        with pytest.raises(ValueError, match="Path traversal"):
+            fs.rename("own.txt", "../project-other/moved.txt")
+        with pytest.raises(ValueError, match="Path traversal"):
+            fs.copy("own.txt", "../project-other/copied.txt")
+        assert (siblings / "project" / "own.txt").exists()
+
+    def test_valid_root_requests_still_work(self, siblings):
+        fs = FileSystemBackend(siblings / "project")
+        fs.write("sub/ok.txt", "fine")
+        assert fs.read("sub/ok.txt") == "fine"
+        assert fs.exists("sub/ok.txt")
+        assert fs.list("sub") == ["sub/ok.txt"]
+        assert fs.list("") == ["sub"] or "sub/ok.txt" in fs.list("sub")
+
+    def test_symlink_pointing_outside_stays_refused(self, siblings):
+        import os
+        target = siblings / "project-other" / "sentinel.txt"
+        link = siblings / "project" / "link.txt"
+        try:
+            os.symlink(target, link)
+        except OSError:
+            pytest.skip("symlinks unavailable")
+        fs = FileSystemBackend(siblings / "project")
+        with pytest.raises(ValueError, match="Path traversal"):
+            fs.read("link.txt")

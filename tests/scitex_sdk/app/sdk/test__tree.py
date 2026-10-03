@@ -758,3 +758,130 @@ class TestCustomBackend:
 
 
 # EOF
+
+
+class TestListEntriesContainment:
+    """The _root fallback resolves through backend._resolve.
+
+    A traversal directory is refused (ValueError, same as read/write/list);
+    a symlink child pointing outside is listed by name but unreadable —
+    listing names is not operating on targets.
+    """
+
+    def test_traversal_directory_refused(self, tmp_path):
+        (tmp_path / "project").mkdir()
+        (tmp_path / "project-other").mkdir()
+        (tmp_path / "project-other" / "sentinel.txt").write_text("secret")
+        backend = FileSystemBackend(tmp_path / "project")
+        with __import__("pytest").raises(ValueError, match="Path traversal"):
+            _list_entries(backend, "../project-other")
+
+    def test_symlink_child_listed_by_name_but_unreadable(self, tmp_path):
+        import os
+        (tmp_path / "project").mkdir()
+        (tmp_path / "project-other").mkdir()
+        (tmp_path / "project-other" / "sentinel.txt").write_text("secret")
+        try:
+            os.symlink(
+                tmp_path / "project-other" / "sentinel.txt",
+                tmp_path / "project" / "link.txt",
+            )
+        except OSError:
+            __import__("pytest").skip("symlinks unavailable")
+        backend = FileSystemBackend(tmp_path / "project")
+        entries = _list_entries(backend, "")
+        assert {"path": "link.txt", "type": "file"} in entries
+        with __import__("pytest").raises(ValueError, match="Path traversal"):
+            backend.read("link.txt")
+
+    def test_valid_directory_still_listed(self, tmp_path):
+        (tmp_path / "project" / "sub").mkdir(parents=True)
+        (tmp_path / "project" / "sub" / "ok.txt").write_text("fine")
+        backend = FileSystemBackend(tmp_path / "project")
+        entries = _list_entries(backend, "sub")
+        assert {"path": "sub/ok.txt", "type": "file"} in entries
+
+
+class TestBuildTreeContainment:
+    """Public build_tree against an owned root with an outward symlink child."""
+
+    def _owned(self, tmp_path):
+        import os
+        (tmp_path / "owned" / "sub").mkdir(parents=True)
+        (tmp_path / "owned" / "own.txt").write_text("own")
+        (tmp_path / "owned" / "sub" / "ok.txt").write_text("ok")
+        (tmp_path / "sibling").mkdir()
+        (tmp_path / "sibling" / "secret.txt").write_text("secret")
+        try:
+            os.symlink(tmp_path / "sibling", tmp_path / "owned" / "outward-dir")
+        except OSError:
+            __import__("pytest").skip("symlinks unavailable")
+        return FileSystemBackend(tmp_path / "owned")
+
+    def _paths(self, tree):
+        found = []
+        for node in tree:
+            found.append(node["path"])
+            found.extend(self._paths(node.get("children", [])))
+        return found
+
+    def test_valid_entries_kept_outward_child_refused(self, tmp_path):
+        tree = build_tree(self._owned(tmp_path))
+        paths = self._paths(tree)
+        assert "own.txt" in paths
+        assert "sub/ok.txt" in paths
+        assert not any("secret" in p or "outward-dir" in p for p in paths)
+
+    def test_explicit_escaping_top_level_still_raises(self, tmp_path):
+        backend = self._owned(tmp_path)
+        with __import__("pytest").raises(ValueError, match="Path traversal"):
+            build_tree(backend, "../sibling")
+
+    def test_alias_dir_keeps_logical_namespace(self, tmp_path):
+        import os
+        (tmp_path / "owned" / "real").mkdir(parents=True)
+        (tmp_path / "owned" / "real" / "f.txt").write_text("f")
+        try:
+            os.symlink(tmp_path / "owned" / "real", tmp_path / "owned" / "alias")
+        except OSError:
+            __import__("pytest").skip("symlinks unavailable")
+        backend = FileSystemBackend(tmp_path / "owned")
+        tree = build_tree(backend, "alias")
+        assert self._paths(tree) == ["alias/f.txt"]
+
+
+class TestGuardedTargetMatchesEnumeratedTarget:
+    """Guard and enumeration use the SAME physical target.
+
+    alias -> root/nested/a, request "alias/../..": physical target is
+    root/nested (valid) while the lexical path points at root.parent
+    (outside). The guarded target must be enumerated, with metadata in the
+    requested logical namespace — never the lexical outside path.
+    """
+
+    def test_dotdot_through_inward_alias_enumerates_guarded_target(self, tmp_path):
+        import os
+        (tmp_path / "owned" / "nested" / "a").mkdir(parents=True)
+        (tmp_path / "owned" / "nested" / "x.txt").write_text("x")
+        (tmp_path / "owned" / "nested" / "a" / "y.txt").write_text("y")
+        try:
+            os.symlink(
+                tmp_path / "owned" / "nested" / "a",
+                tmp_path / "owned" / "alias",
+            )
+        except OSError:
+            __import__("pytest").skip("symlinks unavailable")
+        backend = FileSystemBackend(tmp_path / "owned")
+        # alias/../.. resolves physically to root itself (valid); lexically it
+        # points at root.parent (outside). The guarded target must win: root's
+        # own children in the requested namespace, no raise, no outside names.
+        entries = _list_entries(backend, "alias/../..")
+        paths = sorted(e["path"] for e in entries)
+        assert paths == ["alias/../../alias", "alias/../../nested"]
+
+    def test_dotdot_escaping_root_still_refused(self, tmp_path):
+        (tmp_path / "owned").mkdir()
+        (tmp_path / "outside.txt").write_text("secret")
+        backend = FileSystemBackend(tmp_path / "owned")
+        with __import__("pytest").raises(ValueError, match="Path traversal"):
+            _list_entries(backend, "..")
