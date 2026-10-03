@@ -34,6 +34,23 @@ from ._tree import build_tree
 _registry: Dict[str, Callable[..., FilesBackend]] = {}
 
 
+def _local_files_factory(
+    root: Optional[Union[str, Path]] = None, **kwargs: Any
+) -> FilesBackend:
+    """Build the local filesystem backend (the ``local``/``filesystem`` names)."""
+    from ._filesystem import FileSystemBackend
+
+    if kwargs:
+        raise KeyError(f"Unknown local backend options: {sorted(kwargs)}")
+    return FileSystemBackend(root if root is not None else Path.cwd())
+
+
+for _builtin_name in ("local", "filesystem"):
+    # Pre-register the explicit-local names without closing the registry:
+    # setdefault keeps a host-registered custom factory under the same name.
+    _registry.setdefault(_builtin_name, _local_files_factory)
+
+
 def register_backend(name: str, factory: Callable[..., FilesBackend]) -> None:
     """Register a files backend factory.
 
@@ -57,7 +74,8 @@ def get_files(
 
     Auto-detection logic:
 
-    1. If ``backend`` is specified, use that.
+    1. If ``backend`` is specified, use that (``local``/``filesystem`` select
+       the filesystem backend; a custom name must be registered first).
     2. If ``SCITEX_API_TOKEN`` env var is set and "cloud" backend
        is registered, use cloud.
     3. Otherwise, use filesystem (default).
