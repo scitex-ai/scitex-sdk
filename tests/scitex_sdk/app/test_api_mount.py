@@ -401,3 +401,23 @@ def test_read_only_falsy_non_bool_refused():
             refused += 1
     # Assert
     assert refused == 3
+
+
+def test_lookup_failure_denied_not_absent(monkeypatch):
+    # Arrange
+    import importlib.metadata as _metadata
+
+    real_distribution = _metadata.distribution
+
+    def breaking(name):
+        # Arrange
+        if name == "broken-dist":
+            raise PermissionError("finder fault")
+        # Act
+        return real_distribution(name)
+
+    monkeypatch.setattr(_metadata, "distribution", breaking)
+    # Act
+    # Assert
+    with pytest.raises(AdmissionDenied):
+        read_inert_descriptor("broken-dist")

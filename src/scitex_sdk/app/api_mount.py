@@ -247,8 +247,12 @@ def read_inert_descriptor(distribution: str) -> Optional[ApiPlugin]:
         raise AdmissionDenied("importlib.metadata is unavailable") from exc
     try:
         dist = _metadata.distribution(distribution)
-    except Exception:
+    except _metadata.PackageNotFoundError:
         return None
+    except Exception as exc:
+        raise AdmissionDenied(
+            f"cannot locate distribution {distribution!r}: {exc}"
+        ) from exc
     try:
         text = dist.read_text(INERT_DESCRIPTOR_FILENAME)
     except FileNotFoundError:
