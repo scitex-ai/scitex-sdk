@@ -740,3 +740,116 @@ def test_the_context_carries_the_slot_for_the_template():
     context = project_context(_request(), provider)
     # Assert
     assert "project_provider_endpoint" in context
+
+
+@pytest.mark.parametrize("remember_options", [{}, {"remember": True}])
+def test_context_navigation_still_remembers_once(remember_options):
+    # Arrange
+    provider = _RecordedProvider("alice")
+    request = _request({"project": "grant-2026"})
+    # Act
+    project_context(request, provider, **remember_options)
+    # Assert
+    assert provider.remembered == [("alice", "grant-2026")]
+
+
+def test_read_only_context_does_not_persist_explicit_selection():
+    # Arrange
+    provider = _RecordedProvider("alice")
+    request = _request({"project": "grant-2026"})
+    # Act
+    project_context(request, provider, remember=False)
+    # Assert
+    assert provider.remembered == []
+
+
+def test_read_only_context_keeps_the_previous_navigation_selection():
+    # Arrange
+    provider = _RecordedProvider("alice")
+    provider.stored["alice"] = "neuro-paper"
+    request = _request({"project": "grant-2026"})
+    # Act
+    project_context(request, provider, remember=False)
+    # Assert
+    assert provider.stored == {"alice": "neuro-paper"}
+
+
+@pytest.mark.parametrize("remember_options", [{}, {"remember": True}, {"remember": False}])
+def test_context_contract_keys_and_authorized_descriptor_stay_identical(remember_options):
+    # Arrange
+    from django.test import override_settings
+
+    provider = _RecordedProvider("alice")
+    request = _request({"project": "grant-2026"})
+    endpoint = "/platform/api/project-scope"
+    # Act
+    with override_settings(SCITEX_PROJECT_PROVIDER_URL=endpoint):
+        context = project_context(request, provider, **remember_options)
+    # Assert
+    assert context == {
+        "active_project": {"id": "grant-2026", "name": "Grant 2026"},
+        "project_state": STATE_OK,
+        "project_command": CHANGE_PROJECT_COMMAND,
+        "project_provider_endpoint": endpoint,
+    }
+
+
+@pytest.mark.parametrize("requested", ["bob-only", "no-such-project"])
+def test_read_only_context_keeps_access_checks(requested):
+    # Arrange
+    provider = _RecordedProvider("alice")
+    request = _request({"project": requested})
+    # Act
+    context = project_context(request, provider, remember=False)
+    # Assert
+    assert (context["project_state"], context["active_project"], provider.remembered) == (
+        STATE_DENIED, None, []
+    )
+
+
+def test_read_only_context_keeps_no_selection_state():
+    # Arrange
+    provider = _RecordedProvider("alice")
+    request = _request()
+    # Act
+    context = project_context(request, provider, remember=False)
+    # Assert
+    assert (context["project_state"], context["active_project"], provider.remembered) == (
+        STATE_NONE, None, []
+    )
+
+
+class _RefusesPersistence(_RecordedProvider):
+    def remember(self, request, project_id):
+        raise OSError("synthetic persistence refusal")
+
+
+def test_read_only_context_never_enters_a_failing_persistence_port():
+    # Arrange
+    provider = _RefusesPersistence("alice")
+    request = _request({"project": "grant-2026"})
+    # Act
+    context = project_context(request, provider, remember=False)
+    # Assert
+    assert context["project_state"] == STATE_OK
+
+
+@pytest.mark.parametrize("remember_options", [{}, {"remember": True}])
+def test_context_navigation_keeps_persistence_failure_state(remember_options):
+    # Arrange
+    provider = _RefusesPersistence("alice")
+    request = _request({"project": "grant-2026"})
+    # Act
+    context = project_context(request, provider, **remember_options)
+    # Assert
+    assert context["project_state"] == STATE_UNAVAILABLE
+
+
+def test_read_only_context_flag_is_keyword_only():
+    # Arrange
+    provider = _RecordedProvider("alice")
+    request = _request({"project": "grant-2026"})
+    # Act: call the public function with the unsupported positional flag.
+    # Assert: normal signature binding must reject this call.
+    with pytest.raises(TypeError, match="positional arguments"):
+        project_context(request, provider, False)
