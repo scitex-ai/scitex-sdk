@@ -8,7 +8,7 @@
  */
 
 import { ProjectSelector, PROJECT_SELECTOR_CHANGE } from "./_ProjectSelector";
-import { httpProjectProvider } from "./provider";
+import { httpProjectProvider, usesScopedHttpTransport } from "./provider";
 import type { ProjectProvider } from "./provider";
 
 export const PROJECT_PICKER_ATTRIBUTE = "data-stx-project-picker";
@@ -22,7 +22,8 @@ export function projectNavigationUrl(template: string | null, id: string): strin
 
 export function mountProjectPickers(
   root: ParentNode = document,
-  providerFor: (url: string, element: HTMLElement) => ProjectProvider = httpProjectProvider,
+  providerFor: (url: string, element: HTMLElement) => ProjectProvider = (url, element) =>
+    httpProjectProvider(url, { allowUserScope: element.getAttribute("data-allow-user-scope") === "true" }),
 ): ProjectSelector[] {
   const mounted: ProjectSelector[] = [];
   const elements = root.querySelectorAll<HTMLElement>(`[${PROJECT_PICKER_ATTRIBUTE}]`);
@@ -31,13 +32,17 @@ export function mountProjectPickers(
     const providerUrl = element.getAttribute("data-provider-url");
     if (!providerUrl) continue;
     const scope = element.getAttribute("data-current-scope");
+    const provider = providerFor(providerUrl, element);
+    // In scoped HTTP mode the accepted server pair is authoritative; stale
+    // page attributes must not revive a project after an All selection.
+    const scopedHttp = usesScopedHttpTransport(provider);
     const selector = new ProjectSelector({
       container: element,
-      provider: providerFor(providerUrl, element),
-      current: element.getAttribute("data-current") || null,
+      provider,
+      current: scopedHttp ? undefined : element.getAttribute("data-current") || null,
       placeholder: element.getAttribute("data-placeholder") || undefined,
       allowUserScope: element.getAttribute("data-allow-user-scope") === "true",
-      currentScope: scope === "user" || scope === "project" ? scope : undefined,
+      currentScope: scopedHttp ? undefined : scope === "user" || scope === "project" ? scope : undefined,
     });
     element.setAttribute(MOUNTED_ATTRIBUTE, "");
     const navigate = element.getAttribute("data-navigate");

@@ -575,20 +575,49 @@ function csrfToken() {
   return match ? decodeURIComponent(match[1]) : "";
 }
 var PROJECT_PROVIDER_META_NAME = "stx-project-provider";
-function hostProjectProvider(doc = document) {
-  const url = doc.querySelector(`meta[name="${PROJECT_PROVIDER_META_NAME}"]`)?.getAttribute("content");
-  return url ? httpProjectProvider(url) : null;
+var SCOPED_HTTP_TRANSPORT = Symbol.for("scitex-sdk.ui.scoped-http-project-provider");
+function usesScopedHttpTransport(provider) {
+  return provider !== void 0 && Reflect.get(provider, SCOPED_HTTP_TRANSPORT) === true;
 }
-function httpProjectProvider(url) {
-  return {
+function hostProjectProvider(doc = document, options = {}) {
+  const url = doc.querySelector(`meta[name="${PROJECT_PROVIDER_META_NAME}"]`)?.getAttribute("content");
+  return url ? httpProjectProvider(url, options) : null;
+}
+function httpProjectProvider(url, options = {}) {
+  const scoped = options.allowUserScope === true;
+  let authority = 0;
+  let enabled = false;
+  const provider = {
     async listProjects() {
+      const listingAuthority = scoped ? ++authority : authority;
+      if (scoped) {
+        enabled = false;
+        delete provider.rememberScope;
+      }
       const response = await fetch(url, {
         credentials: "same-origin",
         headers: { Accept: "application/json" }
       });
       if (!response.ok) throw new Error(`project listing failed: HTTP ${response.status}`);
       const body = await response.json();
-      return { projects: body.projects ?? [], current: body.current ?? null };
+      if (!scoped) return { projects: body.projects ?? [], current: body.current ?? null };
+      if (body.allow_user_scope !== true || !Array.isArray(body.projects)) {
+        throw new Error("scoped project provider is not enabled");
+      }
+      const scope = body.current_scope;
+      const current = body.current ?? null;
+      if (scope !== void 0 && scope !== "user" && scope !== "project" || scope === "user" && body.current !== null || scope === "project" && (typeof current !== "string" || !current.trim()) || scope === void 0 && current !== null) {
+        throw new Error("invalid current scope selection");
+      }
+      if (authority !== listingAuthority) throw new Error("scope listing superseded");
+      enabled = true;
+      provider.rememberScope = rememberScope;
+      return {
+        projects: body.projects,
+        current,
+        allow_user_scope: true,
+        ...scope === void 0 ? {} : { current_scope: scope }
+      };
     },
     async rememberProject(id) {
       if (typeof id !== "string" || !id.trim()) throw new Error("project id required");
@@ -601,6 +630,33 @@ function httpProjectProvider(url) {
       if (!response.ok) throw new Error(`project selection failed: HTTP ${response.status}`);
     }
   };
+  async function rememberScope(selection) {
+    if (!enabled || provider.rememberScope !== rememberScope) {
+      throw new Error("scoped project provider is not enabled");
+    }
+    const { scope, id } = selection;
+    if (scope === "user" ? id !== null : scope !== "project" || typeof id !== "string" || !id.trim()) {
+      throw new Error("explicit scope selection required");
+    }
+    const requested = { scope, id };
+    const acceptedAuthority = authority;
+    const response = await fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
+      body: JSON.stringify(requested)
+    });
+    if (!response.ok) throw new Error(`scope selection failed: HTTP ${response.status}`);
+    const body = await response.json();
+    if (body.current_scope !== requested.scope || body.current !== requested.id) {
+      throw new Error("scope selection acknowledgement does not match");
+    }
+    if (!enabled || authority !== acceptedAuthority || provider.rememberScope !== rememberScope) {
+      throw new Error("scope provider authority changed");
+    }
+  }
+  if (scoped) Object.defineProperty(provider, SCOPED_HTTP_TRANSPORT, { value: true });
+  return provider;
 }
 
 // ts/app/project-selector/mount.ts
@@ -635,18 +691,21 @@ function appScope(doc = document) {
 
 // ts/shell/app-scope-selector.ts
 function mountProjectSelectorByScope(options, doc = document) {
-  const provider = options.provider ?? (options.projects ? void 0 : hostProjectProvider(doc) ?? void 0);
-  if ((options.scope ?? appScope(doc)) !== SCOPE_PROJECT && !(options.allowUserScope === true && typeof provider?.rememberScope === "function")) {
+  const provider = options.provider ?? (options.projects ? void 0 : hostProjectProvider(doc, { allowUserScope: options.allowUserScope === true }) ?? void 0);
+  const scopedHttp = usesScopedHttpTransport(provider);
+  if ((options.scope ?? appScope(doc)) !== SCOPE_PROJECT && !(options.allowUserScope === true && (typeof provider?.rememberScope === "function" || scopedHttp))) {
     return null;
   }
   const selector = new ProjectSelector({
     container: options.container,
     projects: options.projects,
     provider,
-    current: options.current,
+    // A pending scoped transport may mount to load its capability, but All is
+    // enabled only by its supporting server GET. Use that same committed pair.
+    current: scopedHttp ? void 0 : options.current,
     placeholder: options.placeholder,
     allowUserScope: options.allowUserScope,
-    currentScope: options.currentScope
+    currentScope: scopedHttp ? void 0 : options.currentScope
   });
   const navigate = options.navigate;
   const container = typeof options.container === "string" ? doc.querySelector(options.container) : options.container;

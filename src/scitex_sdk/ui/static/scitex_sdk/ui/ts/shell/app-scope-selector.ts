@@ -38,6 +38,7 @@ import {
   projectNavigationUrl,
 } from "../app/project-selector";
 import type { ProjectOption, ProjectProvider } from "../app/project-selector";
+import { usesScopedHttpTransport } from "../app/project-selector/provider";
 import {
   appScope,
   SCOPE_PROJECT,
@@ -83,9 +84,11 @@ export function mountProjectSelectorByScope(
   doc: Document = document,
 ): ProjectSelector | null {
   const provider =
-    options.provider ?? (options.projects ? undefined : hostProjectProvider(doc) ?? undefined);
+    options.provider ?? (options.projects ? undefined :
+      hostProjectProvider(doc, { allowUserScope: options.allowUserScope === true }) ?? undefined);
+  const scopedHttp = usesScopedHttpTransport(provider);
   if ((options.scope ?? appScope(doc)) !== SCOPE_PROJECT &&
-      !(options.allowUserScope === true && typeof provider?.rememberScope === "function")) {
+      !(options.allowUserScope === true && (typeof provider?.rememberScope === "function" || scopedHttp))) {
     // user-scoped / absent: do not render a selector. The container is left
     // exactly as given — nothing appended — which is what "renders with no
     // switcher" means structurally.
@@ -95,10 +98,12 @@ export function mountProjectSelectorByScope(
     container: options.container,
     projects: options.projects,
     provider,
-    current: options.current,
+    // A pending scoped transport may mount to load its capability, but All is
+    // enabled only by its supporting server GET. Use that same committed pair.
+    current: scopedHttp ? undefined : options.current,
     placeholder: options.placeholder,
     allowUserScope: options.allowUserScope,
-    currentScope: options.currentScope,
+    currentScope: scopedHttp ? undefined : options.currentScope,
   });
   const navigate = options.navigate;
   const container =
