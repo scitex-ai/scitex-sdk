@@ -357,3 +357,45 @@ def test_local_store_has_no_fallback_for_an_unconfigured_owned_project(tmp_path)
         pytest.raises(CapabilityUnavailable),
     ):
         LocalProjectStore().store_access("owned", req)
+
+
+def test_write_without_grant_refused_before_path_resolution(hosted):
+    # Arrange
+    _, storage = hosted
+    storage.writable = False
+    req = request()
+    # Act
+    failure = _attempt_project_access(req, write=True)
+    # Assert
+    assert failure.status == 403 and storage.calls == []
+
+
+def test_write_to_missing_project_reports_not_found_before_storage(hosted):
+    # Arrange
+    _, storage = hosted
+    storage.writable = False
+    req = request(project="missing")
+    # Act
+    failure = _attempt_project_access(req, write=True)
+    # Assert
+    assert failure.status == 404 and storage.calls == []
+
+
+def test_write_with_grant_resolves_path(hosted):
+    # Arrange
+    req = request()
+    # Act
+    access = project_access(req, write=True)
+    # Assert
+    assert access.can_write is True and access.id == "owned"
+
+
+def test_read_without_grant_still_resolves_path(hosted):
+    # Arrange
+    _, storage = hosted
+    storage.writable = False
+    req = request()
+    # Act
+    access = project_access(req)
+    # Assert
+    assert access.can_write is False and storage.calls == ["owned"]
