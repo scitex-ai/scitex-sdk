@@ -320,3 +320,32 @@ def test_session_with_scopes_refused():
     # Assert
     with _pytest.raises(ApiPluginContractError):
         AuthScope(session=True, scopes=["read"])
+
+
+def test_require_admitted_passes_match_without_import(tmp_path):
+    # Arrange
+    _write_leaf(tmp_path)
+    try:
+        # Act
+        api_mount.require_admitted(_ref(), admit(_ref(), review_ref="review-1", enabled=["ping"]))
+    finally:
+        _unpath(tmp_path)
+    # Assert
+    assert _marker_absent(tmp_path)
+
+
+def test_require_admitted_refuses_drift_without_import(tmp_path):
+    # Arrange
+    _write_leaf(tmp_path)
+    try:
+        # Act
+        # Assert
+        with pytest.raises(AdmissionDenied):
+            api_mount.require_admitted(
+                ApiPluginRef(name="leafprobe", target="leafprobe_pkg.views:OTHER", distribution="leafprobe-dist"),
+                admit(_ref(), review_ref="review-1", enabled=["ping"]),
+            )
+    finally:
+        _unpath(tmp_path)
+    # Assert
+    assert _marker_absent(tmp_path)

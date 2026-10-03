@@ -102,6 +102,22 @@ def _import_dotted(target: str, *, expect_callable: bool = False) -> Any:
     return obj
 
 
+def require_admitted(ref: ApiPluginRef, admission: ApiAdmission) -> None:
+    """Enforce the admission decision before any model/code import.
+
+    A host calls this at settings time, before Django setup imports the
+    plugin's AppConfig and models: identity drift raises
+    :class:`AdmissionDenied` while no leaf code has loaded. Per-path
+    enablement is still checked at :func:`resolve_handler`.
+    """
+    if (
+        ref.name != admission.name
+        or ref.target != admission.target
+        or ref.distribution != admission.distribution
+    ):
+        raise AdmissionDenied("admission does not match the discovered reference")
+
+
 def resolve_handler(
     ref: ApiPluginRef, admission: ApiAdmission, path: str, method: str = "GET"
 ) -> Callable:
@@ -121,6 +137,7 @@ def resolve_handler(
         or ref.distribution != admission.distribution
     ):
         raise AdmissionDenied("admission does not match the discovered reference")
+    require_admitted(ref, admission)
     wanted = api_plugin._validate_path(path)
     if wanted not in admission.enabled:
         raise AdmissionDenied(f"path {wanted!r} is not enabled")
@@ -249,6 +266,7 @@ __all__ = [
     "admit",
     "dump_inert_descriptor",
     "read_inert_descriptor",
+    "require_admitted",
     "resolve_handler",
 ]
 
