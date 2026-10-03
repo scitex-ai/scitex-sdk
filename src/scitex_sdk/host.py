@@ -93,19 +93,33 @@ def project_access(
         raise AccessError("Project not available", 404)
     storage = _provider("SCITEX_PROJECT_STORAGE")
     project = resolution.project
+
+    def _can_write() -> bool:
+        # One bound observation per call: a missing or raising permission
+        # check is a qualified capability failure, never a bare 500, and a
+        # non-explicit-True grant is a refusal, not an absent value.
+        try:
+            return storage.can_write(project.id, request) is True
+        except Exception as exc:
+            raise CapabilityUnavailable(
+                "Write permission check unavailable"
+            ) from exc
+
     if write:
         # Authorization precedes resolution: a write request without an
         # explicit-True can_write is refused before any project path is
         # resolved, so path resolution can never precede the write grant.
         # Read, 401, 404, and provider-unavailable behavior are unchanged.
-        if storage.can_write(project.id, request) is not True:
+        if not _can_write():
             raise AccessError("Write access required", 403)
+        can_write = True
+    else:
+        can_write = False
     root = storage.project_path(project.id, request)
     if root is None:
         raise AccessError("Project workspace not found", 404)
-    can_write = storage.can_write(project.id, request) is True
-    if write and not can_write:
-        raise AccessError("Write access required", 403)
+    if not write:
+        can_write = _can_write()
     return ProjectAccess(project.id, project.name, Path(root).resolve(), can_write)
 
 

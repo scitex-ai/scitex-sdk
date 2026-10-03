@@ -399,3 +399,41 @@ def test_read_without_grant_still_resolves_path(hosted):
     access = project_access(req)
     # Assert
     assert access.can_write is False and storage.calls == ["owned"]
+
+
+def test_allowed_write_observes_permission_exactly_once(hosted):
+    # Arrange
+    _, storage = hosted
+    permission_calls = []
+    real_can_write = storage.can_write
+    storage.can_write = lambda project_id, req: permission_calls.append(project_id) or real_can_write(project_id, req)
+    req = request()
+    # Act
+    access = project_access(req, write=True)
+    # Assert
+    assert access.can_write is True and permission_calls == ["owned"]
+
+
+def test_missing_permission_check_maps_to_capability_failure(hosted, tmp_path, monkeypatch):
+    # Arrange
+    from types import SimpleNamespace
+
+    from django.test import override_settings
+    from scitex_sdk.host import CapabilityUnavailable
+
+    projects, _ = hosted
+    storage = SimpleNamespace(project_path=lambda project_id, req: str(tmp_path))
+    monkeypatch.setattr(
+        "tests.test_host_capabilities._projects", projects, raising=False
+    )
+    # Act
+    try:
+        with override_settings(
+            SCITEX_APP_MODE="hub", SCITEX_PROJECT_STORAGE=storage, SCITEX_PROJECT_STORE=None,
+        ):
+            project_access(request(), write=True)
+        outcome = "admitted"
+    except Exception as exc:
+        outcome = type(exc).__name__
+    # Assert
+    assert outcome == "CapabilityUnavailable"
