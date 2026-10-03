@@ -3,10 +3,9 @@
  * (mode shadowing, input suppression, prefix expiry, lifecycle), and the
  * help() introspection model. `npx vitest run`
  *
- * The harness drives Keymap.handleKeydown through attach(document) and
- * dispatches plain objects that carry the keyboard fields — no real
- * KeyboardEvent is constructed, so the suite is portable across jsdom
- * versions and workers.
+ * Most tests drive Keymap.handleKeydown with plain keyboard-field objects.
+ * Collision regressions also dispatch real, cancelable KeyboardEvents through
+ * attach() on isolated elements, so prior document listeners cannot interfere.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -122,6 +121,21 @@ function key(opts: { key: string; ctrl?: boolean; alt?: boolean; shift?: boolean
     preventDefault: () => { prevented.called = true; },
     _prevented: prevented,
   };
+}
+
+function dispatchKey(
+  map: Keymap,
+  init: KeyboardEventInit,
+  target: HTMLElement = document.createElement("div"),
+): KeyboardEvent {
+  const detach = map.attach(target);
+  const event = new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true });
+  try {
+    target.dispatchEvent(event);
+  } finally {
+    detach();
+  }
+  return event;
 }
 
 describe("Keymap runtime", () => {
@@ -380,6 +394,180 @@ describe("Keymap overrides (write-only defect fix)", () => {
     expect([conflicts[0].existingCommandId, conflicts[0].newCommandId]).toEqual(
       expect.arrayContaining(["save", "close"]),
     );
+  });
+
+  it("an occupied override has one winner for keyboard, program dispatch and help", () => {
+    const save = vi.fn();
+    const close = vi.fn();
+    reg.set({ id: "save", label: "Save", action: save });
+    reg.set({ id: "close", label: "Close", action: close });
+    expect(map.bind("global", "C-s", "save")).toBeNull();
+    expect(map.bind("global", "C-c", "close")).toBeNull();
+    expect(map.bind("global", "C-w", "close")).toBeNull();
+    map.setOverride("save", "C-c");
+
+    const event = dispatchKey(map, { key: "c", ctrlKey: true });
+    expect(event.defaultPrevented).toBe(true);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
+    expect(map.dispatchSequence("C-c", "program")).toBe("save");
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(close).not.toHaveBeenCalled();
+    expect(map.help().commands.find((c) => c.id === "save")!.chords).toEqual(["C-C"]);
+    expect(map.help().commands.find((c) => c.id === "close")!.chords).toEqual(["C-W"]);
+    expect(map.overrideConflicts()).toEqual([{
+      sequenceKey: "C-C", scope: "global", existingCommandId: "close", newCommandId: "save",
+    }]);
+
+    expect(dispatchKey(map, { key: "s", ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(map.dispatchSequence("C-s")).toBeNull();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(dispatchKey(map, { key: "w", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(close).toHaveBeenCalledTimes(1); // its other factory chord survives
+  });
+
+  it.each([true, false])("uses the collision winner's input eligibility (%s)", (inInput) => {
+    const save = vi.fn();
+    const close = vi.fn();
+    reg.set({ id: "save", label: "Save", action: save });
+    reg.set({ id: "close", label: "Close", action: close });
+    expect(map.bind("global", "C-s", "save", inInput)).toBeNull();
+    expect(map.bind("global", "C-c", "close", !inInput)).toBeNull();
+    map.setOverride("save", "C-c");
+
+    const input = document.createElement("input");
+    const event = dispatchKey(map, { key: "c", ctrlKey: true }, input);
+    expect(event.defaultPrevented).toBe(inInput);
+    expect(save).toHaveBeenCalledTimes(inInput ? 1 : 0);
+    expect(close).not.toHaveBeenCalled();
+    expect(map.dispatchSequence("C-c", "program")).toBe("save");
+    expect(save).toHaveBeenCalledTimes(inInput ? 2 : 1);
+    expect(close).not.toHaveBeenCalled();
+    expect(map.help().commands.find((c) => c.id === "save")!.chords).toEqual(["C-C"]);
+    expect(map.help().commands.find((c) => c.id === "close")!.chords).toEqual([]);
+  });
+
+  it.each([
+    ["z-first", "a-last"],
+    ["a-last", "z-first"],
+  ])("keeps conflicting overrides deterministic when set %s then %s", (first, second) => {
+    const firstAction = vi.fn();
+    const lastAction = vi.fn();
+    reg.set({ id: "z-first", label: "First bound", action: firstAction });
+    reg.set({ id: "a-last", label: "Last bound", action: lastAction });
+    expect(map.bind("global", "C-s", "z-first")).toBeNull();
+    expect(map.bind("global", "M-s", "z-first")).toBeNull();
+    expect(map.bind("global", "C-c", "a-last")).toBeNull();
+    map.setOverride(first, "C-q");
+    map.setOverride(second, "C-q");
+
+    expect(dispatchKey(map, { key: "q", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(map.dispatchSequence("C-q", "program")).toBe("a-last");
+    expect(lastAction).toHaveBeenCalledTimes(2);
+    expect(firstAction).not.toHaveBeenCalled();
+    expect(map.help().commands.find((c) => c.id === "z-first")!.chords).toEqual([]);
+    expect(map.help().commands.find((c) => c.id === "a-last")!.chords).toEqual(["C-Q"]);
+    const conflicts = [{
+      sequenceKey: "C-Q", scope: "global", existingCommandId: "z-first", newCommandId: "a-last",
+    }];
+    expect(map.overrideConflicts()).toEqual(conflicts);
+
+    // Persistence input order does not change the factory binding order's winner.
+    map.loadOverrides({ overrides: { [second]: "C-q", [first]: "C-q" } });
+    expect(dispatchKey(map, { key: "q", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(map.dispatchSequence("C-q", "program")).toBe("a-last");
+    expect(lastAction).toHaveBeenCalledTimes(4);
+    expect(firstAction).not.toHaveBeenCalled();
+    expect(map.overrideConflicts()).toEqual(conflicts);
+    expect(map.help().commands.find((c) => c.id === "z-first")!.chords).toEqual([]);
+    expect(map.help().commands.find((c) => c.id === "a-last")!.chords).toEqual(["C-Q"]);
+  });
+
+  it("restores displaced bindings after unbind, enable and reset", () => {
+    const save = vi.fn();
+    const close = vi.fn();
+    reg.set({ id: "save", label: "Save", action: save });
+    reg.set({ id: "close", label: "Close", action: close });
+    expect(map.bind("global", "C-s", "save")).toBeNull();
+    expect(map.bind("global", "C-c", "close")).toBeNull();
+    map.setOverride("save", "C-c");
+
+    map.unbind("close");
+    expect(map.overrideConflicts()).toEqual([]);
+    expect(map.help().commands.find((c) => c.id === "close")!.chords).toEqual([]);
+    expect(dispatchKey(map, { key: "c", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
+
+    map.enable("close");
+    expect(map.overrideConflicts()).toHaveLength(1);
+    expect(map.help().commands.find((c) => c.id === "close")!.chords).toEqual([]);
+    expect(map.dispatchSequence("C-c")).toBe("save");
+    expect(save).toHaveBeenCalledTimes(2);
+
+    map.unbind("save"); // also removes save's override, so close regains C-c
+    expect(map.overrideConflicts()).toEqual([]);
+    expect(map.help().commands.find((c) => c.id === "close")!.chords).toEqual(["C-C"]);
+    expect(dispatchKey(map, { key: "c", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(close).toHaveBeenCalledTimes(1);
+    map.enable("save");
+    expect(map.dispatchSequence("C-s")).toBe("save"); // factory chord, not the removed override
+    expect(map.dispatchSequence("C-c")).toBe("close");
+
+    map.setOverride("save", "C-c");
+    map.resetOverrides();
+    expect(map.overrideConflicts()).toEqual([]);
+    expect(map.help().commands.find((c) => c.id === "save")!.chords).toEqual(["C-S"]);
+    expect(map.help().commands.find((c) => c.id === "close")!.chords).toEqual(["C-C"]);
+    expect(dispatchKey(map, { key: "s", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(dispatchKey(map, { key: "c", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(save).toHaveBeenCalledTimes(4);
+    expect(close).toHaveBeenCalledTimes(3);
+  });
+
+  it("help hides only mode-shadowed chords and restores them as ownership changes", () => {
+    const globalSave = vi.fn();
+    const editorSave = vi.fn();
+    reg.set({ id: "global-save", label: "Global save", action: globalSave });
+    reg.set({ id: "editor-save", label: "Editor save", action: editorSave, modes: new Set(["editor"]) });
+    expect(map.bind("global", "C-s", "global-save")).toBeNull();
+    expect(map.bind("global", "C-p", "global-save")).toBeNull();
+    expect(map.bind("editor", "C-s", "editor-save")).toBeNull();
+    map.activateMode("editor");
+
+    expect(map.help().commands.find((c) => c.id === "global-save")!.chords).toEqual(["C-P"]);
+    expect(map.help().commands.find((c) => c.id === "editor-save")!).toMatchObject({ active: true, chords: ["C-S"] });
+    expect(dispatchKey(map, { key: "s", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(map.dispatchSequence("C-s")).toBe("editor-save");
+    expect(editorSave).toHaveBeenCalledTimes(2);
+    expect(globalSave).not.toHaveBeenCalled();
+    expect(dispatchKey(map, { key: "p", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(globalSave).toHaveBeenCalledTimes(1);
+
+    map.setOverride("editor-save", "M-e");
+    expect(map.help().commands.find((c) => c.id === "global-save")!.chords).toEqual(["C-S", "C-P"]);
+    expect(map.help().commands.find((c) => c.id === "editor-save")!.chords).toEqual(["M-E"]);
+    expect(map.dispatchSequence("C-s")).toBe("global-save");
+    expect(map.dispatchSequence("M-e")).toBe("editor-save");
+    map.resetOverrides();
+    expect(map.help().commands.find((c) => c.id === "global-save")!.chords).toEqual(["C-P"]);
+
+    map.unbind("editor-save");
+    expect(map.help().commands.find((c) => c.id === "global-save")!.chords).toEqual(["C-S", "C-P"]);
+    expect(map.help().commands.find((c) => c.id === "editor-save")!.chords).toEqual([]);
+    expect(map.dispatchSequence("C-s")).toBe("global-save");
+    map.enable("editor-save");
+    expect(map.help().commands.find((c) => c.id === "global-save")!.chords).toEqual(["C-P"]);
+
+    map.deactivateMode();
+    expect(map.help().commands.find((c) => c.id === "global-save")!.chords).toEqual(["C-S", "C-P"]);
+    expect(map.help().commands.find((c) => c.id === "editor-save")!).toMatchObject({ active: false, chords: [] });
+    expect(dispatchKey(map, { key: "s", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(globalSave).toHaveBeenCalledTimes(4);
+    map.activateMode("editor");
+    expect(map.help().commands.find((c) => c.id === "global-save")!.chords).toEqual(["C-P"]);
+    expect(dispatchKey(map, { key: "s", ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(editorSave).toHaveBeenCalledTimes(4);
   });
 
   it("unbind disables a command (its default is preserved) and enable restores it", () => {
