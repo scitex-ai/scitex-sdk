@@ -282,10 +282,10 @@ export class Keymap {
               newCommandId: b.commandId,
             });
             if (pass === 1) continue; // two defaults colliding: first wins (bind() prevents this)
-            // pass 2: the user's override wins the chord it displaced onto.
-            effIndex.set(key, b.commandId);
-            effList.push({ sequence: seq, commandId: b.commandId, inInput: b.inInput });
-            continue;
+            // Pass 2 replaces the losing row as well as the index entry:
+            // keyboard dispatch and help must see the same winning binding.
+            const displaced = effList.findIndex((bound) => sequenceKey(bound.sequence) === key);
+            effList.splice(displaced, 1);
           }
           effIndex.set(key, b.commandId);
           effList.push({ sequence: seq, commandId: b.commandId, inInput: b.inInput });
@@ -420,7 +420,8 @@ export class Keymap {
 
   /** The introspection model: current mode + every command with the chords
    *  bound to it (resolved across scopes). Feeds the help UI and agent tools.
-   *  Reports the EFFECTIVE chords (overrides applied, unbinds honored). */
+   *  Reports the EFFECTIVE chords (overrides applied, unbinds honored,
+   *  mode-shadowed chords omitted). */
   help(): {
     mode: string | null;
     commands: Array<{
@@ -433,14 +434,18 @@ export class Keymap {
   } {
     // map commandId -> chord display strings, mode-first
     const byCommand = new Map<string, string[]>();
+    const seen = new Set<string>();
     const scopes: BindingScope[] =
       this.currentMode !== null ? [this.currentMode, "global"] : ["global"];
-    for (const scope of scopes.reverse()) {
+    for (const scope of scopes) {
       const list = this.bindings.get(scope);
       if (!list) continue;
       for (const b of list) {
+        const key = sequenceKey(b.sequence);
+        if (seen.has(key)) continue; // the higher-priority scope owns this chord
+        seen.add(key);
         const arr = byCommand.get(b.commandId) ?? [];
-        arr.push(sequenceKey(b.sequence));
+        arr.push(key);
         byCommand.set(b.commandId, arr);
       }
     }
