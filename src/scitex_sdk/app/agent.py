@@ -158,17 +158,21 @@ class AgentRouter(Protocol):
 
 def dispatch(
     request: AgentRequest,
-    enabled: tuple,
+    specialists: dict,
     *,
     router: Optional[AgentRouter] = None,
 ) -> AgentResponse:
-    """Route one request to its specialist choice, honestly.
+    """Route one request to its specialist and return the real response.
 
-    Without an injected ``router`` there is no decision to make: returns
-    ``failed`` naming the missing binding rather than fabricating a choice.
-    With one, forwards the original text unchanged and returns the chosen
-    specialist as a receipted selection — execution itself stays with the
-    specialist's own operation path.
+    ``specialists`` maps enabled specialist ID to its operation callable,
+    which takes the :class:`AgentRequest` and returns an
+    :class:`AgentResponse` (server-injected; typically an admitted leaf
+    operation adapted to this contract). Without an injected ``router``
+    there is no decision to make: returns ``failed`` naming the missing
+    binding rather than fabricating a choice. With one, the original
+    request goes unchanged to the chosen specialist's callable and its
+    actual response — artifacts, partials, errors alike — propagates.
+    Out-of-set choices and missing handlers fail explicitly.
     """
     if router is None:
         return AgentResponse(
@@ -179,7 +183,8 @@ def dispatch(
         )
     if not isinstance(router, AgentRouter):
         raise AgentResponseError("router must implement AgentRouter")
-    chosen = router.choose_specialist(request.text, tuple(enabled))
+    enabled = tuple(specialists)
+    chosen = router.choose_specialist(request.text, enabled)
     if chosen not in tuple(enabled):
         return AgentResponse(
             status="failed",
@@ -187,14 +192,84 @@ def dispatch(
             next_steps=("Rebind a router that only selects enabled specialists.",),
             receipt={"choice": str(chosen)},
         )
-    return AgentResponse(
-        status="result",
-        message=f"Routed to {chosen}.",
-        artifacts=(
-            Artifact(kind="data", name="routing", value={"specialist": chosen}, validation="not_checked"),
-        ),
-        receipt={"specialist": chosen, "forwarded_text": request.text},
-    )
+    handler = specialists[chosen]
+    if not callable(handler):
+        return AgentResponse(
+            status="failed",
+            message=f"The {chosen} specialist has no callable operation.",
+            next_steps=("Register a callable operation for the specialist.",),
+            receipt={"specialist": chosen},
+        )
+    response = handler(request)
+    if not isinstance(response, AgentResponse):
+        return AgentResponse(
+            status="failed",
+            message=f"The {chosen} specialist returned no valid response.",
+            next_steps=("Fix the specialist operation to return an AgentResponse.",),
+            receipt={"specialist": chosen},
+        )
+    return response
+
+
+def agent_view(specialists: dict, *, router: Optional[AgentRouter] = None) -> Any:
+    """Build the minimal loopback POST wrapper around :func:`dispatch`.
+
+    Accepts ``{"text": ..., "context": {...}}`` JSON and returns the
+    envelope JSON. Django is imported lazily so this module stays usable
+    without it; without Django there is no wrapper to build. Unbound
+    routers answer honest ``failed`` through the same path — the wrapper
+    adds transport only, never decisions.
+    """
+    import json as _json
+
+    try:
+        from django.http import HttpResponseNotAllowed, JsonResponse
+    except ImportError as exc:
+        raise ImportError("the agent view requires Django") from exc
+
+    def view(request: Any):
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+        try:
+            payload = _json.loads(request.body or b"{}")
+        except ValueError:
+            payload = None
+        if not isinstance(payload, dict) or not payload.get("text"):
+            return JsonResponse({"error": "text is required"}, status=400)
+        try:
+            agent_request = AgentRequest(
+                text=payload["text"],
+                context=payload.get("context") or {},
+            )
+        except AgentResponseError as exc:
+            return JsonResponse({"error": str(exc)}, status=400)
+        response = dispatch(agent_request, specialists, router=router)
+        return JsonResponse(
+            {
+                "status": response.status,
+                "message": response.message,
+                "artifacts": [
+                    {
+                        "kind": a.kind,
+                        "name": a.name,
+                        "validation": a.validation,
+                        "scope": a.scope,
+                        "reference": a.reference,
+                        "media_type": a.media_type,
+                        "value": a.value,
+                        "sha256": a.sha256,
+                    }
+                    for a in response.artifacts
+                ],
+                "questions": [
+                    {"key": q.key, "question": q.question} for q in response.questions
+                ],
+                "next_steps": list(response.next_steps),
+                "receipt": response.receipt,
+            }
+        )
+
+    return view
 
 
 __all__ = [
@@ -205,6 +280,7 @@ __all__ = [
     "AgentRouter",
     "Artifact",
     "Question",
+    "agent_view",
     "dispatch",
 ]
 

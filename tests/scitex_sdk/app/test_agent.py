@@ -240,21 +240,32 @@ def test_dispatch_without_router_fails_honestly():
 
 def test_dispatch_forwards_original_text_to_specialist():
     # Arrange
-    from scitex_sdk.app.agent import AgentRequest, AgentRouter, dispatch
+    from scitex_sdk.app.agent import AgentRequest, AgentResponse, Artifact, dispatch
     seen = {}
+
+    def fig_handler(req):
+        # Arrange
+        seen["text"] = req.text
+        # Act
+        # Assert
+        return AgentResponse(
+            status="result",
+            message="Figure created.",
+            artifacts=(Artifact(kind="file", name="plot.png", reference="out/plot.png", validation="passed"),),
+            receipt={"leaf": "figrecipe"},
+        )
 
     class FixedRouter:
         def choose_specialist(self, text, enabled):
             # Arrange
-            seen["text"] = text
             # Act
             # Assert
             return "figrecipe"
 
     # Act
-    response = dispatch(AgentRequest(text="Plot my data."), ("figrecipe", "stats"), router=FixedRouter())
+    response = dispatch(AgentRequest(text="Plot my data."), {"figrecipe": fig_handler, "stats": None}, router=FixedRouter())
     # Assert
-    assert response.status == "result" and seen["text"] == "Plot my data." and response.receipt["specialist"] == "figrecipe"
+    assert response.status == "result" and seen["text"] == "Plot my data." and response.receipt == {"leaf": "figrecipe"}
 
 
 def test_dispatch_rejects_out_of_set_choice():
@@ -282,3 +293,105 @@ def test_dispatch_rejects_non_router():
     # Assert
     with _pytest.raises(AgentResponseError):
         dispatch(AgentRequest(text="Hi."), ("figrecipe",), router=object())
+
+
+def test_dispatch_invokes_selected_handler_with_original_request():
+    # Arrange
+    from scitex_sdk.app.agent import AgentRequest, Artifact, dispatch
+    seen = {}
+
+    def fig_handler(req):
+        # Arrange
+        seen["text"] = req.text
+        # Act
+        # Assert
+        return __import__("scitex_sdk.app.agent", fromlist=["AgentResponse"]).AgentResponse(
+            status="result",
+            message="Figure created.",
+            artifacts=(Artifact(kind="file", name="plot.png", reference="out/plot.png", validation="passed"),),
+            receipt={"leaf": "figrecipe"},
+        )
+
+    class FixedRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            return "figrecipe"
+
+    # Act
+    response = dispatch(AgentRequest(text="Plot my data."), {"figrecipe": fig_handler}, router=FixedRouter())
+    # Assert
+    assert response.status == "result" and seen["text"] == "Plot my data." and response.artifacts[0].name == "plot.png" and response.receipt == {"leaf": "figrecipe"}
+
+
+def test_dispatch_propagates_handler_failure():
+    # Arrange
+    from scitex_sdk.app.agent import AgentRequest, AgentResponse, dispatch
+
+    def failing_handler(req):
+        # Arrange
+        # Act
+        # Assert
+        return AgentResponse(status="failed", message="Leaf crashed.", next_steps=("Retry.",), receipt={"leaf": "figrecipe"})
+
+    class FixedRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            return "figrecipe"
+
+    # Act
+    response = dispatch(AgentRequest(text="Plot."), {"figrecipe": failing_handler}, router=FixedRouter())
+    # Assert
+    assert response.status == "failed" and response.receipt == {"leaf": "figrecipe"}
+
+
+def test_dispatch_missing_handler_fails_explicitly():
+    # Arrange
+    from scitex_sdk.app.agent import AgentRequest, dispatch
+
+    class FixedRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            return "figrecipe"
+
+    # Act
+    response = dispatch(AgentRequest(text="Plot."), {"figrecipe": None}, router=FixedRouter())
+    # Assert
+    assert response.status == "failed" and "callable" in response.message
+
+
+def test_agent_view_unbound_answers_failed():
+    # Arrange
+    import json as _json
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import agent_view
+    # Act
+    response = agent_view({})(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    # Assert
+    assert response.status_code == 200 and _json.loads(response.content.decode())["status"] == "failed"
+
+
+def test_agent_view_rejects_non_post():
+    # Arrange
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import agent_view
+    # Act
+    response = agent_view({})(RequestFactory().get("/"))
+    # Assert
+    assert response.status_code == 405
+
+
+def test_agent_view_missing_text_is_400():
+    # Arrange
+    import json as _json
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import agent_view
+    # Act
+    response = agent_view({})(RequestFactory().post("/", data=_json.dumps({}), content_type="application/json"))
+    # Assert
+    assert response.status_code == 400
