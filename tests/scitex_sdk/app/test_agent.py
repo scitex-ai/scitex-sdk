@@ -515,4 +515,4 @@ def test_agent_view_native_404_propagates():
     # Act
     # Assert
     with _pytest.raises(Http404):
-        agent_view({"figrecipe": missing})(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+        agent_view({"figrecipe": missing}, router=FixedRouter())(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))

@@ -212,13 +212,14 @@ def dispatch(
 
 
 def agent_view(specialists: dict, *, router: Optional[AgentRouter] = None) -> Any:
-    """Build the minimal loopback POST wrapper around :func:`dispatch`.
+    """Build a Django view callable around :func:`dispatch`.
 
-    Accepts ``{"text": ..., "context": {...}}`` JSON and returns the
-    envelope JSON. Django is imported lazily so this module stays usable
-    without it; without Django there is no wrapper to build. Unbound
-    routers answer honest ``failed`` through the same path — the wrapper
-    adds transport only, never decisions.
+    This is a view factory only: it binds no server, enforces no loopback
+    interface, and performs no bearer admission. Mount it only behind the
+    existing runtime/auth gate (loopback + bearer owned by Infra); the
+    RequestFactory controls prove source behavior, not a running service.
+    Unbound routers answer honest ``failed`` through the same path: the
+    wrapper adds transport only, never decisions.
     """
     import json as _json
 
