@@ -132,10 +132,9 @@ def installed_app_paths(
     """``existing`` INSTALLED_APPS with every discovered plugin merged in.
 
     A plugin whose app package is already listed replaces that entry in place
-    (order kept); the rest are appended. Companions follow the same rule but
-    never replace: an explicitly listed module always wins over a companion,
-    an identical companion path listed twice is kept once, and two different
-    paths for one module raise :class:`LeafContractError`.
+    (order kept); the rest are appended. Companions are appended unless their
+    exact path is already listed; Django setup arbitrates any remaining
+    same-module identity clashes fail-loud (see note in the body).
     """
     plugins = discover_plugin_apps() if plugins is None else list(plugins)
     by_module = {p.app_module: p.app_config for p in plugins}
@@ -143,20 +142,21 @@ def installed_app_paths(
     for entry in existing:
         merged.append(by_module.pop(app_module_of(entry), entry))
     merged.extend(by_module.values())
-    seen = {app_module_of(entry) for entry in merged}
-    companion_paths: dict = {}
+    # Companions dedup by exact path only. The Django app identity (config
+    # ``name``/``label``) is not derivable from the class location without
+    # importing — Fig's real case keeps primary and companion classes in one
+    # ``apps`` module under different Django names — so module-based
+    # guessing would drop real requirements or invent collisions. Same-module
+    # different-config clashes therefore surface at Django setup (duplicate
+    # label/model errors, fail loud), never as silent shadowing here. Hosts
+    # that already install a config with the companion's label must choose
+    # one; the SDK will not rewrite either side.
+    installed = set(merged)
     for plugin in plugins:
         for companion in plugin.companions:
-            module = app_module_of(companion)
-            if module in seen:
-                continue
-            if module in companion_paths and companion_paths[module] != companion:
-                raise LeafContractError(
-                    f"companion module {module!r} declared as both "
-                    f"{companion_paths[module]!r} and {companion!r}"
-                )
-            companion_paths[module] = companion
-    merged.extend(companion_paths.values())
+            if companion not in installed:
+                merged.append(companion)
+                installed.add(companion)
     return merged
 
 

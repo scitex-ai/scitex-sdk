@@ -169,13 +169,23 @@ def test_companion_is_appended_after_primary():
     assert merged == ["fig._django.apps.F", "scitex_sdk.app._chat"]
 
 
-def test_listed_module_wins_over_companion():
-    # Arrange
-    plugins = [PluginApp("fig", "fig._django.apps.F", companions=("shared.chat.Extra",))]
+def test_companion_in_same_apps_module_is_kept():
+    # Arrange — the real Fig shape: primary and companion classes share one
+    # apps module under different Django names; only exact paths dedup.
+    plugins = [
+        PluginApp(
+            "fig",
+            "figrecipe._django.apps.FigRecipeEditorConfig",
+            companions=("figrecipe._django.apps.ScitexAppChatConfig",),
+        )
+    ]
     # Act
-    merged = installed_app_paths(["shared.chat"], plugins)
+    merged = installed_app_paths([], plugins)
     # Assert
-    assert merged == ["shared.chat", "fig._django.apps.F"]
+    assert merged == [
+        "figrecipe._django.apps.FigRecipeEditorConfig",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    ]
 
 
 def test_identical_companion_twice_kept_once():
@@ -188,21 +198,6 @@ def test_identical_companion_twice_kept_once():
     merged = installed_app_paths([], plugins)
     # Assert
     assert merged == ["a.apps.A", "b.apps.B", "shared.chat"]
-
-
-def test_conflicting_companion_paths_refused():
-    # Arrange
-    import pytest as _pytest
-    from scitex_sdk.app.plugins import LeafContractError
-
-    plugins = [
-        PluginApp("a", "a.apps.A", companions=("shared.chat.One",)),
-        PluginApp("b", "b.apps.B", companions=("shared.chat.Two",)),
-    ]
-    # Act
-    # Assert
-    with _pytest.raises(LeafContractError):
-        installed_app_paths([], plugins)
 
 
 def test_garbage_companion_token_refused():
