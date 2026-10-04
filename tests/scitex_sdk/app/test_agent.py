@@ -427,18 +427,21 @@ def test_agent_view_router_timeout_yields_failed():
     import json as _json
     from django.test import RequestFactory
     from scitex_sdk.app.agent import agent_view
+    called = {}
 
     class SlowRouter:
         def choose_specialist(self, text, enabled):
             # Arrange
+            called["router"] = text
             # Act
             # Assert
             raise TimeoutError("model timed out")
 
     # Act
-    response = agent_view({"figrecipe": None})(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    response = agent_view({"figrecipe": None}, router=SlowRouter())(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
     # Assert
-    assert response.status_code == 200 and _json.loads(response.content.decode())["status"] == "failed"
+    body = _json.loads(response.content.decode())
+    assert response.status_code == 200 and called == {"router": "Hi."} and body["status"] == "failed" and "timed out" in body["message"]
 
 
 def test_agent_view_handler_error_yields_failed():
@@ -446,9 +449,11 @@ def test_agent_view_handler_error_yields_failed():
     import json as _json
     from django.test import RequestFactory
     from scitex_sdk.app.agent import agent_view
+    called = {}
 
     def crashing(req):
         # Arrange
+        called["handler"] = req.text
         # Act
         # Assert
         raise RuntimeError("leaf crashed")
@@ -456,27 +461,39 @@ def test_agent_view_handler_error_yields_failed():
     class FixedRouter:
         def choose_specialist(self, text, enabled):
             # Arrange
+            called["router"] = text
             # Act
             # Assert
             return "figrecipe"
 
     # Act
-    response = agent_view({"figrecipe": crashing})(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    response = agent_view({"figrecipe": crashing}, router=FixedRouter())(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
     # Assert
-    assert response.status_code == 200 and _json.loads(response.content.decode())["status"] == "failed"
+    body = _json.loads(response.content.decode())
+    assert response.status_code == 200 and called == {"router": "Hi.", "handler": "Hi."} and body["status"] == "failed" and "crashed" in body["message"]
 
 
-def test_agent_view_unserializable_value_yields_failed():
+def test_agent_view_mixed_serializable_artifacts_preserved():
     # Arrange
     import json as _json
     from django.test import RequestFactory
     from scitex_sdk.app.agent import AgentResponse, Artifact, agent_view
+    called = {}
 
     def weird(req):
         # Arrange
+        called["handler"] = req.text
         # Act
         # Assert
-        return AgentResponse(status="result", message="Odd.", artifacts=(Artifact(kind="data", name="o", value=object()),), receipt={"r": object()})
+        return AgentResponse(
+            status="result",
+            message="Partial.",
+            artifacts=(
+                Artifact(kind="file", name="plot.png", reference="out/plot.png", validation="passed"),
+                Artifact(kind="data", name="o", value=object()),
+            ),
+            receipt={"warning": "native kept", "raw": object()},
+        )
 
     class FixedRouter:
         def choose_specialist(self, text, enabled):
@@ -486,9 +503,12 @@ def test_agent_view_unserializable_value_yields_failed():
             return "figrecipe"
 
     # Act
-    response = agent_view({"figrecipe": weird})(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    response = agent_view({"figrecipe": weird}, router=FixedRouter())(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
     # Assert
-    assert response.status_code == 200 and _json.loads(response.content.decode())["status"] == "failed"
+    body = _json.loads(response.content.decode())
+    assert response.status_code == 200 and called == {"handler": "Hi."}
+    assert body["status"] == "result" and [a["name"] for a in body["artifacts"]] == ["plot.png"]
+    assert body["receipt"] == {"warning": "native kept"}
 
 
 def test_agent_view_native_404_propagates():

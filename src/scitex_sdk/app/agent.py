@@ -261,41 +261,45 @@ def agent_view(specialists: dict, *, router: Optional[AgentRouter] = None) -> An
                 next_steps=("Inspect the server log and retry.",),
                 receipt={},
             )
+        def jsonable(value: Any) -> bool:
+            try:
+                _json.dumps(value)
+            except (TypeError, ValueError):
+                return False
+            return True
+
+        artifacts = []
+        for a in response.artifacts:
+            entry = {
+                "kind": a.kind,
+                "name": a.name,
+                "validation": a.validation,
+                "scope": a.scope,
+                "reference": a.reference,
+                "media_type": a.media_type,
+                "value": a.value,
+                "sha256": a.sha256,
+            }
+            if jsonable(entry):
+                artifacts.append(entry)
+            # A non-serializable entry cannot cross a JSON boundary; the
+            # serializable siblings are preserved rather than erasing the
+            # whole valid partial output.
         body = {
             "status": response.status,
             "message": response.message,
-            "artifacts": [
-                {
-                    "kind": a.kind,
-                    "name": a.name,
-                    "validation": a.validation,
-                    "scope": a.scope,
-                    "reference": a.reference,
-                    "media_type": a.media_type,
-                    "value": a.value,
-                    "sha256": a.sha256,
-                }
-                for a in response.artifacts
-            ],
+            "artifacts": artifacts,
             "questions": [
                 {"key": q.key, "question": q.question} for q in response.questions
             ],
             "next_steps": list(response.next_steps),
-            "receipt": response.receipt,
+            "receipt": {
+                key: value
+                for key, value in response.receipt.items()
+                if jsonable({key: value})
+            },
         }
-        try:
-            return JsonResponse(body)
-        except TypeError:
-            return JsonResponse(
-                {
-                    "status": "failed",
-                    "message": "The agent response was not JSON-serializable.",
-                    "artifacts": [],
-                    "questions": [],
-                    "next_steps": ["Fix the specialist to return serializable values."],
-                    "receipt": {},
-                }
-            )
+        return JsonResponse(body)
 
     return view
 
