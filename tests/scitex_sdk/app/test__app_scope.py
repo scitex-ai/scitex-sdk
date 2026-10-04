@@ -359,3 +359,28 @@ class TestResolveAppConfig:
         got = resolve_app_config(request, [])
         # Assert
         assert got is None
+
+    def test_namespace_matching_slug_selects_config(self, tmp_path):
+        # Arrange
+        from scitex_sdk.app._app_scope import resolve_app_config
+
+        first = _make_named_app_config(tmp_path, "alpha", None)
+        stats_like = _make_named_app_config(tmp_path, "gamma", "project")
+        stats_like.label = "stats_calculator"
+        (tmp_path / "gamma" / "manifest.json").write_text(
+            json.dumps({
+                "name": "gamma",
+                "slug": "stats",
+                "label": "App",
+                "pip_package": "gamma",
+                "icon": "fas fa-puzzle-piece",
+                "license": "MIT",
+                "scope": "project",
+            }),
+            encoding="utf-8",
+        )
+        request = _namespaced_request("/stats/page", "stats")
+        # Act
+        got = resolve_app_config(request, [first, stats_like])
+        # Assert
+        assert got is stats_like

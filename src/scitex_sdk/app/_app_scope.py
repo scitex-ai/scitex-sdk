@@ -115,13 +115,20 @@ def resolve_app_config(request, app_configs):
         return None
     match = getattr(request, "resolver_match", None)
     names = []
-    for attr in ("namespaces", "app_names"):
+    for attr in ("namespaces", "app_names", "namespace", "app_name"):
         value = getattr(match, attr, None)
-        if value:
+        if isinstance(value, str):
+            names.append(value)
+        elif value:
             names.extend(value)
     for name in names:
         for config in mounted:
-            if name == config.label:
+            candidates = {config.label}
+            try:
+                candidates.add(config.app_slug)
+            except Exception:
+                pass
+            if name in candidates:
                 return config
     return mounted[0]
 
