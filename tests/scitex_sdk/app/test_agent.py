@@ -227,3 +227,58 @@ def test_failed_keeps_partial_artifacts():
     )
     # Assert
     assert response.artifacts[0].validation == "failed" and response.receipt["error"] == "boom"
+
+
+def test_dispatch_without_router_fails_honestly():
+    # Arrange
+    from scitex_sdk.app.agent import AgentRequest, dispatch
+    # Act
+    response = dispatch(AgentRequest(text="Plot my data."), ("figrecipe",))
+    # Assert
+    assert response.status == "failed" and "router" in response.message.lower()
+
+
+def test_dispatch_forwards_original_text_to_specialist():
+    # Arrange
+    from scitex_sdk.app.agent import AgentRequest, AgentRouter, dispatch
+    seen = {}
+
+    class FixedRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            seen["text"] = text
+            # Act
+            # Assert
+            return "figrecipe"
+
+    # Act
+    response = dispatch(AgentRequest(text="Plot my data."), ("figrecipe", "stats"), router=FixedRouter())
+    # Assert
+    assert response.status == "result" and seen["text"] == "Plot my data." and response.receipt["specialist"] == "figrecipe"
+
+
+def test_dispatch_rejects_out_of_set_choice():
+    # Arrange
+    from scitex_sdk.app.agent import AgentRequest, dispatch
+
+    class RogueRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            return "elsewhere"
+
+    # Act
+    response = dispatch(AgentRequest(text="Hi."), ("figrecipe",), router=RogueRouter())
+    # Assert
+    assert response.status == "failed" and response.receipt["choice"] == "elsewhere"
+
+
+def test_dispatch_rejects_non_router():
+    # Arrange
+    import pytest as _pytest
+    from scitex_sdk.app.agent import AgentRequest, dispatch
+    # Act
+    # Assert
+    with _pytest.raises(AgentResponseError):
+        dispatch(AgentRequest(text="Hi."), ("figrecipe",), router=object())

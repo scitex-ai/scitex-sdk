@@ -21,7 +21,7 @@ protocol half; the router arrives with the binding.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Protocol, runtime_checkable
 
 STATUSES = ("result", "needs_input", "unsupported", "refused", "failed")
 
@@ -128,12 +128,84 @@ class AgentResponse:
             raise AgentResponseError(f"{self.status} needs actionable next_steps")
 
 
+@dataclass(frozen=True)
+class AgentRequest:
+    """One natural-language call: original text, unchanged, plus context."""
+
+    text: str
+    context: dict = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _require_text(self.text, "request text")
+        if not isinstance(self.context, dict):
+            raise AgentResponseError("request context must be an object")
+
+
+@runtime_checkable
+class AgentRouter(Protocol):
+    """The injectable decision binding: choose a specialist, forward unchanged.
+
+    Implemented by the neutral runtime (Infra-owned), never by keyword
+    matching here: a hardcoded selector would be a pretend agent. Takes the
+    original request text plus the enabled specialist IDs and returns the
+    chosen specialist ID, which must be one of the enabled set. Any model,
+    transport, or credential concern lives with the implementation.
+    """
+
+    def choose_specialist(self, text: str, enabled: tuple) -> str:
+        """Return exactly one ID from ``enabled`` for ``text``."""
+
+
+def dispatch(
+    request: AgentRequest,
+    enabled: tuple,
+    *,
+    router: Optional[AgentRouter] = None,
+) -> AgentResponse:
+    """Route one request to its specialist choice, honestly.
+
+    Without an injected ``router`` there is no decision to make: returns
+    ``failed`` naming the missing binding rather than fabricating a choice.
+    With one, forwards the original text unchanged and returns the chosen
+    specialist as a receipted selection — execution itself stays with the
+    specialist's own operation path.
+    """
+    if router is None:
+        return AgentResponse(
+            status="failed",
+            message="No agent router is bound.",
+            next_steps=("Bind a neutral model router before calling.",),
+            receipt={},
+        )
+    if not isinstance(router, AgentRouter):
+        raise AgentResponseError("router must implement AgentRouter")
+    chosen = router.choose_specialist(request.text, tuple(enabled))
+    if chosen not in tuple(enabled):
+        return AgentResponse(
+            status="failed",
+            message="The router chose an unsupported specialist.",
+            next_steps=("Rebind a router that only selects enabled specialists.",),
+            receipt={"choice": str(chosen)},
+        )
+    return AgentResponse(
+        status="result",
+        message=f"Routed to {chosen}.",
+        artifacts=(
+            Artifact(kind="data", name="routing", value={"specialist": chosen}, validation="not_checked"),
+        ),
+        receipt={"specialist": chosen, "forwarded_text": request.text},
+    )
+
+
 __all__ = [
     "STATUSES",
+    "AgentRequest",
     "AgentResponse",
     "AgentResponseError",
+    "AgentRouter",
     "Artifact",
     "Question",
+    "dispatch",
 ]
 
 
