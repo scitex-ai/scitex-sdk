@@ -239,3 +239,30 @@ def test_one_shot_companion_iterable_fully_consumed():
         "figrecipe._django",
         "figrecipe._django.apps.ScitexAppChatConfig",
     ]
+
+
+def test_fig_b6_tuple_partitions_to_single_companion():
+    # Arrange — Fig's actual declared tuple (c647 candidate __init__ values).
+    from scitex_sdk.app.plugins import partition_companions
+
+    plugins = [PluginApp("figrecipe", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    entries = ("figrecipe._django", "figrecipe._django.apps.ScitexAppChatConfig")
+    # Act
+    companions = partition_companions(entries, plugins)
+    # Assert
+    assert companions == ["figrecipe._django.apps.ScitexAppChatConfig"]
+
+
+def test_fig_b6_merged_list_has_no_duplicate_primary():
+    # Arrange
+    from scitex_sdk.app.plugins import partition_companions
+
+    plugins = [PluginApp("figrecipe", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    entries = ("figrecipe._django", "figrecipe._django.apps.ScitexAppChatConfig")
+    # Act
+    merged = installed_app_paths([], plugins, partition_companions(entries, plugins))
+    # Assert
+    assert merged == [
+        "figrecipe._django.apps.FigRecipeEditorConfig",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    ]

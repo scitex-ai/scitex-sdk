@@ -147,3 +147,91 @@ def test_second_scitex_app_label_fails_loud(tmp_path):
     result = _run_setup(tmp_path, ["synother.apps.SynClashConfig"])
     # Assert
     assert result["setup"] == "RAISED" and "duplicates: scitex_app" in result["error"]
+
+CORE_PROBE = """
+import sys, json
+sys.path.insert(0, "@SDK@")
+import django
+from django.conf import settings
+from scitex_sdk.app.plugins import installed_app_paths
+settings.configure(
+    DEBUG=False, DATABASES={},
+    INSTALLED_APPS=["django.contrib.contenttypes", "django.contrib.auth"]
+    + installed_app_paths(
+        ["scitex_sdk.app.apps.ScitexAppConfig"],
+        [],
+        ["scitex_sdk.app._chat.apps.ScitexAppChatConfig"],
+    ),
+    USE_TZ=True,
+)
+report = {"installed": settings.INSTALLED_APPS}
+try:
+    django.setup()
+except Exception as exc:  # noqa: BLE001 — the failure shape is the assertion
+    report.update({"setup": "RAISED", "error": f"{type(exc).__name__}: {exc}"})
+    print(json.dumps(report))
+else:
+    from django.apps import apps as reg
+    from django.core.management import call_command
+    from django.db.migrations.loader import MigrationLoader
+    message = reg.get_model("scitex_app", "ChatMessage")
+    loader = MigrationLoader(None, load=False)
+    loader.load_disk()
+    disk = sorted(
+        name for (app, name) in loader.disk_migrations if app == "scitex_app"
+    )
+    try:
+        call_command("makemigrations", "scitex_app", check=True, dry_run=True, verbosity=0)
+        migrations = "IN-SYNC"
+    except SystemExit:
+        migrations = "CHANGES-DETECTED"
+    report.update({
+        "setup": "OK",
+        "labels": sorted(c.label for c in reg.get_app_configs()),
+        "chat_message": f"{message.__module__}.{message.__name__}",
+        "disk_migration": disk,
+        "migrations": migrations,
+    })
+    print(json.dumps(report))
+"""
+
+
+def _run_core_setup() -> dict:
+    # Arrange
+    code = CORE_PROBE.replace("@SDK@", str(SDK_SRC))
+    # Act
+    proc = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=60
+    )
+    # Assert
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+def test_core_plus_chat_canonical_setup():
+    # Arrange — relabelled canonical coexists with the chat owner.
+    # Act
+    result = _run_core_setup()
+    # Assert
+    assert result["setup"] == "OK" and sorted(result["labels"]) == [
+        "auth",
+        "contenttypes",
+        "scitex_app",
+        "scitex_sdk_app",
+    ]
+
+
+def test_chat_message_resolves_from_sdk_canonical_models():
+    # Arrange
+    # Act
+    result = _run_core_setup()
+    # Assert
+    assert result["chat_message"] == "scitex_sdk.app._chat._models.ChatMessage"
+
+
+def test_migration_loader_sees_shipped_initial():
+    # Arrange
+    # Act
+    result = _run_core_setup()
+    # Assert
+    assert result["disk_migration"] == ["0001_initial"] and result["migrations"] == "IN-SYNC"
