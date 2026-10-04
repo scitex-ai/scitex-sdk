@@ -42,7 +42,8 @@ class Artifact:
 
     kind: str
     name: str
-    validation: str = ""
+    validation: str = "not_checked"
+    scope: str = "unknown"
     reference: str = ""
     media_type: str = ""
     value: Any = None
@@ -54,8 +55,10 @@ class Artifact:
                 f"artifact kind must be 'file' or 'data', got {self.kind!r}"
             )
         _require_text(self.name, "artifact name")
-        if self.kind == "file" and not self.reference:
-            raise AgentResponseError("a file artifact needs a native reference")
+        _require_text(self.validation, "artifact validation state")
+        _require_text(self.scope, "artifact scope")
+        if self.kind == "file":
+            _require_text(self.reference, "file artifact reference")
         if self.kind == "data" and self.value is None:
             raise AgentResponseError("a data artifact needs a value")
 
@@ -89,6 +92,14 @@ class AgentResponse:
                 f"status must be one of {STATUSES}, got {self.status!r}"
             )
         _require_text(self.message, "message")
+        if not isinstance(self.artifacts, (list, tuple)):
+            raise AgentResponseError("artifacts must be an array")
+        if not isinstance(self.questions, (list, tuple)):
+            raise AgentResponseError("questions must be an array")
+        if not isinstance(self.next_steps, (list, tuple)):
+            raise AgentResponseError("next_steps must be an array")
+        for step in self.next_steps:
+            _require_text(step, "next step")
         for artifact in self.artifacts:
             if not isinstance(artifact, Artifact):
                 raise AgentResponseError("artifacts must be Artifact entries")
@@ -99,6 +110,8 @@ class AgentResponse:
             raise AgentResponseError("receipt must be an object")
         if self.status == "result" and not self.artifacts:
             raise AgentResponseError("a result needs nonempty artifacts")
+        if self.status == "result" and self.questions:
+            raise AgentResponseError("a result carries no missing-input questions")
         if self.status == "needs_input" and not self.questions:
             raise AgentResponseError("needs_input needs concrete questions")
         if self.status in ("unsupported", "refused", "failed") and not self.next_steps:

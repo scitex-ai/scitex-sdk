@@ -123,3 +123,56 @@ def test_receipt_defaults_to_empty_object():
 
 
 # EOF
+
+
+def test_next_steps_string_refused():
+    # Arrange
+    # Act
+    # Assert
+    with __import__("pytest").raises(AgentResponseError):
+        AgentResponse(status="failed", message="Down.", next_steps="retry")
+
+
+def test_next_steps_blank_item_refused():
+    # Arrange
+    # Act
+    # Assert
+    with __import__("pytest").raises(AgentResponseError):
+        AgentResponse(status="failed", message="Down.", next_steps=["  "])
+
+
+def test_next_steps_null_item_refused():
+    # Arrange
+    # Act
+    # Assert
+    with __import__("pytest").raises(AgentResponseError):
+        AgentResponse(status="failed", message="Down.", next_steps=[None])
+
+
+def test_file_reference_integer_refused():
+    # Arrange
+    # Act
+    # Assert
+    with __import__("pytest").raises(AgentResponseError):
+        Artifact(kind="file", name="plot.png", reference=42)
+
+
+def test_file_reference_blank_refused():
+    # Arrange
+    # Act
+    # Assert
+    with __import__("pytest").raises(AgentResponseError):
+        Artifact(kind="file", name="plot.png", reference="  ")
+
+
+def test_result_with_questions_refused():
+    # Arrange
+    # Act
+    # Assert
+    with __import__("pytest").raises(AgentResponseError):
+        AgentResponse(
+            status="result",
+            message="Done.",
+            artifacts=(Artifact(kind="data", name="s", value="v"),),
+            questions=(Question(key="k", question="Q?"),),
+        )
