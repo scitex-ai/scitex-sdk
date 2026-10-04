@@ -255,6 +255,9 @@ def agent_view(specialists: dict, *, router: Optional[AgentRouter] = None) -> An
             # never converts them into envelope bodies.
             raise
         except Exception as exc:
+            # receipt={} here records no execution metadata; it must not be
+            # read as proof that nothing ran or had effects before the
+            # router/handler raised.
             response = AgentResponse(
                 status="failed",
                 message=f"The agent call failed: {exc}",
