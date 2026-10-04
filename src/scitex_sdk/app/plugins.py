@@ -49,22 +49,17 @@ ENTRY_POINT_GROUP = "scitex.apps"
 class PluginApp:
     """One ``scitex.apps`` entry point, read without importing it.
 
-    ``companions`` are extra INSTALLED_APPS paths the leaf declares in the
-    same entry-point value after the primary config, whitespace-separated::
-
-        figrecipe = "figrecipe._django.apps:FigRecipeEditorConfig scitex_sdk.app._chat"
-
-    Companions are installed, never mounted: they contribute models,
-    migrations and admin — URL mounting stays with the primary config and
-    is the host's seam. Settings time sees strings only; Django itself
-    fails loud on duplicate app labels at setup, so identities are never
-    silently rewritten here.
+    The entry-point value names exactly one config, so standard
+    :meth:`importlib.metadata.EntryPoint.load` consumers keep working —
+    companion paths are never smuggled into the value string. Companions
+    travel separately: leaves publish an ``INSTALLED_APPS_ENTRIES`` tuple
+    of plain INSTALLED_APPS paths (readable without Django setup), and the
+    host passes them to :func:`installed_app_paths` explicitly.
     """
 
     name: str
     app_config: str
     distribution: str = ""
-    companions: tuple = ()
 
     @property
     def app_module(self) -> str:
@@ -91,25 +86,6 @@ def app_module_of(installed_app: str) -> str:
     return ".".join(parts)
 
 
-def split_entry_point_value(value: str):
-    """``"primary companions..."`` -> ``(primary, (companions...))``.
-
-    Tokens after the first whitespace-separated token are companion
-    INSTALLED_APPS paths. Each companion must be a plain dotted path;
-    anything else raises :class:`LeafContractError` at settings time
-    rather than failing obscurely at Django setup.
-    """
-    tokens = value.split()
-    if not tokens:
-        raise LeafContractError(f"empty {ENTRY_POINT_GROUP!r} entry-point value")
-    for token in tokens[1:]:
-        if not token.replace(".", "").replace("_", "").isalnum() or token[:1].isdigit():
-            raise LeafContractError(
-                f"companion {token!r} is not a dotted INSTALLED_APPS path"
-            )
-    return tokens[0], tuple(tokens[1:])
-
-
 def discover_plugin_apps(entry_points: Optional[Iterable] = None) -> List[PluginApp]:
     """Every installed ``scitex.apps`` entry point, sorted by name, first wins."""
     if entry_points is None:
@@ -121,42 +97,45 @@ def discover_plugin_apps(entry_points: Optional[Iterable] = None) -> List[Plugin
         if ep.name in found:
             continue
         dist = getattr(getattr(ep, "dist", None), "name", "") or ""
-        primary, companions = split_entry_point_value(ep.value)
-        found[ep.name] = PluginApp(ep.name, app_config_path(primary), dist, companions)
+        found[ep.name] = PluginApp(ep.name, app_config_path(ep.value), dist)
     return [found[k] for k in sorted(found)]
 
 
 def installed_app_paths(
-    existing: Iterable[str] = (), plugins: Optional[Iterable[PluginApp]] = None
+    existing: Iterable[str] = (),
+    plugins: Optional[Iterable[PluginApp]] = None,
+    companions: Iterable[str] = (),
 ) -> List[str]:
     """``existing`` INSTALLED_APPS with every discovered plugin merged in.
 
     A plugin whose app package is already listed replaces that entry in place
-    (order kept); the rest are appended. Companions are appended unless their
-    exact path is already listed; Django setup arbitrates any remaining
-    same-module identity clashes fail-loud (see note in the body).
+    (order kept); the rest are appended. ``companions`` — plain INSTALLED_APPS
+    paths from the leaf's ``INSTALLED_APPS_ENTRIES`` tuple, passed explicitly
+    by the host — are appended unless their exact path is already listed.
+    Companions install; they are never mounted (companion urls stay the host
+    mounting seam). Django app identity (``name``/``label``) is not derivable
+    from a class location without importing, so remaining same-label clashes
+    surface at Django setup as duplicate-label errors — fail loud, never
+    silently shadowed or rewritten here. A host that already installs a
+    config with the companion's label must choose one side.
     """
     plugins = discover_plugin_apps() if plugins is None else list(plugins)
     by_module = {p.app_module: p.app_config for p in plugins}
+    companion_set = set(companions)
     merged: List[str] = []
     for entry in existing:
-        merged.append(by_module.pop(app_module_of(entry), entry))
+        if entry in companion_set:
+            # An explicitly declared companion is never replaced by primary
+            # module inference: the host said this exact path, keep it.
+            merged.append(entry)
+        else:
+            merged.append(by_module.pop(app_module_of(entry), entry))
     merged.extend(by_module.values())
-    # Companions dedup by exact path only. The Django app identity (config
-    # ``name``/``label``) is not derivable from the class location without
-    # importing — Fig's real case keeps primary and companion classes in one
-    # ``apps`` module under different Django names — so module-based
-    # guessing would drop real requirements or invent collisions. Same-module
-    # different-config clashes therefore surface at Django setup (duplicate
-    # label/model errors, fail loud), never as silent shadowing here. Hosts
-    # that already install a config with the companion's label must choose
-    # one; the SDK will not rewrite either side.
     installed = set(merged)
-    for plugin in plugins:
-        for companion in plugin.companions:
-            if companion not in installed:
-                merged.append(companion)
-                installed.add(companion)
+    for companion in companions:
+        if companion not in installed:
+            merged.append(companion)
+            installed.add(companion)
     return merged
 
 

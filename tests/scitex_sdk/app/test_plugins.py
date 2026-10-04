@@ -151,60 +151,53 @@ def test_leaf_declarations_wrong_type_refused(tmp_path):
         _unpath(tmp_path)
 
 
-def test_discovery_parses_companion_paths():
-    # Arrange
-    eps = [_ep("fig", "fig._django.apps:F scitex_sdk.app._chat")]
+def test_discovery_values_stay_load_compatible():
+    # Arrange — EntryPoint.load only parses single-config values: no smuggling.
+    eps = [_ep("fig", "fig._django.apps:FigRecipeEditorConfig")]
     # Act
     found = discover_plugin_apps(eps)
     # Assert
-    assert found[0].companions == ("scitex_sdk.app._chat",)
+    assert " " not in found[0].app_config and "\t" not in found[0].app_config
 
 
-def test_companion_is_appended_after_primary():
+def test_companions_appended_unless_listed():
     # Arrange
-    plugins = [PluginApp("fig", "fig._django.apps.F", companions=("scitex_sdk.app._chat",))]
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    companions = (
+        "figrecipe._django",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    )
     # Act
-    merged = installed_app_paths([], plugins)
-    # Assert
-    assert merged == ["fig._django.apps.F", "scitex_sdk.app._chat"]
-
-
-def test_companion_in_same_apps_module_is_kept():
-    # Arrange — the real Fig shape: primary and companion classes share one
-    # apps module under different Django names; only exact paths dedup.
-    plugins = [
-        PluginApp(
-            "fig",
-            "figrecipe._django.apps.FigRecipeEditorConfig",
-            companions=("figrecipe._django.apps.ScitexAppChatConfig",),
-        )
-    ]
-    # Act
-    merged = installed_app_paths([], plugins)
+    merged = installed_app_paths([], plugins, companions)
     # Assert
     assert merged == [
         "figrecipe._django.apps.FigRecipeEditorConfig",
+        "figrecipe._django",
         "figrecipe._django.apps.ScitexAppChatConfig",
     ]
 
 
-def test_identical_companion_twice_kept_once():
-    # Arrange
-    plugins = [
-        PluginApp("a", "a.apps.A", companions=("shared.chat",)),
-        PluginApp("b", "b.apps.B", companions=("shared.chat",)),
+def test_undeclared_same_module_entry_still_replaced():
+    # Arrange — without an explicit companion declaration the 0.3.2 primary
+    # same-module replacement rule applies unchanged.
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    # Act
+    merged = installed_app_paths(["figrecipe._django.apps.ScitexAppChatConfig"], plugins)
+    # Assert
+    assert merged == ["figrecipe._django.apps.FigRecipeEditorConfig"]
+
+
+def test_declared_companion_survives_primary_replacement():
+    # Arrange — an explicitly declared companion is exempt from primary
+    # same-module replacement: both entries persist, no silent drop.
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    companions = ("figrecipe._django.apps.ScitexAppChatConfig",)
+    # Act
+    merged = installed_app_paths(
+        ["figrecipe._django.apps.ScitexAppChatConfig"], plugins, companions
+    )
+    # Assert
+    assert merged == [
+        "figrecipe._django.apps.ScitexAppChatConfig",
+        "figrecipe._django.apps.FigRecipeEditorConfig",
     ]
-    # Act
-    merged = installed_app_paths([], plugins)
-    # Assert
-    assert merged == ["a.apps.A", "b.apps.B", "shared.chat"]
-
-
-def test_garbage_companion_token_refused():
-    # Arrange
-    import pytest as _pytest
-    from scitex_sdk.app.plugins import LeafContractError, split_entry_point_value
-    # Act
-    # Assert
-    with _pytest.raises(LeafContractError):
-        split_entry_point_value("a.apps:A not-a-path!")
