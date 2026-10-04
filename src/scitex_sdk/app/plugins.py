@@ -101,6 +101,30 @@ def discover_plugin_apps(entry_points: Optional[Iterable] = None) -> List[Plugin
     return [found[k] for k in sorted(found)]
 
 
+def partition_companions(entries, plugins) -> List[str]:
+    """Split a leaf ``INSTALLED_APPS_ENTRIES`` tuple into true companions.
+
+    The tuple lists every entry the leaf needs — including the bare primary
+    module, which entry-point discovery already covers. Entries that resolve
+    primary-side are dropped: exact primary paths, and bare modules belonging
+    to a discovered plugin (assumed to resolve to that primary via the
+    standard ``default = True`` convention the leaf itself documents).
+    Everything else — the chat companion sharing the apps module, foreign
+    bare apps — is kept verbatim for :func:`installed_app_paths`.
+    """
+    plugins = list(plugins)
+    primary_modules = {p.app_module for p in plugins}
+    primary_paths = {p.app_config for p in plugins}
+    companions = []
+    for entry in entries:
+        if entry in primary_paths:
+            continue
+        if app_module_of(entry) == entry and entry in primary_modules:
+            continue
+        companions.append(entry)
+    return companions
+
+
 def installed_app_paths(
     existing: Iterable[str] = (),
     plugins: Optional[Iterable[PluginApp]] = None,
@@ -120,6 +144,7 @@ def installed_app_paths(
     config with the companion's label must choose one side.
     """
     plugins = discover_plugin_apps() if plugins is None else list(plugins)
+    companions = list(companions)
     by_module = {p.app_module: p.app_config for p in plugins}
     companion_set = set(companions)
     merged: List[str] = []
