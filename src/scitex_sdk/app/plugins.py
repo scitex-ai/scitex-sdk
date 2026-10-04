@@ -47,11 +47,24 @@ ENTRY_POINT_GROUP = "scitex.apps"
 
 @dataclass(frozen=True)
 class PluginApp:
-    """One ``scitex.apps`` entry point, read without importing it."""
+    """One ``scitex.apps`` entry point, read without importing it.
+
+    ``companions`` are extra INSTALLED_APPS paths the leaf declares in the
+    same entry-point value after the primary config, whitespace-separated::
+
+        figrecipe = "figrecipe._django.apps:FigRecipeEditorConfig scitex_sdk.app._chat"
+
+    Companions are installed, never mounted: they contribute models,
+    migrations and admin — URL mounting stays with the primary config and
+    is the host's seam. Settings time sees strings only; Django itself
+    fails loud on duplicate app labels at setup, so identities are never
+    silently rewritten here.
+    """
 
     name: str
     app_config: str
     distribution: str = ""
+    companions: tuple = ()
 
     @property
     def app_module(self) -> str:
@@ -78,6 +91,25 @@ def app_module_of(installed_app: str) -> str:
     return ".".join(parts)
 
 
+def split_entry_point_value(value: str):
+    """``"primary companions..."`` -> ``(primary, (companions...))``.
+
+    Tokens after the first whitespace-separated token are companion
+    INSTALLED_APPS paths. Each companion must be a plain dotted path;
+    anything else raises :class:`LeafContractError` at settings time
+    rather than failing obscurely at Django setup.
+    """
+    tokens = value.split()
+    if not tokens:
+        raise LeafContractError(f"empty {ENTRY_POINT_GROUP!r} entry-point value")
+    for token in tokens[1:]:
+        if not token.replace(".", "").replace("_", "").isalnum() or token[:1].isdigit():
+            raise LeafContractError(
+                f"companion {token!r} is not a dotted INSTALLED_APPS path"
+            )
+    return tokens[0], tuple(tokens[1:])
+
+
 def discover_plugin_apps(entry_points: Optional[Iterable] = None) -> List[PluginApp]:
     """Every installed ``scitex.apps`` entry point, sorted by name, first wins."""
     if entry_points is None:
@@ -89,7 +121,8 @@ def discover_plugin_apps(entry_points: Optional[Iterable] = None) -> List[Plugin
         if ep.name in found:
             continue
         dist = getattr(getattr(ep, "dist", None), "name", "") or ""
-        found[ep.name] = PluginApp(ep.name, app_config_path(ep.value), dist)
+        primary, companions = split_entry_point_value(ep.value)
+        found[ep.name] = PluginApp(ep.name, app_config_path(primary), dist, companions)
     return [found[k] for k in sorted(found)]
 
 
@@ -99,7 +132,10 @@ def installed_app_paths(
     """``existing`` INSTALLED_APPS with every discovered plugin merged in.
 
     A plugin whose app package is already listed replaces that entry in place
-    (order kept); the rest are appended.
+    (order kept); the rest are appended. Companions follow the same rule but
+    never replace: an explicitly listed module always wins over a companion,
+    an identical companion path listed twice is kept once, and two different
+    paths for one module raise :class:`LeafContractError`.
     """
     plugins = discover_plugin_apps() if plugins is None else list(plugins)
     by_module = {p.app_module: p.app_config for p in plugins}
@@ -107,6 +143,20 @@ def installed_app_paths(
     for entry in existing:
         merged.append(by_module.pop(app_module_of(entry), entry))
     merged.extend(by_module.values())
+    seen = {app_module_of(entry) for entry in merged}
+    companion_paths: dict = {}
+    for plugin in plugins:
+        for companion in plugin.companions:
+            module = app_module_of(companion)
+            if module in seen:
+                continue
+            if module in companion_paths and companion_paths[module] != companion:
+                raise LeafContractError(
+                    f"companion module {module!r} declared as both "
+                    f"{companion_paths[module]!r} and {companion!r}"
+                )
+            companion_paths[module] = companion
+    merged.extend(companion_paths.values())
     return merged
 
 

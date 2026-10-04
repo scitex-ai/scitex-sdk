@@ -149,3 +149,67 @@ def test_leaf_declarations_wrong_type_refused(tmp_path):
             leaf_declarations(mod, {"partial_template": str})
     finally:
         _unpath(tmp_path)
+
+
+def test_discovery_parses_companion_paths():
+    # Arrange
+    eps = [_ep("fig", "fig._django.apps:F scitex_sdk.app._chat")]
+    # Act
+    found = discover_plugin_apps(eps)
+    # Assert
+    assert found[0].companions == ("scitex_sdk.app._chat",)
+
+
+def test_companion_is_appended_after_primary():
+    # Arrange
+    plugins = [PluginApp("fig", "fig._django.apps.F", companions=("scitex_sdk.app._chat",))]
+    # Act
+    merged = installed_app_paths([], plugins)
+    # Assert
+    assert merged == ["fig._django.apps.F", "scitex_sdk.app._chat"]
+
+
+def test_listed_module_wins_over_companion():
+    # Arrange
+    plugins = [PluginApp("fig", "fig._django.apps.F", companions=("shared.chat.Extra",))]
+    # Act
+    merged = installed_app_paths(["shared.chat"], plugins)
+    # Assert
+    assert merged == ["shared.chat", "fig._django.apps.F"]
+
+
+def test_identical_companion_twice_kept_once():
+    # Arrange
+    plugins = [
+        PluginApp("a", "a.apps.A", companions=("shared.chat",)),
+        PluginApp("b", "b.apps.B", companions=("shared.chat",)),
+    ]
+    # Act
+    merged = installed_app_paths([], plugins)
+    # Assert
+    assert merged == ["a.apps.A", "b.apps.B", "shared.chat"]
+
+
+def test_conflicting_companion_paths_refused():
+    # Arrange
+    import pytest as _pytest
+    from scitex_sdk.app.plugins import LeafContractError
+
+    plugins = [
+        PluginApp("a", "a.apps.A", companions=("shared.chat.One",)),
+        PluginApp("b", "b.apps.B", companions=("shared.chat.Two",)),
+    ]
+    # Act
+    # Assert
+    with _pytest.raises(LeafContractError):
+        installed_app_paths([], plugins)
+
+
+def test_garbage_companion_token_refused():
+    # Arrange
+    import pytest as _pytest
+    from scitex_sdk.app.plugins import LeafContractError, split_entry_point_value
+    # Act
+    # Assert
+    with _pytest.raises(LeafContractError):
+        split_entry_point_value("a.apps:A not-a-path!")
