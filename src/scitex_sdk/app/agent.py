@@ -239,7 +239,7 @@ def agent_view(specialists: dict, *, router: Optional[AgentRouter] = None) -> An
         try:
             agent_request = AgentRequest(
                 text=payload["text"],
-                context=payload.get("context") or {},
+                context=payload["context"] if "context" in payload else {},
             )
         except AgentResponseError as exc:
             return JsonResponse({"error": str(exc)}, status=400)

@@ -395,3 +395,28 @@ def test_agent_view_missing_text_is_400():
     response = agent_view({})(RequestFactory().post("/", data=_json.dumps({}), content_type="application/json"))
     # Assert
     assert response.status_code == 400
+
+
+def test_agent_view_absent_context_defaults():
+    # Arrange
+    import json as _json
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import agent_view
+    # Act
+    response = agent_view({})(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    # Assert
+    assert response.status_code == 200 and _json.loads(response.content.decode())["status"] == "failed"
+
+
+def test_agent_view_invalid_context_reaches_400():
+    # Arrange
+    import json as _json
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import agent_view
+    # Act
+    refused = 0
+    for bad in (False, 0, "", [], None):
+        response = agent_view({})(RequestFactory().post("/", data=_json.dumps({"text": "Hi.", "context": bad}), content_type="application/json"))
+        refused += response.status_code == 400
+    # Assert
+    assert refused == 5
