@@ -114,6 +114,9 @@ class AgentResponse:
         for question in self.questions:
             if not isinstance(question, Question):
                 raise AgentResponseError("questions must be Question entries")
+        keys = [question.key for question in self.questions]
+        if len(set(keys)) != len(keys):
+            raise AgentResponseError("question keys must be unique")
         if not isinstance(self.receipt, dict):
             raise AgentResponseError("receipt must be an object")
         if self.status == "result" and not self.artifacts:

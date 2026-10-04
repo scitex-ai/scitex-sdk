@@ -516,3 +516,30 @@ def test_agent_view_native_404_propagates():
     # Assert
     with _pytest.raises(Http404):
         agent_view({"figrecipe": missing}, router=FixedRouter())(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+
+
+def test_duplicate_question_keys_refused():
+    # Arrange
+    import pytest as _pytest
+    from scitex_sdk.app.agent import AgentResponse, Question
+    # Act
+    # Assert
+    with _pytest.raises(AgentResponseError):
+        AgentResponse(
+            status="needs_input",
+            message="Which?",
+            questions=(Question(key="column", question="A?"), Question(key="column", question="B?")),
+        )
+
+
+def test_distinct_question_keys_accepted():
+    # Arrange
+    from scitex_sdk.app.agent import AgentResponse, Question
+    # Act
+    response = AgentResponse(
+        status="needs_input",
+        message="Which?",
+        questions=(Question(key="column", question="A?"), Question(key="other", question="B?")),
+    )
+    # Assert
+    assert [q.key for q in response.questions] == ["column", "other"]
