@@ -507,8 +507,41 @@ def test_agent_view_mixed_serializable_artifacts_preserved():
     # Assert
     body = _json.loads(response.content.decode())
     assert response.status_code == 200 and called == {"handler": "Hi."}
-    assert body["status"] == "result" and [a["name"] for a in body["artifacts"]] == ["plot.png"]
-    assert body["receipt"] == {"warning": "native kept"}
+    assert body["status"] == "failed" and [a["name"] for a in body["artifacts"]] == ["plot.png"]
+    assert body["receipt"]["warning"] == "native kept" and set(body["receipt"]["omitted"]) == {"o", "receipt:raw"}
+    assert body["message"] == "Partial." and body["next_steps"][-1].startswith("Return JSON-serializable")
+
+
+def test_agent_view_all_unserializable_marks_failed():
+    # Arrange
+    import json as _json
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import AgentResponse, Artifact, agent_view
+
+    def weird(req):
+        # Arrange
+        # Act
+        # Assert
+        return AgentResponse(
+            status="result",
+            message="Odd.",
+            artifacts=(Artifact(kind="data", name="o", value=object()),),
+            receipt={},
+            next_steps=(),
+        )
+
+    class FixedRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            return "figrecipe"
+
+    # Act
+    response = agent_view({"figrecipe": weird}, router=FixedRouter())(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    # Assert
+    body = _json.loads(response.content.decode())
+    assert body["status"] == "failed" and body["artifacts"] == [] and body["receipt"]["omitted"] == ["o"]
 
 
 def test_agent_view_native_404_propagates():

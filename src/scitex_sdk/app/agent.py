@@ -269,6 +269,7 @@ def agent_view(specialists: dict, *, router: Optional[AgentRouter] = None) -> An
             return True
 
         artifacts = []
+        omitted = []
         for a in response.artifacts:
             entry = {
                 "kind": a.kind,
@@ -282,22 +283,34 @@ def agent_view(specialists: dict, *, router: Optional[AgentRouter] = None) -> An
             }
             if jsonable(entry):
                 artifacts.append(entry)
-            # A non-serializable entry cannot cross a JSON boundary; the
-            # serializable siblings are preserved rather than erasing the
-            # whole valid partial output.
+            else:
+                # A non-serializable entry cannot cross a JSON boundary; the
+                # serializable siblings are preserved rather than erasing the
+                # whole valid partial output, and the omission is declared
+                # below instead of silently dropped.
+                omitted.append(a.name)
+        receipt = {}
+        for key, value in response.receipt.items():
+            if jsonable({key: value}):
+                receipt[key] = value
+            else:
+                omitted.append(f"receipt:{key}")
+        if omitted:
+            receipt["omitted"] = omitted
         body = {
-            "status": response.status,
+            "status": "failed" if omitted else response.status,
             "message": response.message,
             "artifacts": artifacts,
             "questions": [
                 {"key": q.key, "question": q.question} for q in response.questions
             ],
-            "next_steps": list(response.next_steps),
-            "receipt": {
-                key: value
-                for key, value in response.receipt.items()
-                if jsonable({key: value})
-            },
+            "next_steps": list(response.next_steps)
+            + (
+                ["Return JSON-serializable artifact values and receipt entries."]
+                if omitted
+                else []
+            ),
+            "receipt": receipt,
         }
         return JsonResponse(body)
 
