@@ -596,3 +596,67 @@ def test_distinct_question_keys_accepted():
     )
     # Assert
     assert [q.key for q in response.questions] == ["column", "other"]
+
+
+def test_agent_view_needs_input_omission_keeps_coherent_failed():
+    # Arrange
+    import json as _json
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import AgentResponse, Question, agent_view
+
+    def ask(req):
+        # Arrange
+        # Act
+        # Assert
+        return AgentResponse(
+            status="needs_input",
+            message="Need more.",
+            questions=(Question(key="column", question="Which column?"),),
+            receipt={"raw": object()},
+        )
+
+    class FixedRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            return "figrecipe"
+
+    # Act
+    response = agent_view({"figrecipe": ask}, router=FixedRouter())(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    # Assert
+    body = _json.loads(response.content.decode())
+    assert body["status"] == "failed" and body["questions"] == []
+    assert body["receipt"]["pending_questions"] == [{"key": "column", "question": "Which column?"}]
+    assert body["receipt"]["omitted"] == ["receipt:raw"]
+
+
+def test_agent_view_native_omitted_key_preserved():
+    # Arrange
+    import json as _json
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import AgentResponse, Artifact, agent_view
+
+    def weird(req):
+        # Arrange
+        # Act
+        # Assert
+        return AgentResponse(
+            status="result",
+            message="Odd.",
+            artifacts=(Artifact(kind="data", name="o", value=object()),),
+            receipt={"omitted": "native-note"},
+        )
+
+    class FixedRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            return "figrecipe"
+
+    # Act
+    response = agent_view({"figrecipe": weird}, router=FixedRouter())(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    # Assert
+    body = _json.loads(response.content.decode())
+    assert body["receipt"]["omitted"] == {"native": "native-note", "adapter": ["o"]}

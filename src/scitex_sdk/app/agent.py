@@ -295,13 +295,33 @@ def agent_view(specialists: dict, *, router: Optional[AgentRouter] = None) -> An
                 receipt[key] = value
             else:
                 omitted.append(f"receipt:{key}")
+
+        def declare(key: str, value: Any) -> None:
+            if key in receipt:
+                receipt[key] = {"native": receipt[key], "adapter": value}
+            else:
+                receipt[key] = value
+
         if omitted:
-            receipt["omitted"] = omitted
+            declare("omitted", omitted)
+        if omitted and response.questions:
+            # Only needs_input may carry questions; the prompts move into
+            # declared receipt metadata so the failed envelope stays coherent
+            # without losing them.
+            declare(
+                "pending_questions",
+                [
+                    {"key": q.key, "question": q.question}
+                    for q in response.questions
+                ],
+            )
         body = {
             "status": "failed" if omitted else response.status,
             "message": response.message,
             "artifacts": artifacts,
-            "questions": [
+            "questions": []
+            if omitted
+            else [
                 {"key": q.key, "question": q.question} for q in response.questions
             ],
             "next_steps": list(response.next_steps)
