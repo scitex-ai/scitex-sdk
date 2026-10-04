@@ -25,6 +25,10 @@ from typing import Any, Optional
 
 STATUSES = ("result", "needs_input", "unsupported", "refused", "failed")
 
+#: Explicit artifact validation states. ``not_checked`` is the honest
+#: default: unknown is stated, never a fabricated science pass.
+VALIDATION_STATES = ("passed", "failed", "not_checked")
+
 
 class AgentResponseError(ValueError):
     """An envelope violates its status contract."""
@@ -55,7 +59,11 @@ class Artifact:
                 f"artifact kind must be 'file' or 'data', got {self.kind!r}"
             )
         _require_text(self.name, "artifact name")
-        _require_text(self.validation, "artifact validation state")
+        if self.validation not in VALIDATION_STATES:
+            raise AgentResponseError(
+                f"artifact validation must be one of {VALIDATION_STATES}, "
+                f"got {self.validation!r}"
+            )
         _require_text(self.scope, "artifact scope")
         if self.kind == "file":
             _require_text(self.reference, "file artifact reference")
@@ -110,8 +118,10 @@ class AgentResponse:
             raise AgentResponseError("receipt must be an object")
         if self.status == "result" and not self.artifacts:
             raise AgentResponseError("a result needs nonempty artifacts")
-        if self.status == "result" and self.questions:
-            raise AgentResponseError("a result carries no missing-input questions")
+        if self.status != "needs_input" and self.questions:
+            raise AgentResponseError(
+                "only needs_input carries missing-input questions"
+            )
         if self.status == "needs_input" and not self.questions:
             raise AgentResponseError("needs_input needs concrete questions")
         if self.status in ("unsupported", "refused", "failed") and not self.next_steps:

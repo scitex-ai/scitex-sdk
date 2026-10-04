@@ -19,7 +19,7 @@ def test_result_needs_artifacts():
     response = AgentResponse(
         status="result",
         message="Figure created.",
-        artifacts=(Artifact(kind="file", name="plot.png", reference="out/plot.png", validation="exists"),),
+        artifacts=(Artifact(kind="file", name="plot.png", reference="out/plot.png", validation="passed"),),
         receipt={"leaf": "figrecipe"},
     )
     # Assert
@@ -173,6 +173,57 @@ def test_result_with_questions_refused():
         AgentResponse(
             status="result",
             message="Done.",
-            artifacts=(Artifact(kind="data", name="s", value="v"),),
+            artifacts=(Artifact(kind="data", name="s", value="v", validation="not_checked"),),
             questions=(Question(key="k", question="Q?"),),
         )
+
+
+def test_questions_refused_outside_needs_input():
+    # Arrange
+    questions = (Question(key="k", question="Q?"),)
+    # Act
+    refused = 0
+    for status, kwargs in (
+        ("unsupported", {"next_steps": ("Alt.",)}),
+        ("refused", {"next_steps": ("Ask.",)}),
+        ("failed", {"next_steps": ("Retry.",)}),
+    ):
+        try:
+            AgentResponse(status=status, message="M.", questions=questions, **kwargs)
+        except AgentResponseError:
+            refused += 1
+    # Assert
+    assert refused == 3
+
+
+def test_validation_arbitrary_string_refused():
+    # Arrange
+    # Act
+    # Assert
+    with __import__("pytest").raises(AgentResponseError):
+        Artifact(kind="data", name="s", value="v", validation="anything")
+
+
+def test_validation_explicit_states_accepted():
+    # Arrange
+    # Act
+    states = [
+        Artifact(kind="data", name="s", value="v", validation=state).validation
+        for state in ("passed", "failed", "not_checked")
+    ]
+    # Assert
+    assert states == ["passed", "failed", "not_checked"]
+
+
+def test_failed_keeps_partial_artifacts():
+    # Arrange
+    # Act
+    response = AgentResponse(
+        status="failed",
+        message="Crashed mid-way.",
+        artifacts=(Artifact(kind="data", name="partial", value="v", validation="failed"),),
+        next_steps=("Inspect the log.",),
+        receipt={"leaf": "figrecipe", "error": "boom"},
+    )
+    # Assert
+    assert response.artifacts[0].validation == "failed" and response.receipt["error"] == "boom"
