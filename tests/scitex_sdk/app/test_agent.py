@@ -420,3 +420,99 @@ def test_agent_view_invalid_context_reaches_400():
         refused += response.status_code == 400
     # Assert
     assert refused == 5
+
+
+def test_agent_view_router_timeout_yields_failed():
+    # Arrange
+    import json as _json
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import agent_view
+
+    class SlowRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            raise TimeoutError("model timed out")
+
+    # Act
+    response = agent_view({"figrecipe": None})(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    # Assert
+    assert response.status_code == 200 and _json.loads(response.content.decode())["status"] == "failed"
+
+
+def test_agent_view_handler_error_yields_failed():
+    # Arrange
+    import json as _json
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import agent_view
+
+    def crashing(req):
+        # Arrange
+        # Act
+        # Assert
+        raise RuntimeError("leaf crashed")
+
+    class FixedRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            return "figrecipe"
+
+    # Act
+    response = agent_view({"figrecipe": crashing})(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    # Assert
+    assert response.status_code == 200 and _json.loads(response.content.decode())["status"] == "failed"
+
+
+def test_agent_view_unserializable_value_yields_failed():
+    # Arrange
+    import json as _json
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import AgentResponse, Artifact, agent_view
+
+    def weird(req):
+        # Arrange
+        # Act
+        # Assert
+        return AgentResponse(status="result", message="Odd.", artifacts=(Artifact(kind="data", name="o", value=object()),), receipt={"r": object()})
+
+    class FixedRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            return "figrecipe"
+
+    # Act
+    response = agent_view({"figrecipe": weird})(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
+    # Assert
+    assert response.status_code == 200 and _json.loads(response.content.decode())["status"] == "failed"
+
+
+def test_agent_view_native_404_propagates():
+    # Arrange
+    import json as _json
+    import pytest as _pytest
+    from django.http import Http404
+    from django.test import RequestFactory
+    from scitex_sdk.app.agent import agent_view
+
+    def missing(req):
+        # Arrange
+        # Act
+        # Assert
+        raise Http404("gone")
+
+    class FixedRouter:
+        def choose_specialist(self, text, enabled):
+            # Arrange
+            # Act
+            # Assert
+            return "figrecipe"
+
+    # Act
+    # Assert
+    with _pytest.raises(Http404):
+        agent_view({"figrecipe": missing})(RequestFactory().post("/", data=_json.dumps({"text": "Hi."}), content_type="application/json"))
