@@ -7,6 +7,7 @@ Verifies the shape returned by ``get_plugin()`` matches the
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import sys
 from importlib.metadata import entry_points
@@ -106,9 +107,17 @@ def test_replacement_identifies_only_the_complete_predecessor_provider():
     }
 
 
-def test_runtime_and_provider_imports_keep_dev_optional():
+def test_runtime_and_provider_imports_keep_dev_optional(tmp_path):
     """A real interpreter without site packages imports before activation."""
-    source_root = str(Path(provider_module.__file__).resolve().parents[2])
+    # Installed wheels may share a site-packages directory with Dev. Copy only
+    # the SDK package so this interpreter sees the actual shipped SDK bytes
+    # without inheriting any adjacent distribution.
+    shutil.copytree(
+        Path(provider_module.__file__).resolve().parents[1],
+        tmp_path / "scitex_sdk",
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
+    source_root = str(tmp_path)
     code = f"""
 import sys
 sys.path.insert(0, {source_root!r})
