@@ -67,8 +67,13 @@ canonical parent. Its version correction is not a public release. A genuine
 canonical release newer than published 0.35 must still register its source and
 artifact association before dependency retirement can pass.
 
-SDK runtime CLI Dev>=0.11.7, contributor group Dev>=0.61, and project/all
-Dev>=0.62 are distinct contracts. No floor is lowered to resolve the bootstrap.
+The 0.3.3 candidate raises optional CLI and contributor tooling to
+Dev>=0.62.4.dev0 for the declared UI provider replacement SPI. The separate
+project API retains Dev>=0.62; `all` includes CLI and inherits its higher floor.
+The paired Dev candidate is private, so a compatible public Dev release remains
+a genuine prerequisite for normal SDK `[all]` publication. See
+[the provider transition](UI_LINTER_PROVIDER_TRANSITION.md). No floor is lowered
+to resolve the bootstrap.
 
 ## Checker scope and remaining proof
 
