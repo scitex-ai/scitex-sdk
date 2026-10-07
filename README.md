@@ -24,8 +24,8 @@ scitex-sdk gui serve
 ```
 
 Add the `chat`, `mcp`, `cli` or `project` extras for those capabilities, or
-install `scitex-sdk[all]`. The `project` extra requires scitex-dev>=0.62.0;
-the `cli` extra, `all`, and contributor tooling require scitex-dev>=0.62.4.dev0
+install `scitex-sdk[all]`. The `project` and `cli` extras, `all`, and contributor
+tooling require scitex-dev>=0.62.4.dev0
 for the declared UI provider replacement SPI. SDK publication verifies a normal built-wheel `[all]`
 installation and `pip check` against published dependencies before uploading.
 Contributor dependencies use `pip install -e . --group dev`.

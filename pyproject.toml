@@ -25,8 +25,8 @@ gui = ["django>=4.2"]
 chat = ["anthropic>=0.25.0", "litellm>=1.0.0", "requests>=2.28.0"]
 mcp = ["fastmcp>=2.0.0"]
 cli = ["scitex-dev>=0.62.4.dev0"]
-# This API is absent from published Dev 0.61.0. Keep the genuine release gate.
-project = ["scitex-dev>=0.62.0"]
+# SDK tooling requires the project API and declared linter provider SPI.
+project = ["scitex-dev>=0.62.4.dev0"]
 all = ["scitex-sdk[gui,chat,mcp,cli,project]"]
 
 # Contributor tooling is not a public runtime capability. pip >=25.1 supports

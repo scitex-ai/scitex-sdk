@@ -27,9 +27,11 @@ The replacement SPI is imported only when `get_plugin()` is called. Importing
 the SDK, importing its provider module, and using the standalone UI walker do
 not acquire a new Dev dependency. Activating the provider with an older Dev
 fails with an actionable compatibility error instead of dropping its
-declaration. The optional `cli` extra and contributor `dev` group therefore
-require `scitex-dev>=0.62.4.dev0`. The separate `project` extra keeps its existing
-project API floor; `all` includes `cli` and consequently acquires the new floor.
+declaration. The optional `cli` and `project` extras and contributor `dev` group
+therefore require `scitex-dev>=0.62.4.dev0`; `all` includes both extras. The
+project primitive itself existed in Dev 0.62.0, but installing an older Dev for
+that API would also discover the SDK's incompatible linter provider. Every
+SDK tooling installation consequently selects the compatible engine.
 
 Version 0.3.3 is an unpublished SDK candidate. Its Python and npm metadata agree;
 no tag or package publication follows from this change. The paired Dev
