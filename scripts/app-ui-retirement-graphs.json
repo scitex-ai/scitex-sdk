@@ -9,8 +9,8 @@
       "extras": [
         "all"
       ],
-      "minimum_canonical_version": null,
-      "canonical_source_commit": null,
+      "minimum_canonical_version": "0.3.2",
+      "canonical_source_commit": "691d22c4f2bfc6cb54fdb80ec063e77a6099d2f2",
       "sdk_requirement": "owner",
       "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
       "reviewed_candidate_source_commit": "5a860c3e837519dcb1409607412110587e132e3f"
@@ -66,8 +66,8 @@
       "extras": [
         "all"
       ],
-      "minimum_canonical_version": null,
-      "canonical_source_commit": null,
+      "minimum_canonical_version": "1.13.0",
+      "canonical_source_commit": "cf5dbaaab2375bca31805de6ab1c423999f11a2a",
       "sdk_requirement": "active",
       "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
       "reviewed_candidate_source_commit": "45889be162a2b06fd942ebec2b7af85cdf4157fe"
@@ -78,8 +78,8 @@
       "extras": [
         "gui"
       ],
-      "minimum_canonical_version": null,
-      "canonical_source_commit": null,
+      "minimum_canonical_version": "0.5.1",
+      "canonical_source_commit": "d9645c2f6f2ce139d8f109347725eaad9fd38d74",
       "sdk_requirement": "active",
       "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
       "reviewed_candidate_source_commit": "ff25ecd77d3717ecd31067e3067a9ce6fab604c2"
@@ -90,8 +90,8 @@
       "extras": [
         "web"
       ],
-      "minimum_canonical_version": null,
-      "canonical_source_commit": null,
+      "minimum_canonical_version": "0.53.4",
+      "canonical_source_commit": "62b971f8604dd786b7fb6d0d8e16d7e1ab90110b",
       "sdk_requirement": "active",
       "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
       "reviewed_candidate_source_commit": "cb3e5a8161a826e76a3d4611d1b6e029fd2449f0"
@@ -102,8 +102,8 @@
       "extras": [
         "gui"
       ],
-      "minimum_canonical_version": null,
-      "canonical_source_commit": null,
+      "minimum_canonical_version": "0.29.5",
+      "canonical_source_commit": "24ec12b6d10b7526e66d761e49445709280e7c4b",
       "sdk_requirement": "active",
       "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
       "reviewed_candidate_source_commit": "26f3806fc642e63c558574e3e346f2bda76438cd"
@@ -137,8 +137,8 @@
       "name": "template-core",
       "distribution": "scitex-template",
       "extras": [],
-      "minimum_canonical_version": null,
-      "canonical_source_commit": null,
+      "minimum_canonical_version": "0.7.1",
+      "canonical_source_commit": "7ad147d0a924311336c49c4b346063057e4ec9fe",
       "sdk_requirement": "none",
       "contract": "Generator emits SDK>=0.3.0 scaffolds; package itself does not require SDK. Native generated Python/React scaffold tests mandatory.",
       "reviewed_candidate_source_commit": "f679acead1155b8f1e24afad9076d525b44e4f7f",
@@ -151,8 +151,8 @@
         "all",
         "dev"
       ],
-      "minimum_canonical_version": null,
-      "canonical_source_commit": null,
+      "minimum_canonical_version": "0.62.3",
+      "canonical_source_commit": "5f4c5d84d5007d9f142f69960d1a5fb2822f9d7e",
       "sdk_requirement": "none",
       "contract": "Registry/project owner; candidate now includes canonical project-get follow-up at remote PR833 head. Genuine Dev>=0.62 prerequisite and normal native release tests required. No invented direct SDK floor.",
       "reviewed_candidate_source_commit": "7a8d15c130ca8b71e52d782c718bf6ccccbcfa68",
@@ -173,8 +173,8 @@
       "extras": [
         "gui"
       ],
-      "minimum_canonical_version": null,
-      "canonical_source_commit": null,
+      "minimum_canonical_version": "0.21.0",
+      "canonical_source_commit": "44b9426732b00e0b84b7b27f31684a5d9c3500f5",
       "sdk_requirement": "active",
       "contract": "Actual canonical GUI draft162 at exact immutable head; candidate source version 0.21.0 is unpublished and not a registered genuine release floor.",
       "reviewed_candidate_source_commit": "d7499c09ca95b7c101d26ecf9950deefb4a4ce09",
