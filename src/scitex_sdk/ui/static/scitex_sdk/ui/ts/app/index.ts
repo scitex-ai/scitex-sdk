@@ -81,6 +81,8 @@ export type {
 export {
   ProjectSelector,
   PROJECT_SELECTOR_CHANGE,
+  PROJECT_SELECTOR_OPEN,
+  PROJECT_SELECTOR_SELECT,
   fuzzyFilter,
   fuzzyScore,
   httpProjectProvider,

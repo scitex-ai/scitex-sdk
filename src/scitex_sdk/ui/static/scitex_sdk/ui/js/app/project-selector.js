@@ -192,6 +192,7 @@ var globalRegistry = new CommandRegistry();
 var CLS = "stx-app-project-selector";
 var PROJECT_SELECTOR_CHANGE = "stx-project-selector:change";
 var PROJECT_SELECTOR_SELECT = "project-selector:select";
+var PROJECT_SELECTOR_OPEN = "project-selector:open";
 var instanceCount = 0;
 function translate(msgid, shellKey) {
   const translated = gettext(msgid);
@@ -203,7 +204,9 @@ var ProjectSelector = class extends BaseComponent {
   ready;
   commands;
   selectCommandId;
+  openCommandId;
   selectCommand;
+  openCommand;
   projects;
   current;
   filtered = [];
@@ -222,6 +225,7 @@ var ProjectSelector = class extends BaseComponent {
   search = null;
   list;
   open = false;
+  compositionActive = false;
   outsideClickHandler;
   keyHandler;
   constructor(config) {
@@ -231,13 +235,28 @@ var ProjectSelector = class extends BaseComponent {
     if (!this.selectCommandId || this.commands.has(this.selectCommandId)) {
       throw new Error(`project selector command already registered: ${this.selectCommandId}`);
     }
+    this.openCommandId = config.openCommandId ?? null;
+    if (this.openCommandId !== null && (!this.openCommandId.trim() || this.openCommandId === this.selectCommandId || this.commands.has(this.openCommandId))) {
+      throw new Error(`project selector command already registered: ${this.openCommandId}`);
+    }
     this.selectCommand = { id: this.selectCommandId, label: gettext("Select project"), action: (payload) => this.select(payload) };
+    this.openCommand = this.openCommandId === null ? null : {
+      id: this.openCommandId,
+      label: gettext("Choose project"),
+      action: () => {
+        if (this.destroyed || this.pending) return false;
+        this.show();
+        this.search?.focus();
+        return true;
+      }
+    };
     this.uid = "stx-project-picker-" + ++instanceCount;
     this.projects = this.validProjects(config.projects ?? []);
     this.legacyPersistenceExpected = config.provider?.rememberProject !== void 0;
     this.allowUserScope = config.allowUserScope === true && typeof config.provider?.rememberScope === "function";
     this.current = this.choice(config.current, config.currentScope);
     this.commands.set(this.selectCommand);
+    if (this.openCommand) this.commands.set(this.openCommand);
     this.container.className = CLS;
     this.trigger = document.createElement("button");
     this.trigger.type = "button";
@@ -267,6 +286,12 @@ var ProjectSelector = class extends BaseComponent {
         this.activeIndex = 0;
         this.renderList();
       });
+      this.search.addEventListener("compositionstart", () => {
+        this.compositionActive = true;
+      });
+      this.search.addEventListener("compositionend", () => {
+        this.compositionActive = false;
+      });
       this.search.addEventListener("keydown", (e) => this.onSearchKey(e));
       this.panel.appendChild(this.search);
     }
@@ -280,15 +305,17 @@ var ProjectSelector = class extends BaseComponent {
     if (this.allowUserScope || this.legacyPersistenceExpected) this.container.appendChild(this.selectionError);
     this.trigger.addEventListener("click", () => this.toggle());
     this.trigger.addEventListener("keydown", (e) => {
+      if (this.composing(e) || e.defaultPrevented) return;
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        this.show();
+        this.openPicker("keyboard");
       }
     });
     this.outsideClickHandler = (e) => {
       if (!this.container.contains(e.target)) this.close();
     };
     this.keyHandler = (e) => {
+      if (this.composing(e) || e.defaultPrevented) return;
       if (e.key === "Escape" && this.open) {
         this.close();
         this.trigger.focus?.();
@@ -428,6 +455,7 @@ var ProjectSelector = class extends BaseComponent {
     return option;
   }
   onSearchKey(e) {
+    if (this.composing(e) || e.defaultPrevented) return;
     const last = this.filtered.length - 1;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
@@ -445,8 +473,20 @@ var ProjectSelector = class extends BaseComponent {
   }
   /** Open or close the option panel. */
   toggle() {
+    if (this.destroyed || this.pending) return;
     if (this.open) this.close();
-    else this.show();
+    else this.openPicker("button");
+  }
+  composing(event) {
+    return this.compositionActive || event.isComposing || event.keyCode === 229 || ["Dead", "Process", "Unidentified"].includes(event.key) || event.getModifierState("AltGraph");
+  }
+  openPicker(via) {
+    if (this.destroyed || this.pending) return;
+    if (this.openCommandId && this.openCommand) {
+      if (this.commands.get(this.openCommandId)?.def === this.openCommand) {
+        this.commands.run(this.openCommandId, { via, source: this.trigger });
+      }
+    } else this.show();
   }
   show() {
     if (this.open) return;
@@ -562,6 +602,7 @@ var ProjectSelector = class extends BaseComponent {
     this.destroyed = true;
     this.generation++;
     if (this.commands.get(this.selectCommandId)?.def === this.selectCommand) this.commands.unset(this.selectCommandId);
+    if (this.openCommandId && this.commands.get(this.openCommandId)?.def === this.openCommand) this.commands.unset(this.openCommandId);
     document.removeEventListener("click", this.outsideClickHandler);
     document.removeEventListener("keydown", this.keyHandler);
     super.destroy();
@@ -716,6 +757,7 @@ export {
   PROJECT_PICKER_ATTRIBUTE,
   PROJECT_PROVIDER_META_NAME,
   PROJECT_SELECTOR_CHANGE,
+  PROJECT_SELECTOR_OPEN,
   PROJECT_SELECTOR_SELECT,
   ProjectSelector,
   fuzzyFilter,
