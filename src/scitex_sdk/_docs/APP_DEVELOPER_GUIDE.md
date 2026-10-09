@@ -35,7 +35,9 @@ from scitex_sdk.ui.project_scope import host_project_provider
 ```
 
 Django installs `scitex_sdk.app` and `scitex_sdk.ui`. Their Python names move,
-but database app labels remain `scitex_app` and `scitex_ui`; chat foreign keys
+but the database app label remains `scitex_app` (the model-less ui component
+carries the namespaced `scitex_sdk_ui` label and has no database identity);
+chat foreign keys
 and the `scitex_app_content` template block retain their identity. Template
 tag library filenames also remain stable. New template/static paths are
 `scitex_sdk/app/...` and `scitex_sdk/ui/...`. Existing SCITEX_APP_* and
