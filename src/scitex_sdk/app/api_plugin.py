@@ -776,6 +776,7 @@ class AuthScope:
     project_scope: str = "user"
     scopes: Sequence[str] = field(default_factory=tuple)
     public: bool = False
+    session: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "project_scope", _require_choice(
@@ -789,11 +790,23 @@ class AuthScope:
             raise ApiPluginContractError(
                 f"auth public flag must be a boolean (got {self.public!r})"
             )
-        if not self.public and not self.scopes:
+        if not isinstance(self.session, bool):
             raise ApiPluginContractError(
-                "an auth scope declares neither scopes nor public=True; a route "
-                "whose auth was never stated must not be treated as open. "
-                "Declare the OAuth scopes it needs, or say public=True out loud."
+                f"auth session flag must be a boolean (got {self.session!r})"
+            )
+        if self.session and (self.scopes or self.public):
+            raise ApiPluginContractError(
+                "auth declares session=True together with scopes or public=True; "
+                "a session-cookie route carries no OAuth scopes and is not open — "
+                "exactly one of session/scopes/public describes it"
+            )
+        if not self.public and not self.scopes and not self.session:
+            raise ApiPluginContractError(
+                "an auth scope declares neither scopes nor public=True nor "
+                "session=True; a route whose auth was never stated must not be "
+                "treated as open. Declare the OAuth scopes it needs, say "
+                "public=True out loud, or mark the native session cookie with "
+                "session=True."
             )
         if self.public and self.scopes:
             raise ApiPluginContractError(
@@ -979,6 +992,7 @@ class ApiRoute:
     transport: str = "json"
     handler: str = ""
     deprecation: Deprecation | None = None
+    read_only: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "path", _validate_path(self.path))
@@ -1106,8 +1120,26 @@ class ApiRoute:
 
         Silence here is the expensive kind: a retried POST creates a second
         object, and the client had no way to know it was unsafe.
+
+        ``read_only=True`` exempts POST alone: a query-semantics POST has no
+        side effects, so there is nothing a retry could duplicate. PUT, PATCH
+        and DELETE are inherently mutating and still require the key, and a
+        read-only route declaring them is refused outright.
         """
         mutating = [m for m in self.methods if m in MUTATING_METHODS]
+        if not isinstance(self.read_only, bool):
+            raise ApiPluginContractError(
+                f"route {self.path!r} declares read_only {self.read_only!r}; "
+                "expected a boolean"
+            )
+        if self.read_only:
+            stubborn = [m for m in mutating if m != "POST"]
+            if stubborn:
+                raise ApiPluginContractError(
+                    f"route {self.path!r} declares read_only with {tuple(stubborn)}; "
+                    "only POST can be side-effect free, the rest always mutate"
+                )
+            mutating = []
         if mutating and not self.idempotency.required:
             raise ApiPluginContractError(
                 f"route {self.path!r} accepts {tuple(mutating)} but declares no "
@@ -1573,6 +1605,10 @@ class ApiPlugin:
         elif route.auth.scopes:
             operation["security"] = [{OAUTH_SECURITY_SCHEME: list(route.auth.scopes)}]
             operation["x-scitex-oauth-scopes"] = list(route.auth.scopes)
+        if route.auth.session:
+            operation["x-scitex-session"] = True
+        if route.read_only:
+            operation["x-scitex-read-only"] = True
         if route.idempotency.required:
             operation["x-scitex-idempotency-key-header"] = route.idempotency.key_header
         if route.pagination.style != "none":
