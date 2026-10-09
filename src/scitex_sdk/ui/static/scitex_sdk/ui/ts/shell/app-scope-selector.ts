@@ -37,7 +37,7 @@ import {
   hostProjectProvider,
   projectNavigationUrl,
 } from "../app/project-selector";
-import type { ProjectOption, ProjectProvider } from "../app/project-selector";
+import type { ProjectOption, ProjectProvider, ProjectSelectorConfig } from "../app/project-selector";
 import { usesScopedHttpTransport } from "../app/project-selector/provider";
 import {
   appScope,
@@ -65,6 +65,10 @@ export interface AppScopeSelectorOptions {
   /** Explicit opt-in; a scoped provider must also support rememberScope. */
   allowUserScope?: boolean;
   currentScope?: AppScope;
+  /** Reuse the host's registry for opt-in workspace commands. */
+  commands?: ProjectSelectorConfig["commands"];
+  selectCommandId?: string;
+  openCommandId?: string;
 }
 
 /** The host's project list, when the host advertises a provider. */
@@ -104,6 +108,9 @@ export function mountProjectSelectorByScope(
     placeholder: options.placeholder,
     allowUserScope: options.allowUserScope,
     currentScope: scopedHttp ? undefined : options.currentScope,
+    commands: options.commands,
+    selectCommandId: options.selectCommandId,
+    openCommandId: options.openCommandId,
   });
   const navigate = options.navigate;
   const container =

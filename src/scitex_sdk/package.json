@@ -55,6 +55,7 @@
     "./ui/ts/shell/file-tree": "./ui/static/scitex_sdk/ui/ts/shell/file-tree/index.ts",
     "./ui/ts/shell/keyboard-shortcuts": "./ui/static/scitex_sdk/ui/ts/shell/keyboard-shortcuts/index.ts",
     "./ui/ts/shell/keymap": "./ui/static/scitex_sdk/ui/ts/shell/keymap/index.ts",
+    "./ui/ts/shell/workspace-commands": "./ui/static/scitex_sdk/ui/ts/shell/workspace-commands/index.ts",
     "./ui/ts/shell/repo-monitor": "./ui/static/scitex_sdk/ui/ts/shell/repo-monitor/index.ts",
     "./ui/ts/shell/resizer": "./ui/static/scitex_sdk/ui/ts/shell/resizer/index.ts",
     "./ui/ts/shell/status-bar": "./ui/static/scitex_sdk/ui/ts/shell/status-bar/index.ts",
