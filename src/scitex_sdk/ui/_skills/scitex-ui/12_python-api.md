@@ -13,7 +13,7 @@ tags: [scitex-ui-python-api]
 # Add to Django INSTALLED_APPS for static asset discovery
 INSTALLED_APPS = [
     ...
-    "scitex_ui",
+    "scitex_sdk.ui",
 ]
 ```
 
@@ -103,11 +103,11 @@ register_component(MyComponent.name, MyComponent)
 
 ## Django Static Files
 
-Django's `AppDirectoriesFinder` auto-discovers `static/scitex_sdk/ui/` when `scitex_ui` is in `INSTALLED_APPS`. No manual `STATICFILES_DIRS` needed.
+Django's `AppDirectoriesFinder` auto-discovers `static/scitex_sdk/ui/` when `scitex_sdk.ui` is in `INSTALLED_APPS`. No manual `STATICFILES_DIRS` needed.
 
 ```python
 # settings.py
-INSTALLED_APPS = ["scitex_ui", ...]
+INSTALLED_APPS = ["scitex_sdk.ui", ...]
 # Run: python manage.py collectstatic
 ```
 
