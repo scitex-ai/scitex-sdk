@@ -47,7 +47,15 @@ ENTRY_POINT_GROUP = "scitex.apps"
 
 @dataclass(frozen=True)
 class PluginApp:
-    """One ``scitex.apps`` entry point, read without importing it."""
+    """One ``scitex.apps`` entry point, read without importing it.
+
+    The entry-point value names exactly one config, so standard
+    :meth:`importlib.metadata.EntryPoint.load` consumers keep working —
+    companion paths are never smuggled into the value string. Companions
+    travel separately: leaves publish an ``INSTALLED_APPS_ENTRIES`` tuple
+    of plain INSTALLED_APPS paths (readable without Django setup), and the
+    host passes them to :func:`installed_app_paths` explicitly.
+    """
 
     name: str
     app_config: str
@@ -93,20 +101,66 @@ def discover_plugin_apps(entry_points: Optional[Iterable] = None) -> List[Plugin
     return [found[k] for k in sorted(found)]
 
 
+def partition_companions(entries, plugins) -> List[str]:
+    """Split a leaf ``INSTALLED_APPS_ENTRIES`` tuple into true companions.
+
+    The tuple lists every entry the leaf needs — including the bare primary
+    module, which entry-point discovery already covers. Entries that resolve
+    primary-side are dropped: exact primary paths, and bare modules belonging
+    to a discovered plugin (assumed to resolve to that primary via the
+    standard ``default = True`` convention the leaf itself documents).
+    Everything else — the chat companion sharing the apps module, foreign
+    bare apps — is kept verbatim for :func:`installed_app_paths`.
+    """
+    plugins = list(plugins)
+    primary_modules = {p.app_module for p in plugins}
+    primary_paths = {p.app_config for p in plugins}
+    companions = []
+    for entry in entries:
+        if entry in primary_paths:
+            continue
+        if app_module_of(entry) == entry and entry in primary_modules:
+            continue
+        companions.append(entry)
+    return companions
+
+
 def installed_app_paths(
-    existing: Iterable[str] = (), plugins: Optional[Iterable[PluginApp]] = None
+    existing: Iterable[str] = (),
+    plugins: Optional[Iterable[PluginApp]] = None,
+    companions: Iterable[str] = (),
 ) -> List[str]:
     """``existing`` INSTALLED_APPS with every discovered plugin merged in.
 
     A plugin whose app package is already listed replaces that entry in place
-    (order kept); the rest are appended.
+    (order kept); the rest are appended. ``companions`` — plain INSTALLED_APPS
+    paths from the leaf's ``INSTALLED_APPS_ENTRIES`` tuple, passed explicitly
+    by the host — are appended unless their exact path is already listed.
+    Companions install; they are never mounted (companion urls stay the host
+    mounting seam). Django app identity (``name``/``label``) is not derivable
+    from a class location without importing, so remaining same-label clashes
+    surface at Django setup as duplicate-label errors — fail loud, never
+    silently shadowed or rewritten here. A host that already installs a
+    config with the companion's label must choose one side.
     """
     plugins = discover_plugin_apps() if plugins is None else list(plugins)
+    companions = list(companions)
     by_module = {p.app_module: p.app_config for p in plugins}
+    companion_set = set(companions)
     merged: List[str] = []
     for entry in existing:
-        merged.append(by_module.pop(app_module_of(entry), entry))
+        if entry in companion_set:
+            # An explicitly declared companion is never replaced by primary
+            # module inference: the host said this exact path, keep it.
+            merged.append(entry)
+        else:
+            merged.append(by_module.pop(app_module_of(entry), entry))
     merged.extend(by_module.values())
+    installed = set(merged)
+    for companion in companions:
+        if companion not in installed:
+            merged.append(companion)
+            installed.add(companion)
     return merged
 
 

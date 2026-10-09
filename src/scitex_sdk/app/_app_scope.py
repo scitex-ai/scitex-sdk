@@ -100,26 +100,60 @@ def _inject_scope_meta(html: str, scope: Optional[str]) -> str:
     return tag + html
 
 
+def resolve_app_config(request, app_configs):
+    """Return the mounted ``ScitexAppConfig`` serving ``request``.
+
+    Matches ``request.resolver_match`` (namespace, then app names) against
+    config labels — the generic Django binding, nothing host-specific.
+    Falls back to the first mounted config (the historical behavior) and
+    then to ``None`` when nothing is mounted.
+    """
+    from ._django import ScitexAppConfig
+
+    mounted = [c for c in app_configs if isinstance(c, ScitexAppConfig)]
+    if not mounted:
+        return None
+    match = getattr(request, "resolver_match", None)
+    names = []
+    for attr in ("namespaces", "app_names", "namespace", "app_name"):
+        value = getattr(match, attr, None)
+        if isinstance(value, str):
+            names.append(value)
+        elif value:
+            names.extend(value)
+    for name in names:
+        for config in mounted:
+            candidates = {config.label}
+            try:
+                candidates.add(config.app_slug)
+            except Exception:
+                pass
+            if name in candidates:
+                return config
+    return mounted[0]
+
+
 def app_scope_context(request) -> dict:
     """Context processor: expose the mounted app's scope to templates.
 
-    Resolves the mounted ``ScitexAppConfig`` (the one carrying a ``scope``)
-    and adds ``app_scope`` (``"user"`` or ``"project"``) to every template.
-    A user-scoped / absent app yields ``"user"``. The host surface reads this
-    to decide whether to render a project selector — and it is the per-app
-    surface that renders one, never the global header.
+    Resolves the ``ScitexAppConfig`` serving ``request`` (first mounted
+    config when the request carries no namespace) and adds ``app_scope``
+    (``"user"`` or ``"project"``) to every template. A user-scoped /
+    absent app yields ``"user"``. The host surface reads this to decide
+    whether to render a project selector — and it is the per-app surface
+    that renders one, never the global header.
     """
     try:
         from django.apps import apps
 
-        from ._django import ScitexAppConfig
+        configs = apps.get_app_configs()
     except ImportError:
         return {"app_scope": DEFAULT_SCOPE}
 
-    for app_config in apps.get_app_configs():
-        if isinstance(app_config, ScitexAppConfig):
-            try:
-                return {"app_scope": app_config.app_scope}
-            except Exception:
-                return {"app_scope": DEFAULT_SCOPE}
-    return {"app_scope": DEFAULT_SCOPE}
+    config = resolve_app_config(request, configs)
+    if config is None:
+        return {"app_scope": DEFAULT_SCOPE}
+    try:
+        return {"app_scope": config.app_scope}
+    except Exception:
+        return {"app_scope": DEFAULT_SCOPE}
