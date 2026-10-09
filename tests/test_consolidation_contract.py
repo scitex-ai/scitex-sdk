@@ -83,12 +83,19 @@ def test_component_registration_uses_its_sdk_python_name(component):
 
 @pytest.mark.parametrize("component", ["app", "ui"])
 def test_component_registration_preserves_its_existing_database_label(component):
-    # Arrange
-    expected = f"scitex_{component}"
+    # Arrange — lead call 2026-10-09 option (a): the persisted model identity
+    # lives under scitex_sdk.app._chat with label scitex_app (same tables,
+    # same 0001_initial), so the model-less app contract takes the namespaced
+    # scitex_sdk_app label and both install together without a duplicate-label
+    # failure. The ui component keeps its existing scitex_ui label (same split
+    # pattern: SDK python name, legacy database label).
     # Act
     config = AppConfig.create(f"scitex_sdk.{component}")
     # Assert
-    assert config.label == expected
+    if component == "app":
+        assert config.label == "scitex_sdk_app"
+    else:
+        assert config.label == f"scitex_{component}"
 
 
 def test_chat_migration_foreign_key_retains_its_identity():

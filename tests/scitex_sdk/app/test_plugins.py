@@ -149,3 +149,120 @@ def test_leaf_declarations_wrong_type_refused(tmp_path):
             leaf_declarations(mod, {"partial_template": str})
     finally:
         _unpath(tmp_path)
+
+
+def test_discovery_values_stay_load_compatible():
+    # Arrange — EntryPoint.load only parses single-config values: no smuggling.
+    eps = [_ep("fig", "fig._django.apps:FigRecipeEditorConfig")]
+    # Act
+    found = discover_plugin_apps(eps)
+    # Assert
+    assert " " not in found[0].app_config and "\t" not in found[0].app_config
+
+
+def test_companions_appended_unless_listed():
+    # Arrange
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    companions = (
+        "figrecipe._django",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    )
+    # Act
+    merged = installed_app_paths([], plugins, companions)
+    # Assert
+    assert merged == [
+        "figrecipe._django.apps.FigRecipeEditorConfig",
+        "figrecipe._django",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    ]
+
+
+def test_undeclared_same_module_entry_still_replaced():
+    # Arrange — without an explicit companion declaration the 0.3.2 primary
+    # same-module replacement rule applies unchanged.
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    # Act
+    merged = installed_app_paths(["figrecipe._django.apps.ScitexAppChatConfig"], plugins)
+    # Assert
+    assert merged == ["figrecipe._django.apps.FigRecipeEditorConfig"]
+
+
+def test_declared_companion_survives_primary_replacement():
+    # Arrange — an explicitly declared companion is exempt from primary
+    # same-module replacement: both entries persist, no silent drop.
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    companions = ("figrecipe._django.apps.ScitexAppChatConfig",)
+    # Act
+    merged = installed_app_paths(
+        ["figrecipe._django.apps.ScitexAppChatConfig"], plugins, companions
+    )
+    # Assert
+    assert merged == [
+        "figrecipe._django.apps.ScitexAppChatConfig",
+        "figrecipe._django.apps.FigRecipeEditorConfig",
+    ]
+
+
+def test_partition_drops_bare_primary_keeps_companion():
+    # Arrange
+    from scitex_sdk.app.plugins import partition_companions
+
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    entries = ("figrecipe._django", "figrecipe._django.apps.ScitexAppChatConfig")
+    # Act
+    companions = partition_companions(entries, plugins)
+    # Assert
+    assert companions == ["figrecipe._django.apps.ScitexAppChatConfig"]
+
+
+def test_partition_keeps_foreign_entries_verbatim():
+    # Arrange
+    from scitex_sdk.app.plugins import partition_companions
+
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    entries = ("other.app", "other.app.apps.OtherConfig")
+    # Act
+    companions = partition_companions(entries, plugins)
+    # Assert
+    assert companions == ["other.app", "other.app.apps.OtherConfig"]
+
+
+def test_one_shot_companion_iterable_fully_consumed():
+    # Arrange
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    companions = (c for c in ("figrecipe._django", "figrecipe._django.apps.ScitexAppChatConfig"))
+    # Act
+    merged = installed_app_paths([], plugins, companions)
+    # Assert
+    assert merged == [
+        "figrecipe._django.apps.FigRecipeEditorConfig",
+        "figrecipe._django",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    ]
+
+
+def test_fig_b6_tuple_partitions_to_single_companion():
+    # Arrange — Fig's actual declared tuple (c647 candidate __init__ values).
+    from scitex_sdk.app.plugins import partition_companions
+
+    plugins = [PluginApp("figrecipe", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    entries = ("figrecipe._django", "figrecipe._django.apps.ScitexAppChatConfig")
+    # Act
+    companions = partition_companions(entries, plugins)
+    # Assert
+    assert companions == ["figrecipe._django.apps.ScitexAppChatConfig"]
+
+
+def test_fig_b6_merged_list_has_no_duplicate_primary():
+    # Arrange
+    from scitex_sdk.app.plugins import partition_companions
+
+    plugins = [PluginApp("figrecipe", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    entries = ("figrecipe._django", "figrecipe._django.apps.ScitexAppChatConfig")
+    # Act
+    merged = installed_app_paths([], plugins, partition_companions(entries, plugins))
+    # Assert
+    assert merged == [
+        "figrecipe._django.apps.FigRecipeEditorConfig",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    ]
