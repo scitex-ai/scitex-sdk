@@ -34,6 +34,8 @@ Migration changes imports to `scitex_sdk.app/ui` and resource prefixes to
 template block names and App/UI environment settings retain their identity.
 The predecessor [App](https://github.com/scitex-ai/scitex-app) and
 [UI](https://github.com/scitex-ai/scitex-ui) repositories are public archives.
+Users coming from either one: start at
+[docs/MIGRATION_FROM_APP_AND_UI.md](docs/MIGRATION_FROM_APP_AND_UI.md).
 Sequential SDK publication can still observe transitive predecessor packages
 and reports dependency retirement as incomplete. Consumer migration and strict
 published dependency retirement remain separate gates; see
