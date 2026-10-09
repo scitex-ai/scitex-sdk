@@ -4,6 +4,15 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-09
+
+Leaf API endpoint successors (PRs #39/#40/#41, re-plan of closed #33/#34/#36):
+opt-in leaf API admission with deny-before-import (#39); shared project
+picker commands and configurable shortcuts (#40); agent envelope,
+request-bound scope, companion expansion, canonical chat registration (#41).
+App contract takes the namespaced `scitex_sdk_app` label coexisting with
+the persisted `scitex_app` chat identity (lead call option (a)).
+
 ## [0.3.2] — 2026-10-03
 
 ### Fixed
