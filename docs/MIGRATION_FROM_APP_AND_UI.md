@@ -31,7 +31,9 @@ or install `scitex-sdk[all]`. The `project` and `all` extras require
 
 ## What stayed the same
 
-- Django database labels (`scitex_app`, `scitex_ui`).
+- Chat models keep the `scitex_app` database label.
+- The SDK UI ships under the `scitex_sdk_ui` label and carries no models,
+  so the rename is migration-free (PR #44).
 - The `scitex_app_content` template block and template tag library
   filenames.
 - Existing `SCITEX_APP_*` / `SCITEX_UI_*` settings and configuration
