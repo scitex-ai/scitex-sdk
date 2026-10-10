@@ -37,6 +37,7 @@ const entries = [
   ["app/tooltip/index", "app/tooltip"],
   ["app/tour-player/auto-mount", "app/tour-player"],
   ["shell/app-scope-selector", "shell/app-scope-selector"],
+  ["shell/workspace-commands/index", "shell/workspace-commands"],
   ["shell/launcher-overlay", "shell/launcher-overlay", "iife"],
   ["shell/mobile-swipe", "shell/mobile-swipe", "iife"],
   ["utils/element-inspector", "utils/element-inspector", "iife"],

@@ -24,9 +24,39 @@ def _json(obj):
     return _json_mod.dumps(obj, indent=2, default=str)
 
 
+def _resolve_files(root, backend):
+    """Resolve the FilesBackend for an MCP file tool — fail-closed.
+
+    ``backend="local"`` (the default) pins the filesystem backend: the
+    ambient ``SCITEX_API_TOKEN`` is never consulted, so a token in the
+    environment cannot silently flip local paths to cloud.
+    ``backend="cloud"`` serves only an explicit authenticated request
+    (token set); without one it raises instead of falling back.
+    Any other name flows into :func:`get_files`, which raises
+    ``KeyError`` for unregistered backends. No silent substitution
+    in any direction.
+    """
+    import os
+
+    from scitex_sdk.app.sdk import get_files
+
+    if backend == "cloud":
+        if not os.environ.get("SCITEX_API_TOKEN"):
+            raise RuntimeError(
+                "backend='cloud' requires an explicit authenticated request "
+                "(SCITEX_API_TOKEN is not set); refusing to serve or to fall "
+                "back — fail-closed, no silent local/cloud substitution."
+            )
+        from scitex_sdk.app.sdk import register_backend
+        from scitex_sdk.app.sdk._cloud_files import cloud_files_factory
+
+        register_backend("cloud", cloud_files_factory)
+    return get_files(root, backend=backend)
+
+
 @mcp.tool()
-def app_read_file(path: str, root: str = ".", binary: bool = False) -> str:
-    """Read a file inside a SciTeX app project via the auto-detecting FilesBackend — same call works for local paths AND cloud-backed workspaces (S3 / NAS / registered custom backends). Drop-in replacement for raw `open(path).read()` or `boto3.get_object` scattered through app code. Use when the user asks to "read this app's config.yaml", "get the contents of path X in my app", "load a file through the SDK", or is writing app code that must work both locally and on the cloud. Set `binary=True` for base64-encoded binary content.
+def app_read_file(path: str, root: str = ".", binary: bool = False, backend: str = "local") -> str:
+    """Read a file inside a SciTeX app project via the FilesBackend — local by default (pass backend="cloud" for an explicit authenticated cloud request). Drop-in replacement for raw `open(path).read()` or `boto3.get_object` scattered through app code. Use when the user asks to "read this app's config.yaml", "get the contents of path X in my app", "load a file through the SDK", or is writing app code that must work both locally and on the cloud. Set `binary=True` for base64-encoded binary content.
 
     Parameters
     ----------
@@ -34,12 +64,14 @@ def app_read_file(path: str, root: str = ".", binary: bool = False) -> str:
         Relative file path within the project.
     root : str
         Root directory for file operations (default: current directory).
+    backend : str
+        Backend selection, fail-closed (default: "local" — the ambient
+        SCITEX_API_TOKEN is ignored). "cloud" serves only an explicit
+        authenticated request and raises without one.
     binary : bool
         If True, read as binary and return base64-encoded content.
     """
-    from scitex_sdk.app.sdk import get_files
-
-    files = get_files(root)
+    files = _resolve_files(root, backend)
     content = files.read(path, binary=binary)
     if binary:
         import base64
@@ -49,8 +81,8 @@ def app_read_file(path: str, root: str = ".", binary: bool = False) -> str:
 
 
 @mcp.tool()
-def app_write_file(path: str, content: str, root: str = ".") -> str:
-    """Write content to a file inside a SciTeX app project via the auto-detecting FilesBackend — routes to local disk OR the active cloud backend automatically. Drop-in replacement for `open(path, 'w').write(...)` or `boto3.put_object`. Use when the user asks to "save this to my app", "write config.yaml in the app folder", "persist this result", or is producing outputs from app code that must work both locally and in the cloud workspace.
+def app_write_file(path: str, content: str, root: str = ".", backend: str = "local") -> str:
+    """Write content to a file inside a SciTeX app project via the FilesBackend — local by default (pass backend="cloud" for an explicit authenticated cloud request). Drop-in replacement for `open(path, 'w').write(...)` or `boto3.put_object`. Use when the user asks to "save this to my app", "write config.yaml in the app folder", "persist this result", or is producing outputs from app code that must work both locally and in the cloud workspace.
 
     Parameters
     ----------
@@ -60,10 +92,12 @@ def app_write_file(path: str, content: str, root: str = ".") -> str:
         Text content to write.
     root : str
         Root directory for file operations (default: current directory).
+    backend : str
+        Backend selection, fail-closed (default: "local" — the ambient
+        SCITEX_API_TOKEN is ignored). "cloud" serves only an explicit
+        authenticated request and raises without one.
     """
-    from scitex_sdk.app.sdk import get_files
-
-    files = get_files(root)
+    files = _resolve_files(root, backend)
     files.write(path, content)
     return f"Written: {path}"
 
@@ -73,6 +107,7 @@ def app_list_files(
     directory: str = "",
     root: str = ".",
     extensions: list[str] | None = None,
+    backend: str = "local",
 ) -> list[str]:
     """List files inside a SciTeX app project through the FilesBackend — works on local directories AND cloud-backed workspaces. Drop-in replacement for `os.listdir` / `pathlib.Path.glob` / `s3.list_objects_v2`. Use when the user asks to "list files in my app", "show YAML configs", "what's in this app's data/ dir?", or before iterating over app inputs. Filter with `extensions=['.yaml', '.png']`.
 
@@ -82,17 +117,19 @@ def app_list_files(
         Relative directory path (empty string = root).
     root : str
         Root directory for file operations (default: current directory).
+    backend : str
+        Backend selection, fail-closed (default: "local" — the ambient
+        SCITEX_API_TOKEN is ignored). "cloud" serves only an explicit
+        authenticated request and raises without one.
     extensions : list of str, optional
         Filter by file extensions (e.g., [".yaml", ".png"]).
     """
-    from scitex_sdk.app.sdk import get_files
-
-    files = get_files(root)
+    files = _resolve_files(root, backend)
     return files.list(directory, extensions=extensions)
 
 
 @mcp.tool()
-def app_file_exists(path: str, root: str = ".") -> bool:
+def app_file_exists(path: str, root: str = ".", backend: str = "local") -> bool:
     """Check whether a file exists inside a SciTeX app project via the FilesBackend. Works identically for local and cloud backends. Drop-in replacement for `pathlib.Path.exists()` / `s3.head_object`. Use when the user asks "does this file exist in the app?", "has the app written its output yet?", "check for X before writing", or guards a read.
 
     Parameters
@@ -101,15 +138,17 @@ def app_file_exists(path: str, root: str = ".") -> bool:
         Relative file path within the project.
     root : str
         Root directory for file operations (default: current directory).
+    backend : str
+        Backend selection, fail-closed (default: "local" — the ambient
+        SCITEX_API_TOKEN is ignored). "cloud" serves only an explicit
+        authenticated request and raises without one.
     """
-    from scitex_sdk.app.sdk import get_files
-
-    files = get_files(root)
+    files = _resolve_files(root, backend)
     return files.exists(path)
 
 
 @mcp.tool()
-def app_delete_file(path: str, root: str = ".") -> str:
+def app_delete_file(path: str, root: str = ".", backend: str = "local") -> str:
     """Delete a file inside a SciTeX app project via the FilesBackend — local or cloud. Destructive. Drop-in replacement for `os.remove` / `pathlib.Path.unlink` / `s3.delete_object`. Use when the user asks to "delete this file from my app", "remove stale outputs", "clean up the app's temp/", or is tidying before a fresh run.
 
     Parameters
@@ -118,16 +157,18 @@ def app_delete_file(path: str, root: str = ".") -> str:
         Relative file path within the project.
     root : str
         Root directory for file operations (default: current directory).
+    backend : str
+        Backend selection, fail-closed (default: "local" — the ambient
+        SCITEX_API_TOKEN is ignored). "cloud" serves only an explicit
+        authenticated request and raises without one.
     """
-    from scitex_sdk.app.sdk import get_files
-
-    files = get_files(root)
+    files = _resolve_files(root, backend)
     files.delete(path)
     return f"Deleted: {path}"
 
 
 @mcp.tool()
-def app_copy_file(src_path: str, dest_path: str, root: str = ".") -> str:
+def app_copy_file(src_path: str, dest_path: str, root: str = ".", backend: str = "local") -> str:
     """Copy a file inside a SciTeX app project via the FilesBackend — local or cloud, including cross-backend copies (e.g. local → S3) if both are configured. Drop-in replacement for `shutil.copy` / `s3.copy_object`. Use when the user asks to "copy config.yaml to backup.yaml", "duplicate this input as a variant", "snapshot this file before editing", or is preparing a "known-good" baseline.
 
     Parameters
@@ -138,16 +179,18 @@ def app_copy_file(src_path: str, dest_path: str, root: str = ".") -> str:
         Destination file path.
     root : str
         Root directory for file operations (default: current directory).
+    backend : str
+        Backend selection, fail-closed (default: "local" — the ambient
+        SCITEX_API_TOKEN is ignored). "cloud" serves only an explicit
+        authenticated request and raises without one.
     """
-    from scitex_sdk.app.sdk import get_files
-
-    files = get_files(root)
+    files = _resolve_files(root, backend)
     files.copy(src_path, dest_path)
     return f"Copied: {src_path} -> {dest_path}"
 
 
 @mcp.tool()
-def app_rename_file(old_path: str, new_path: str, root: str = ".") -> str:
+def app_rename_file(old_path: str, new_path: str, root: str = ".", backend: str = "local") -> str:
     """Rename or move a file inside a SciTeX app project via the FilesBackend — atomic on local, best-effort on cloud backends. Drop-in replacement for `os.rename` / `pathlib.Path.rename`. Use when the user asks to "rename X to Y in my app", "move this file to a different folder", "fix a typo in a filename", or is reorganizing the app's data layout.
 
     Parameters
@@ -158,10 +201,12 @@ def app_rename_file(old_path: str, new_path: str, root: str = ".") -> str:
         New file path.
     root : str
         Root directory for file operations (default: current directory).
+    backend : str
+        Backend selection, fail-closed (default: "local" — the ambient
+        SCITEX_API_TOKEN is ignored). "cloud" serves only an explicit
+        authenticated request and raises without one.
     """
-    from scitex_sdk.app.sdk import get_files
-
-    files = get_files(root)
+    files = _resolve_files(root, backend)
     files.rename(old_path, new_path)
     return f"Renamed: {old_path} -> {new_path}"
 

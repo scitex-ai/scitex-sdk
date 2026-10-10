@@ -280,3 +280,107 @@ class TestManifestScopeValidation:
         errors = validate_manifest(tmp_path)
         # Assert
         assert any("scope" in e for e in errors)
+
+
+def _make_named_app_config(base: Path, name: str, scope_value):
+    app_dir = base / name
+    app_dir.mkdir(exist_ok=True)
+    mod = types.ModuleType(f"{name}._django")
+    mod.__file__ = str(app_dir / "__init__.py")
+    cfg = ScitexAppConfig(f"{name}._django", mod)
+    cfg.label = name
+    manifest = {
+        "name": name,
+        "slug": name,
+        "label": "App",
+        "pip_package": name,
+        "icon": "fas fa-puzzle-piece",
+        "license": "MIT",
+    }
+    if scope_value is not None:
+        manifest["scope"] = scope_value
+    (app_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    return cfg
+
+
+def _namespaced_request(path: str, namespace: str):
+    from django.urls import ResolverMatch
+
+    request = RequestFactory().get(path)
+    request.resolver_match = ResolverMatch(
+        lambda r: None, (), {}, None, [], [namespace], path
+    )
+    return request
+
+
+class TestResolveAppConfig:
+    def test_namespace_selects_second_mounted_config(self, tmp_path):
+        # Arrange
+        from scitex_sdk.app._app_scope import resolve_app_config
+
+        first = _make_named_app_config(tmp_path, "alpha", None)
+        second = _make_named_app_config(tmp_path, "beta", "project")
+        request = _namespaced_request("/beta/page", "beta")
+        # Act
+        got = resolve_app_config(request, [first, second])
+        # Assert
+        assert got is second
+
+    def test_request_without_match_falls_back_to_first(self, tmp_path):
+        # Arrange
+        from scitex_sdk.app._app_scope import resolve_app_config
+
+        first = _make_named_app_config(tmp_path, "alpha", "project")
+        second = _make_named_app_config(tmp_path, "beta", None)
+        request = RequestFactory().get("/beta/page")
+        # Act
+        got = resolve_app_config(request, [first, second])
+        # Assert
+        assert got is first
+
+    def test_unknown_namespace_falls_back_to_first(self, tmp_path):
+        # Arrange
+        from scitex_sdk.app._app_scope import resolve_app_config
+
+        first = _make_named_app_config(tmp_path, "alpha", None)
+        second = _make_named_app_config(tmp_path, "beta", "project")
+        request = _namespaced_request("/other/page", "other")
+        # Act
+        got = resolve_app_config(request, [first, second])
+        # Assert
+        assert got is first
+
+    def test_no_mounted_config_yields_none(self):
+        # Arrange
+        from scitex_sdk.app._app_scope import resolve_app_config
+
+        request = RequestFactory().get("/")
+        # Act
+        got = resolve_app_config(request, [])
+        # Assert
+        assert got is None
+
+    def test_namespace_matching_slug_selects_config(self, tmp_path):
+        # Arrange
+        from scitex_sdk.app._app_scope import resolve_app_config
+
+        first = _make_named_app_config(tmp_path, "alpha", None)
+        stats_like = _make_named_app_config(tmp_path, "gamma", "project")
+        stats_like.label = "stats_calculator"
+        (tmp_path / "gamma" / "manifest.json").write_text(
+            json.dumps({
+                "name": "gamma",
+                "slug": "stats",
+                "label": "App",
+                "pip_package": "gamma",
+                "icon": "fas fa-puzzle-piece",
+                "license": "MIT",
+                "scope": "project",
+            }),
+            encoding="utf-8",
+        )
+        request = _namespaced_request("/stats/page", "stats")
+        # Act
+        got = resolve_app_config(request, [first, stats_like])
+        # Assert
+        assert got is stats_like

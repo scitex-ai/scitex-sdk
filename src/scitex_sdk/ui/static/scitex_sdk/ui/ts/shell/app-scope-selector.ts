@@ -37,7 +37,8 @@ import {
   hostProjectProvider,
   projectNavigationUrl,
 } from "../app/project-selector";
-import type { ProjectOption, ProjectProvider } from "../app/project-selector";
+import type { ProjectOption, ProjectProvider, ProjectSelectorConfig } from "../app/project-selector";
+import { usesScopedHttpTransport } from "../app/project-selector/provider";
 import {
   appScope,
   SCOPE_PROJECT,
@@ -64,6 +65,10 @@ export interface AppScopeSelectorOptions {
   /** Explicit opt-in; a scoped provider must also support rememberScope. */
   allowUserScope?: boolean;
   currentScope?: AppScope;
+  /** Reuse the host's registry for opt-in workspace commands. */
+  commands?: ProjectSelectorConfig["commands"];
+  selectCommandId?: string;
+  openCommandId?: string;
 }
 
 /** The host's project list, when the host advertises a provider. */
@@ -83,9 +88,11 @@ export function mountProjectSelectorByScope(
   doc: Document = document,
 ): ProjectSelector | null {
   const provider =
-    options.provider ?? (options.projects ? undefined : hostProjectProvider(doc) ?? undefined);
+    options.provider ?? (options.projects ? undefined :
+      hostProjectProvider(doc, { allowUserScope: options.allowUserScope === true }) ?? undefined);
+  const scopedHttp = usesScopedHttpTransport(provider);
   if ((options.scope ?? appScope(doc)) !== SCOPE_PROJECT &&
-      !(options.allowUserScope === true && typeof provider?.rememberScope === "function")) {
+      !(options.allowUserScope === true && (typeof provider?.rememberScope === "function" || scopedHttp))) {
     // user-scoped / absent: do not render a selector. The container is left
     // exactly as given — nothing appended — which is what "renders with no
     // switcher" means structurally.
@@ -95,10 +102,15 @@ export function mountProjectSelectorByScope(
     container: options.container,
     projects: options.projects,
     provider,
-    current: options.current,
+    // A pending scoped transport may mount to load its capability, but All is
+    // enabled only by its supporting server GET. Use that same committed pair.
+    current: scopedHttp ? undefined : options.current,
     placeholder: options.placeholder,
     allowUserScope: options.allowUserScope,
-    currentScope: options.currentScope,
+    currentScope: scopedHttp ? undefined : options.currentScope,
+    commands: options.commands,
+    selectCommandId: options.selectCommandId,
+    openCommandId: options.openCommandId,
   });
   const navigate = options.navigate;
   const container =

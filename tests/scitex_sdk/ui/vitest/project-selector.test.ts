@@ -1,18 +1,20 @@
 /** Canonical picker scope/command contract through the real component and provider ports. */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import * as sourcePicker from "../../../../src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/project-selector";
 import * as shippedPicker from "../../../../src/scitex_sdk/ui/static/scitex_sdk/ui/js/app/project-selector.js";
 import { CommandRegistry } from "../../../../src/scitex_sdk/ui/static/scitex_sdk/ui/ts/shell/keymap/_registry";
 import { createServer } from "node:http";
-import { mountProjectSelectorByScope as sourceScopeMount } from "../../../../src/scitex_sdk/ui/static/scitex_sdk/ui/ts/shell/app-scope-selector";
-import { mountProjectSelectorByScope as shippedScopeMount } from "../../../../src/scitex_sdk/ui/static/scitex_sdk/ui/js/shell/app-scope-selector.js";
+import { mountProjectSelectorByScope as sourceScopeMount, hostProjectProvider as sourceScopeProvider } from "../../../../src/scitex_sdk/ui/static/scitex_sdk/ui/ts/shell/app-scope-selector";
+import { mountProjectSelectorByScope as shippedScopeMount, hostProjectProvider as shippedScopeProvider } from "../../../../src/scitex_sdk/ui/static/scitex_sdk/ui/js/shell/app-scope-selector.js";
 import type { ProjectProvider } from "../../../../src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/project-selector/provider";
 
 const projects = [{ id: "a", name: "Authorized A" }, { id: "b", name: "Authorized B" }];
 const shipped = process.env.STX_PICKER_TEST_RUNTIME === "shipped";
 const { ProjectSelector, PROJECT_SELECTOR_CHANGE, projectNavigationUrl, mountProjectPickers, httpProjectProvider } = shipped ? shippedPicker : sourcePicker;
 const mountProjectSelectorByScope = shipped ? shippedScopeMount : sourceScopeMount;
+const scopeHostProvider = shipped ? shippedScopeProvider : sourceScopeProvider;
 const instances: sourcePicker.ProjectSelector[] = [];
+const httpServers: ReturnType<typeof createServer>[] = [];
 function fixture(options: Record<string, unknown> = {}, persist: (choice: unknown) => Promise<void> = async () => {}) {
   const container = document.createElement("div");
   document.body.append(container);
@@ -31,7 +33,67 @@ function options(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll('[role="option"]')).map((row) => row.textContent ?? "");
 }
 async function settle(): Promise<void> { await Promise.resolve(); await Promise.resolve(); }
-afterEach(() => { instances.splice(0).forEach((selector) => selector.destroy()); document.body.innerHTML = ""; document.documentElement.lang = "en"; });
+afterEach(async () => {
+  instances.splice(0).forEach((selector) => selector.destroy());
+  document.body.innerHTML = ""; document.documentElement.lang = "en";
+  await Promise.all(httpServers.splice(0).map((server) => new Promise<void>((done) => {
+    server.closeAllConnections(); server.close(() => done());
+  })));
+});
+
+interface PendingProjectPost {
+  body: unknown;
+  reply(body: unknown, status?: number, raw?: boolean): void;
+}
+
+/** Real HTTP requests are held until the test supplies an acceptance response. */
+async function projectHttpServer(initialListing: unknown, holdListing = false) {
+  let listing = initialListing, gets = 0;
+  const posts: unknown[] = [];
+  const pending: PendingProjectPost[] = [];
+  const waiting: ((post: PendingProjectPost) => void)[] = [];
+  const pendingGets: PendingProjectPost[] = [];
+  const waitingGets: ((get: PendingProjectPost) => void)[] = [];
+  const server = createServer(async (request, response) => {
+    response.setHeader("Content-Type", "application/json");
+    const reply = (value: unknown, status = 200, raw = false) => {
+      response.statusCode = status;
+      response.end(raw ? String(value) : JSON.stringify(value));
+    };
+    if (request.method === "GET") {
+      gets++;
+      if (holdListing) {
+        const get = { body: undefined, reply }, receive = waitingGets.shift();
+        if (receive) receive(get); else pendingGets.push(get);
+      } else reply(listing);
+      return;
+    }
+    const chunks = []; for await (const chunk of request) chunks.push(chunk);
+    const body: unknown = JSON.parse(Buffer.concat(chunks).toString());
+    posts.push(body);
+    const post = { body, reply };
+    const receive = waiting.shift();
+    if (receive) receive(post); else pending.push(post);
+  });
+  await new Promise<void>((done, reject) => {
+    server.once("error", reject); server.listen(0, "127.0.0.1", done);
+  });
+  httpServers.push(server);
+  return {
+    url: `http://127.0.0.1:${(server.address() as { port: number }).port}/projects`,
+    posts,
+    get gets() { return gets; },
+    setListing(value: unknown) { listing = value; },
+    nextPost(): Promise<PendingProjectPost> {
+      const post = pending.shift();
+      return post ? Promise.resolve(post) : new Promise((receive) => waiting.push(receive));
+    },
+    nextGet(): Promise<PendingProjectPost> {
+      const get = pendingGets.shift();
+      return get ? Promise.resolve(get) : new Promise((receive) => waitingGets.push(receive));
+    },
+  };
+}
 
 describe("canonical user capability", () => {
   it.each([undefined, false, null, "true", 1])("suppresses All without strict capability %s", async (capability) => {
@@ -483,5 +545,168 @@ describe("legacy project persistence acceptance", () => {
     f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" }); await settle();
     // Assert
     expect([ids, f.selector.getSelection(), f.events]).toEqual([["b"], { scope: "project", id: "b" }, [{ id: "b", name: "Authorized B" }]]);
+  });
+});
+
+describe("scoped HTTP persistence and first mount", () => {
+  it.each(["user", "project"] as const)("waits for a matching real HTTP %s acknowledgement before accepting", async (scope) => {
+    const server = await projectHttpServer({ projects, current_scope: "project", current: "a", allow_user_scope: true });
+    const provider = httpProjectProvider(server.url, { allowUserScope: true });
+    expect(provider.rememberScope).toBeUndefined();
+    const f = fixture({ provider, allowUserScope: true }); await f.selector.ready;
+    const trigger = f.container.querySelector("button") as HTMLButtonElement;
+    const target = { scope, id: scope === "user" ? null : "b" };
+    trigger.click();
+    (f.container.querySelectorAll('[role="option"]')[scope === "user" ? 0 : 2] as HTMLButtonElement).click();
+    const post = await server.nextPost();
+    expect(post.body).toEqual(target);
+    expect(f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, target)).toBe(false);
+    expect([server.posts, f.selector.getSelection(), f.container.querySelector(".stx-app-project-selector__current")?.textContent, f.events, trigger.disabled]).toEqual([
+      [target], { scope: "project", id: "a" }, "Authorized A", [], true,
+    ]);
+    expect(Array.from(f.container.querySelectorAll<HTMLButtonElement>('[role="option"]')).every((option) => option.disabled)).toBe(true);
+    post.reply({ current_scope: scope, current: target.id });
+    await vi.waitFor(() => expect(trigger.disabled).toBe(false));
+    const name = scope === "user" ? "All Projects" : "Authorized B";
+    expect([f.selector.getSelection(), f.container.querySelector(".stx-app-project-selector__current")?.textContent, f.events, server.posts]).toEqual([
+      target, name, [{ ...target, name }], [target],
+    ]);
+  });
+
+  it.each(["user", "project"] as const)("rejects failed, malformed and mismatched real HTTP %s acknowledgements", async (scope) => {
+    const server = await projectHttpServer({ projects, current_scope: "project", current: "a", allow_user_scope: true });
+    const container = document.createElement("div");
+    container.setAttribute("data-stx-project-picker", ""); container.setAttribute("data-provider-url", server.url);
+    container.setAttribute("data-allow-user-scope", "true"); container.setAttribute("data-navigate", "?project={id}");
+    document.body.append(container);
+    const events: unknown[] = [];
+    container.addEventListener(PROJECT_SELECTOR_CHANGE, (event) => events.push((event as CustomEvent).detail));
+    const [selector] = mountProjectPickers(document); instances.push(selector); await selector.ready;
+    const trigger = container.querySelector("button") as HTMLButtonElement;
+    const target = { scope, id: scope === "user" ? null : "b" }, locationBefore = window.location.href;
+    const replies = [
+      { body: { error: "denied" }, status: 403 },
+      { body: "{invalid JSON", raw: true },
+      { body: { current: target.id } },
+      { body: { current_scope: scope === "user" ? "project" : "user", current: scope === "user" ? "b" : null } },
+    ];
+    for (const reply of replies) {
+      trigger.click();
+      (container.querySelectorAll('[role="option"]')[scope === "user" ? 0 : 2] as HTMLButtonElement).click();
+      const post = await server.nextPost();
+      expect([post.body, selector.getSelection(), events, trigger.disabled]).toEqual([target, { scope: "project", id: "a" }, [], true]);
+      post.reply(reply.body, reply.status ?? 200, reply.raw ?? false);
+      await vi.waitFor(() => expect(trigger.disabled).toBe(false));
+      const error = container.querySelector('[role="status"]') as HTMLElement;
+      expect([selector.getSelection(), container.querySelector(".stx-app-project-selector__current")?.textContent, events, error.hidden, error.textContent, window.location.href]).toEqual([
+        { scope: "project", id: "a" }, "Authorized A", [], false, "Could not select scope", locationBefore,
+      ]);
+    }
+    expect(server.posts).toEqual(replies.map(() => target));
+    // The same real control remains usable after a rejected acknowledgement.
+    if (scope === "user") {
+      (container.querySelector('[role="option"]') as HTMLButtonElement).click();
+      const post = await server.nextPost(); post.reply({ current_scope: "user", current: null });
+      await vi.waitFor(() => expect(trigger.disabled).toBe(false));
+      expect([selector.getSelection(), events, window.location.href]).toEqual([
+        { scope: "user", id: null }, [{ scope: "user", id: null, name: "All Projects" }], locationBefore,
+      ]);
+    }
+  });
+
+  it("the default first mount stays legacy despite a capable server", async () => {
+    const server = await projectHttpServer({ projects, current_scope: "project", current: "a", allow_user_scope: true });
+    const container = document.createElement("div");
+    container.setAttribute("data-stx-project-picker", ""); container.setAttribute("data-provider-url", server.url);
+    document.body.append(container);
+    const events: unknown[] = [];
+    container.addEventListener(PROJECT_SELECTOR_CHANGE, (event) => events.push((event as CustomEvent).detail));
+    const [selector] = mountProjectPickers(document); instances.push(selector); await selector.ready;
+    expect(options(container)).toEqual(["Authorized A", "Authorized B"]);
+    expect(selector.commands.run(selector.selectCommandId, { via: "agent" }, { scope: "user", id: null })).toBe(false);
+    (container.querySelectorAll('[role="option"]')[1] as HTMLButtonElement).click();
+    const post = await server.nextPost(); expect(post.body).toEqual({ id: "b" });
+    post.reply({ current: "b" });
+    await vi.waitFor(() => expect((container.querySelector("button") as HTMLButtonElement).disabled).toBe(false));
+    expect([selector.getSelection(), events]).toEqual([{ scope: "project", id: "b" }, [{ id: "b", name: "Authorized B" }]]);
+  });
+
+  it.each([undefined, false, "true"])("client opt-in cannot enable an unsupported server capability %s", async (allow_user_scope) => {
+    const server = await projectHttpServer({ projects, current_scope: "project", current: "a", allow_user_scope });
+    const provider = httpProjectProvider(server.url, { allowUserScope: true });
+    const f = fixture({ provider, allowUserScope: true }); await f.selector.ready;
+    expect([provider.rememberScope, options(f.container), f.selector.getSelection(), server.posts]).toEqual([undefined, [], null, []]);
+    expect(f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "user", id: null })).toBe(false);
+  });
+
+  it.each([
+    { current_scope: "user", current: "a" },
+    { current_scope: "project", current: null },
+    { current_scope: null, current: null },
+    { current: "a" },
+  ])("invalid initial scope pair %j cannot install the scoped port", async (pair) => {
+    const server = await projectHttpServer({ projects, allow_user_scope: true, ...pair });
+    const provider = httpProjectProvider(server.url, { allowUserScope: true });
+    const f = fixture({ provider, allowUserScope: true }); await f.selector.ready;
+    expect([provider.rememberScope, f.selector.getSelection(), options(f.container), server.posts]).toEqual([undefined, null, [], []]);
+  });
+
+  it.each([
+    { label: "user", pair: { current_scope: "user", current: null }, selection: { scope: "user", id: null } },
+    { label: "project", pair: { current_scope: "project", current: "b" }, selection: { scope: "project", id: "b" } },
+    { label: "unselected", pair: { current: null }, selection: null },
+  ])("the normal first mount uses authoritative $label state over stale page attributes", async ({ pair, selection }) => {
+    const server = await projectHttpServer({ projects, allow_user_scope: true, ...pair });
+    const container = document.createElement("div");
+    container.setAttribute("data-stx-project-picker", ""); container.setAttribute("data-provider-url", server.url);
+    container.setAttribute("data-allow-user-scope", "true"); container.setAttribute("data-current", "a"); container.setAttribute("data-current-scope", "project");
+    document.body.append(container);
+    const [selector] = mountProjectPickers(document); instances.push(selector); await selector.ready;
+    expect([selector.getSelection(), options(container), server.gets, server.posts]).toEqual([selection, ["All Projects", "Authorized A", "Authorized B"], 1, []]);
+    expect(mountProjectPickers(document)).toEqual([]);
+    expect([server.gets, container.querySelectorAll(".stx-app-project-selector__trigger").length]).toEqual([1, 1]);
+  });
+
+  it.each(["revoked", "replaced"])("a pending HTTP acknowledgement cannot apply after authority is %s", async (mutation) => {
+    const server = await projectHttpServer({ projects, current_scope: "project", current: "a", allow_user_scope: true });
+    const provider = httpProjectProvider(server.url, { allowUserScope: true });
+    const f = fixture({ provider, allowUserScope: true }); await f.selector.ready;
+    f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "user", id: null });
+    const post = await server.nextPost();
+    if (mutation === "revoked") {
+      server.setListing({ projects, current_scope: "project", current: "a", allow_user_scope: false });
+      await expect(provider.listProjects()).rejects.toThrow();
+      expect(provider.rememberScope).toBeUndefined();
+    } else provider.rememberScope = async () => {};
+    post.reply({ current_scope: "user", current: null });
+    await vi.waitFor(() => expect((f.container.querySelector("button") as HTMLButtonElement).disabled).toBe(false));
+    expect([f.selector.getSelection(), f.events, server.posts]).toEqual([{ scope: "project", id: "a" }, [], [{ scope: "user", id: null }]]);
+  });
+
+  it("the shell entrypoint accepts a pending scoped provider from the picker entrypoint", async () => {
+    const server = await projectHttpServer(null, true);
+    const provider = httpProjectProvider(server.url, { allowUserScope: true });
+    const container = document.createElement("div"); document.body.append(container);
+    const selector = mountProjectSelectorByScope({ container, scope: "user", allowUserScope: true, provider, current: "a", currentScope: "project" });
+    expect(selector).not.toBeNull(); instances.push(selector!);
+    const get = await server.nextGet();
+    expect([provider.rememberScope, selector!.getSelection(), options(container)]).toEqual([undefined, null, []]);
+    get.reply({ projects, allow_user_scope: true, current_scope: "user", current: null });
+    await selector!.ready;
+    expect([selector!.getSelection(), options(container)]).toEqual([{ scope: "user", id: null }, ["All Projects", "Authorized A", "Authorized B"]]);
+  });
+
+  it("picker first mount recognizes a scoped provider from the shell entrypoint", async () => {
+    const server = await projectHttpServer({ projects, allow_user_scope: true, current_scope: "user", current: null });
+    const meta = document.createElement("meta"); meta.name = "stx-project-provider"; meta.content = server.url; document.head.append(meta);
+    try {
+      const provider = scopeHostProvider(document, { allowUserScope: true })!;
+      const container = document.createElement("div");
+      container.setAttribute("data-stx-project-picker", ""); container.setAttribute("data-provider-url", server.url);
+      container.setAttribute("data-allow-user-scope", "true"); container.setAttribute("data-current", "a"); container.setAttribute("data-current-scope", "project");
+      document.body.append(container);
+      const [selector] = mountProjectPickers(document, () => provider); instances.push(selector); await selector.ready;
+      expect([selector.getSelection(), options(container)]).toEqual([{ scope: "user", id: null }, ["All Projects", "Authorized A", "Authorized B"]]);
+    } finally { meta.remove(); }
   });
 });

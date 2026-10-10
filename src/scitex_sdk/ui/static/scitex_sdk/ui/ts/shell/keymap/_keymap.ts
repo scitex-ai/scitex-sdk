@@ -102,20 +102,43 @@ export class Keymap {
 
   /** Pending prefix sequence while a multi-chord command is being typed. */
   private pending: Sequence = [];
+  private composing = false;
   // Typed as Event (not KeyboardEvent) so it satisfies addEventListener's
   // EventListener signature; handleKeydown duck-types the keyboard fields.
   private readonly onKeydown: (event: Event) => void;
+  private readonly onCompositionStart: () => void;
+  private readonly onCompositionEnd: () => void;
 
   constructor(options: KeymapOptions = {}) {
     this.registry = options.registry ?? globalRegistry;
     this.overrideStorage = options.overrideStorage ?? new Map();
     this.defaults.set("global", []);
     this.onKeydown = (event) => this.handleKeydown(event);
+    this.onCompositionStart = () => {
+      this.composing = true;
+      this.resetPending();
+    };
+    this.onCompositionEnd = () => {
+      this.composing = false;
+      this.resetPending();
+    };
     this.rebuildEffective();
+  }
+
+  /** The registry this keymap dispatches into, for consumer identity checks. */
+  get commands(): CommandRegistry {
+    return this.registry;
   }
 
   get currentMode(): string | null {
     return this.registry.currentMode;
+  }
+
+  /** Factory presence survives overrides, mode shadowing and user disabling. */
+  hasFactoryBinding(commandId: string): boolean {
+    return [...this.defaults.values()].some((bindings) =>
+      bindings.some((binding) => binding.commandId === commandId),
+    );
   }
 
   /** Activate a page/app mode. Installs the scope so it is bindable, and
@@ -234,11 +257,62 @@ export class Keymap {
   /**
    * Override-induced collisions: a chord where a user override (or a second
    * default) landed on top of another command's effective chord. Non-empty
-   * means a UI should warn — the displaced command lost that chord. This is
-   * the "no silent one-wins" guarantee for the override path.
+   * means a UI should warn — the displaced command lost that chord. Prefix
+   * collisions involving an override are also reported for every known mode:
+   * an exact shorter command would prevent typing the longer command.
    */
   overrideConflicts(): Conflict[] {
-    return [...this.overrideCollisions];
+    return [...this.overrideCollisions, ...this.prefixOverrideConflicts()];
+  }
+
+  private prefixOverrideConflicts(): Conflict[] {
+    const modes = new Set([...this.defaults.keys()].filter((scope) => scope !== "global"));
+    for (const command of this.registry.list()) {
+      for (const mode of command.modes ?? []) modes.add(mode);
+    }
+    const conflicts: Conflict[] = [];
+    const reported = new Set<string>();
+    for (const mode of [null, ...[...modes].sort()]) {
+      const scopes = mode === null ? ["global"] : [mode, "global"];
+      const seen = new Set<string>();
+      const effective: Array<{ binding: Binding; key: string }> = [];
+      for (const scope of scopes) {
+        for (const binding of this.bindings.get(scope) ?? []) {
+          const key = sequenceKey(binding.sequence);
+          if (seen.has(key)) continue;
+          seen.add(key); // Preserve exact mode-over-global shadowing.
+          const definition = this.registry.get(binding.commandId)?.def;
+          if (!definition || (definition.modes && (mode === null || !definition.modes.has(mode)))) continue;
+          effective.push({ binding, key });
+        }
+      }
+      for (let i = 0; i < effective.length; i++) {
+        for (let j = i + 1; j < effective.length; j++) {
+          const left = effective[i];
+          const right = effective[j];
+          if (left.binding.commandId === right.binding.commandId) continue;
+          const shorter = left.key.startsWith(right.key + " ") ? right : left;
+          const longer = shorter === left ? right : left;
+          if (!longer.key.startsWith(shorter.key + " ")) continue;
+          for (const overridden of [shorter, longer]) {
+            if (!this.overrideStorage.has(overridden.binding.commandId)) continue;
+            const other = overridden === shorter ? longer : shorter;
+            const conflict: Conflict = {
+              sequenceKey: shorter.key,
+              scope: mode ?? "global",
+              existingCommandId: other.binding.commandId,
+              newCommandId: overridden.binding.commandId,
+            };
+            const identity = JSON.stringify(conflict);
+            if (!reported.has(identity)) {
+              reported.add(identity);
+              conflicts.push(conflict);
+            }
+          }
+        }
+      }
+    }
+    return conflicts;
   }
 
   /**
@@ -282,10 +356,10 @@ export class Keymap {
               newCommandId: b.commandId,
             });
             if (pass === 1) continue; // two defaults colliding: first wins (bind() prevents this)
-            // pass 2: the user's override wins the chord it displaced onto.
-            effIndex.set(key, b.commandId);
-            effList.push({ sequence: seq, commandId: b.commandId, inInput: b.inInput });
-            continue;
+            // Pass 2 replaces the losing row as well as the index entry:
+            // keyboard dispatch and help must see the same winning binding.
+            const displaced = effList.findIndex((bound) => sequenceKey(bound.sequence) === key);
+            effList.splice(displaced, 1);
           }
           effIndex.set(key, b.commandId);
           effList.push({ sequence: seq, commandId: b.commandId, inInput: b.inInput });
@@ -350,6 +424,17 @@ export class Keymap {
     // plain objects still satisfy the read.
     const ev = event as KeyboardEvent;
     const key = ev.key;
+    // Composition and AltGraph produce text, not command intent. An event
+    // already claimed by another listener likewise cannot complete our prefix.
+    if (
+      this.composing || ev.isComposing || ev.keyCode === 229 || ev.which === 229 ||
+      key === "Dead" || key === "Process" || key === "AltGraph" ||
+      ev.defaultPrevented ||
+      (typeof ev.getModifierState === "function" && ev.getModifierState("AltGraph"))
+    ) {
+      this.resetPending();
+      return;
+    }
     const ctrlKey = ev.ctrlKey;
     const altKey = ev.altKey;
     const shiftKey = ev.shiftKey;
@@ -415,12 +500,21 @@ export class Keymap {
    *  returned function and call it on teardown. */
   attach(target: EventTarget = document): () => void {
     target.addEventListener("keydown", this.onKeydown, true);
-    return () => target.removeEventListener("keydown", this.onKeydown, true);
+    target.addEventListener("compositionstart", this.onCompositionStart, true);
+    target.addEventListener("compositionend", this.onCompositionEnd, true);
+    return () => {
+      target.removeEventListener("keydown", this.onKeydown, true);
+      target.removeEventListener("compositionstart", this.onCompositionStart, true);
+      target.removeEventListener("compositionend", this.onCompositionEnd, true);
+      this.composing = false;
+      this.resetPending();
+    };
   }
 
   /** The introspection model: current mode + every command with the chords
    *  bound to it (resolved across scopes). Feeds the help UI and agent tools.
-   *  Reports the EFFECTIVE chords (overrides applied, unbinds honored). */
+   *  Reports the EFFECTIVE chords (overrides applied, unbinds honored,
+   *  mode-shadowed chords omitted). */
   help(): {
     mode: string | null;
     commands: Array<{
@@ -433,14 +527,18 @@ export class Keymap {
   } {
     // map commandId -> chord display strings, mode-first
     const byCommand = new Map<string, string[]>();
+    const seen = new Set<string>();
     const scopes: BindingScope[] =
       this.currentMode !== null ? [this.currentMode, "global"] : ["global"];
-    for (const scope of scopes.reverse()) {
+    for (const scope of scopes) {
       const list = this.bindings.get(scope);
       if (!list) continue;
       for (const b of list) {
+        const key = sequenceKey(b.sequence);
+        if (seen.has(key)) continue; // the higher-priority scope owns this chord
+        seen.add(key);
         const arr = byCommand.get(b.commandId) ?? [];
-        arr.push(sequenceKey(b.sequence));
+        arr.push(key);
         byCommand.set(b.commandId, arr);
       }
     }

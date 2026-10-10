@@ -35,6 +35,7 @@ const CLS = "stx-app-project-selector";
 /** Event emitted on the container when the selection changes. */
 export const PROJECT_SELECTOR_CHANGE = "stx-project-selector:change";
 export const PROJECT_SELECTOR_SELECT = "project-selector:select";
+export const PROJECT_SELECTOR_OPEN = "project-selector:open";
 
 let instanceCount = 0;
 
@@ -50,7 +51,9 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
   readonly ready: Promise<void>;
   readonly commands: CommandRegistry;
   readonly selectCommandId: string;
+  readonly openCommandId: string | null;
   private readonly selectCommand: CommandDef;
+  private readonly openCommand: CommandDef | null;
   private projects: ProjectOption[];
   private current: ProjectChoice | null;
   private filtered: ProjectChoice[] = [];
@@ -69,6 +72,7 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
   private search: HTMLInputElement | null = null;
   private list: HTMLElement;
   private open = false;
+  private compositionActive = false;
   private outsideClickHandler: (e: MouseEvent) => void;
   private keyHandler: (e: KeyboardEvent) => void;
 
@@ -79,13 +83,28 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
     if (!this.selectCommandId || this.commands.has(this.selectCommandId)) {
       throw new Error(`project selector command already registered: ${this.selectCommandId}`);
     }
+    this.openCommandId = config.openCommandId ?? null;
+    if (this.openCommandId !== null && (!this.openCommandId.trim() ||
+        this.openCommandId === this.selectCommandId || this.commands.has(this.openCommandId))) {
+      throw new Error(`project selector command already registered: ${this.openCommandId}`);
+    }
     this.selectCommand = { id: this.selectCommandId, label: gettext("Select project"), action: (payload) => this.select(payload) };
+    this.openCommand = this.openCommandId === null ? null : {
+      id: this.openCommandId, label: gettext("Choose project"),
+      action: () => {
+        if (this.destroyed || this.pending) return false;
+        this.show();
+        this.search?.focus();
+        return true;
+      },
+    };
     this.uid = "stx-project-picker-" + ++instanceCount;
     this.projects = this.validProjects(config.projects ?? []);
     this.legacyPersistenceExpected = config.provider?.rememberProject !== undefined;
     this.allowUserScope = config.allowUserScope === true && typeof config.provider?.rememberScope === "function";
     this.current = this.choice(config.current, config.currentScope);
     this.commands.set(this.selectCommand);
+    if (this.openCommand) this.commands.set(this.openCommand);
 
     this.container.className = CLS;
 
@@ -121,6 +140,8 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
         this.activeIndex = 0;
         this.renderList();
       });
+      this.search.addEventListener("compositionstart", () => { this.compositionActive = true; });
+      this.search.addEventListener("compositionend", () => { this.compositionActive = false; });
       this.search.addEventListener("keydown", (e) => this.onSearchKey(e));
       this.panel.appendChild(this.search);
     }
@@ -137,9 +158,10 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
 
     this.trigger.addEventListener("click", () => this.toggle());
     this.trigger.addEventListener("keydown", (e) => {
+      if (this.composing(e) || e.defaultPrevented) return;
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        this.show();
+        this.openPicker("keyboard");
       }
     });
 
@@ -147,6 +169,7 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
       if (!this.container.contains(e.target as Node)) this.close();
     };
     this.keyHandler = (e: KeyboardEvent): void => {
+      if (this.composing(e) || e.defaultPrevented) return;
       if (e.key === "Escape" && this.open) {
         this.close();
         this.trigger.focus?.();
@@ -305,6 +328,7 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
   }
 
   private onSearchKey(e: KeyboardEvent): void {
+    if (this.composing(e) || e.defaultPrevented) return;
     const last = this.filtered.length - 1;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
@@ -323,8 +347,24 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
 
   /** Open or close the option panel. */
   toggle(): void {
+    if (this.destroyed || this.pending) return;
     if (this.open) this.close();
-    else this.show();
+    else this.openPicker("button");
+  }
+
+  private composing(event: KeyboardEvent): boolean {
+    return this.compositionActive || event.isComposing || event.keyCode === 229 ||
+      ["Dead", "Process", "Unidentified"].includes(event.key) ||
+      event.getModifierState("AltGraph");
+  }
+
+  private openPicker(via: "button" | "keyboard"): void {
+    if (this.destroyed || this.pending) return;
+    if (this.openCommandId && this.openCommand) {
+      if (this.commands.get(this.openCommandId)?.def === this.openCommand) {
+        this.commands.run(this.openCommandId, { via, source: this.trigger });
+      }
+    } else this.show();
   }
 
   private show(): void {
@@ -448,6 +488,7 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
     this.destroyed = true;
     this.generation++;
     if (this.commands.get(this.selectCommandId)?.def === this.selectCommand) this.commands.unset(this.selectCommandId);
+    if (this.openCommandId && this.commands.get(this.openCommandId)?.def === this.openCommand) this.commands.unset(this.openCommandId);
     document.removeEventListener("click", this.outsideClickHandler);
     document.removeEventListener("keydown", this.keyHandler);
     super.destroy();

@@ -42,4 +42,6 @@ export interface ProjectSelectorConfig extends BaseComponentConfig {
   commands?: CommandRegistry;
   /** Stable command id within that registry. Defaults to project-selector:select. */
   selectCommandId?: string;
+  /** Opt in to a payload-free picker-opening command in the same registry. */
+  openCommandId?: string;
 }
