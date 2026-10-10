@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Django registration for the SDK-owned UI component.
 
-Install scitex_sdk.ui in INSTALLED_APPS. Its persisted app label remains
-scitex_ui. ScitexUiConfig.ready() wires the development element inspector and
+Install scitex_sdk.ui in INSTALLED_APPS. Its app label is the namespaced
+scitex_sdk_ui, so it installs alongside the retired scitex-ui package
+without a duplicate-label conflict (ui ships no models, so the rename is
+migration-free). ScitexUiConfig.ready() wires the development element
+inspector and
 feature context processors; middleware gates their visibility at runtime.
 SCITEX_UI_AUTOWIRE_INSPECTOR=False explicitly disables automatic registration.
 """
@@ -67,7 +70,7 @@ def _ensure_context_processor(settings) -> None:
 
 class ScitexUiConfig(AppConfig):
     name = "scitex_sdk.ui"
-    label = "scitex_ui"
+    label = "scitex_sdk_ui"
     verbose_name = "SciTeX UI Components"
     default_auto_field = "django.db.models.BigAutoField"
 

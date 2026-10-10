@@ -254,3 +254,61 @@ def test_app_skills_get_unknown_skill_reports_error_unknown_skill_in_payload_err
     payload = json.loads(_unwrap(raw))
     # Assert
     assert "unknown skill" in payload["error"]
+
+
+def test_default_backend_ignores_ambient_token_stays_local(tmp_path, monkeypatch):
+    # Arrange
+    # Arrange
+    monkeypatch.setenv("SCITEX_API_TOKEN", "fake-token-for-fail-closed-proof")
+    (tmp_path / "local.txt").write_text("stays-local")
+    # Act
+    content = _unwrap(_call_tool("app_read_file", path="local.txt", root=str(tmp_path)))
+    # Act
+    # Assert
+    # Assert
+    assert content == "stays-local"
+
+
+def test_resolve_files_default_local_is_filesystem_backend(tmp_path):
+    # Arrange
+    # Arrange
+    from scitex_sdk.app.sdk._filesystem import FileSystemBackend
+    # Act
+    files = server._resolve_files(str(tmp_path), "local")
+    # Act
+    # Assert
+    # Assert
+    assert isinstance(files, FileSystemBackend)
+
+
+def test_resolve_files_cloud_without_token_fails_closed(tmp_path, monkeypatch):
+    # Arrange
+    # Arrange
+    monkeypatch.delenv("SCITEX_API_TOKEN", raising=False)
+    # Act
+    # Assert
+    with pytest.raises(RuntimeError, match="explicit authenticated request"):
+        server._resolve_files(str(tmp_path), "cloud")
+    # Assert
+
+
+def test_tool_cloud_without_token_raises_not_silent_fallback(tmp_path, monkeypatch):
+    # Arrange
+    # Arrange
+    monkeypatch.delenv("SCITEX_API_TOKEN", raising=False)
+    # Act
+    # Assert
+    with pytest.raises(RuntimeError, match="explicit authenticated request"):
+        _call_tool("app_read_file", path="x.txt", root=str(tmp_path), backend="cloud")
+    # Assert
+
+
+def test_resolve_files_unknown_backend_raises_key_error(tmp_path):
+    # Arrange
+    # Arrange
+    pass
+    # Act
+    # Assert
+    with pytest.raises(KeyError):
+        server._resolve_files(str(tmp_path), "__no_such_backend__")
+    # Assert
