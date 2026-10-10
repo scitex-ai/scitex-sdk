@@ -195,5 +195,53 @@ class TestValidateManifest:
         # Assert
         assert any("pip_package" in e for e in errors)
 
+    # --- mount_policy jail contract (closed when present, open when absent) ---
+
+    def test_login_only_mount_policy_is_valid(self, tmp_path):
+        # Arrange — the pre-jail contract (creator manifest shape)
+        data: dict = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["mount_policy"] = {"login_required": True}
+        write_manifest(tmp_path, data)
+        # Act
+        errors = validate_manifest(tmp_path)
+        # Assert
+        assert errors == []
+
+    def test_file_touching_without_jail_is_rejected(self, tmp_path):
+        # Arrange
+        data: dict = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["mount_policy"] = {"login_required": True, "touches_files": True}
+        write_manifest(tmp_path, data)
+        # Act
+        errors = validate_manifest(tmp_path)
+        # Assert
+        assert any("jail" in e for e in errors)
+
+    def test_typo_jail_scope_is_rejected(self, tmp_path):
+        # Arrange
+        data: dict = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["mount_policy"] = {
+            "login_required": True,
+            "touches_files": True,
+            "jail": {"scope": "users"},
+        }
+        write_manifest(tmp_path, data)
+        # Act
+        errors = validate_manifest(tmp_path)
+        # Assert
+        assert any("scope" in e for e in errors)
+
+    def test_full_figrecipe_mount_policy_is_valid(self, tmp_path):
+        # Arrange — the reference declaration the leaf adopts
+        from scitex_sdk.app.jail import FIGRECIPE_MOUNT_POLICY_REFERENCE
+
+        data: dict = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["mount_policy"] = dict(FIGRECIPE_MOUNT_POLICY_REFERENCE)
+        write_manifest(tmp_path, data)
+        # Act
+        errors = validate_manifest(tmp_path)
+        # Assert
+        assert errors == []
+
 
 # EOF
