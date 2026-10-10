@@ -4,6 +4,12 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-10-09
+
+Fail-closed MCP backend selection on file tools, default local (PR #43);
+SDK UI ships under the `scitex_sdk_ui` label, migration-free, resolving
+the retired scitex_ui label collision (PR #44).
+
 ## [0.3.3] - 2026-10-09
 
 Leaf API endpoint successors (PRs #39/#40/#41, re-plan of closed #33/#34/#36):
