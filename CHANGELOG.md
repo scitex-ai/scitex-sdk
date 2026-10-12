@@ -4,6 +4,12 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-10-12
+
+Identity re-export of `ScitexAppConfig` at the `scitex_sdk.app` root
+(lazy, Django-free plain import preserved; PR #50) — the public
+migration target for consumers subclassing the leaf AppConfig.
+
 ## [0.3.4] - 2026-10-09
 
 Fail-closed MCP backend selection on file tools, default local (PR #43);
