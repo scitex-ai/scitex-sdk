@@ -50,6 +50,12 @@ __all__ = [
     # What a --host bind implies for Django's ALLOWED_HOSTS. Public because
     # three repos were about to import it from a private module.
     "hosts_to_allow",
+    # The leaf-AppConfig base (identity re-export of ._django's; lazy so
+    # importing this package still does not import Django — the import-purity
+    # gate in tests/scitex_sdk/app/test___init__.py pins that). Public because
+    # consumers (scitex-cards' board AppConfig) subclass it and the private
+    # `scitex_sdk.app._django` path is not a migration target.
+    "ScitexAppConfig",
     # Flat file-ops API (mirrors the MCP tool surface so the
     # API/MCP parity stays balanced — see _files_api.py).
     "read_file",
@@ -105,6 +111,11 @@ def __getattr__(name: str):
             from . import validator as _validator
 
             return _validator
+        if name == "ScitexAppConfig":
+            from ._django import ScitexAppConfig as value
+
+            globals()[name] = value
+            return value
     finally:
         _LOADING.discard(name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
