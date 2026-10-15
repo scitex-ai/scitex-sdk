@@ -4,6 +4,13 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-10-15
+
+Declared UI provider transition (PR #38): canonical SDK replacement of the
+legacy UI linter provider, the compatible Dev provider SPI required in every
+SDK tooling extra, and import-boundary tests isolated from adjacent installed
+providers.
+
 ## [0.3.5] - 2026-10-12
 
 Identity re-export of `ScitexAppConfig` at the `scitex_sdk.app` root
