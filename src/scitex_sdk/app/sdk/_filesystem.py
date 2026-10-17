@@ -32,9 +32,17 @@ class FileSystemBackend:
         return self._root
 
     def _resolve(self, path: str) -> Path:
-        """Resolve relative path, preventing traversal attacks."""
+        """Resolve relative path, preventing traversal attacks.
+
+        Containment is a path-COMPONENT comparison (resolved equals root or
+        root is one of its parents), never a string prefix: a sibling such
+        as ``<root>-other`` shares the string prefix but not the directory,
+        and ``..`` segments resolving into it must be refused. Symlinks keep
+        their existing policy — resolve() follows them first, so a link
+        inside root pointing outside is refused the same way.
+        """
         resolved = (self._root / path.lstrip("/")).resolve()
-        if not str(resolved).startswith(str(self._root)):
+        if resolved != self._root and self._root not in resolved.parents:
             raise ValueError(f"Path traversal detected: {path!r}")
         return resolved
 

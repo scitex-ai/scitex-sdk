@@ -91,3 +91,178 @@ def test_mount_route_honours_manifest_url():
     route = mount_route(config)
     # Assert
     assert route == "apps/u/x/"
+
+
+def _leaf_module(tmp_path, name, body):
+    # Arrange
+    (tmp_path / f"{name}.py").write_text(body, encoding="utf-8")
+    # Act
+    import sys
+    sys.path.insert(0, str(tmp_path))
+    # Assert
+    return name
+
+
+def _unpath(tmp_path):
+    # Arrange
+    import sys
+    # Act
+    sys.path.remove(str(tmp_path))
+    # Assert
+    assert True
+
+
+def test_leaf_declarations_reads_existing_exports(tmp_path):
+    # Arrange
+    from collections.abc import Callable
+
+    from scitex_sdk.app.plugins import leaf_declarations
+    mod = _leaf_module(tmp_path, "leaf_a", "def context_builder(r): return {}\npartial_template = 'leaf/page.html'\n")
+    try:
+        # Act
+        found = leaf_declarations(mod, {"context_builder": Callable, "partial_template": str, "missing": str})
+    finally:
+        _unpath(tmp_path)
+    # Assert
+    assert sorted(found) == ["context_builder", "partial_template"]
+
+
+def test_leaf_declarations_absent_module_yields_empty():
+    # Arrange
+    from scitex_sdk.app.plugins import leaf_declarations
+    # Act
+    found = leaf_declarations("no_such_leaf_module_xyz", {"context_builder": object})
+    # Assert
+    assert found == {}
+
+
+def test_leaf_declarations_wrong_type_refused(tmp_path):
+    # Arrange
+    import pytest
+
+    from scitex_sdk.app.plugins import LeafContractError, leaf_declarations
+    mod = _leaf_module(tmp_path, "leaf_b", "partial_template = 42\n")
+    try:
+        # Act
+        # Assert
+        with pytest.raises(LeafContractError, match="leaf_b.partial_template"):
+            leaf_declarations(mod, {"partial_template": str})
+    finally:
+        _unpath(tmp_path)
+
+
+def test_discovery_values_stay_load_compatible():
+    # Arrange — EntryPoint.load only parses single-config values: no smuggling.
+    eps = [_ep("fig", "fig._django.apps:FigRecipeEditorConfig")]
+    # Act
+    found = discover_plugin_apps(eps)
+    # Assert
+    assert " " not in found[0].app_config and "\t" not in found[0].app_config
+
+
+def test_companions_appended_unless_listed():
+    # Arrange
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    companions = (
+        "figrecipe._django",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    )
+    # Act
+    merged = installed_app_paths([], plugins, companions)
+    # Assert
+    assert merged == [
+        "figrecipe._django.apps.FigRecipeEditorConfig",
+        "figrecipe._django",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    ]
+
+
+def test_undeclared_same_module_entry_still_replaced():
+    # Arrange — without an explicit companion declaration the 0.3.2 primary
+    # same-module replacement rule applies unchanged.
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    # Act
+    merged = installed_app_paths(["figrecipe._django.apps.ScitexAppChatConfig"], plugins)
+    # Assert
+    assert merged == ["figrecipe._django.apps.FigRecipeEditorConfig"]
+
+
+def test_declared_companion_survives_primary_replacement():
+    # Arrange — an explicitly declared companion is exempt from primary
+    # same-module replacement: both entries persist, no silent drop.
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    companions = ("figrecipe._django.apps.ScitexAppChatConfig",)
+    # Act
+    merged = installed_app_paths(
+        ["figrecipe._django.apps.ScitexAppChatConfig"], plugins, companions
+    )
+    # Assert
+    assert merged == [
+        "figrecipe._django.apps.ScitexAppChatConfig",
+        "figrecipe._django.apps.FigRecipeEditorConfig",
+    ]
+
+
+def test_partition_drops_bare_primary_keeps_companion():
+    # Arrange
+    from scitex_sdk.app.plugins import partition_companions
+
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    entries = ("figrecipe._django", "figrecipe._django.apps.ScitexAppChatConfig")
+    # Act
+    companions = partition_companions(entries, plugins)
+    # Assert
+    assert companions == ["figrecipe._django.apps.ScitexAppChatConfig"]
+
+
+def test_partition_keeps_foreign_entries_verbatim():
+    # Arrange
+    from scitex_sdk.app.plugins import partition_companions
+
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    entries = ("other.app", "other.app.apps.OtherConfig")
+    # Act
+    companions = partition_companions(entries, plugins)
+    # Assert
+    assert companions == ["other.app", "other.app.apps.OtherConfig"]
+
+
+def test_one_shot_companion_iterable_fully_consumed():
+    # Arrange
+    plugins = [PluginApp("fig", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    companions = (c for c in ("figrecipe._django", "figrecipe._django.apps.ScitexAppChatConfig"))
+    # Act
+    merged = installed_app_paths([], plugins, companions)
+    # Assert
+    assert merged == [
+        "figrecipe._django.apps.FigRecipeEditorConfig",
+        "figrecipe._django",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    ]
+
+
+def test_fig_b6_tuple_partitions_to_single_companion():
+    # Arrange — Fig's actual declared tuple (c647 candidate __init__ values).
+    from scitex_sdk.app.plugins import partition_companions
+
+    plugins = [PluginApp("figrecipe", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    entries = ("figrecipe._django", "figrecipe._django.apps.ScitexAppChatConfig")
+    # Act
+    companions = partition_companions(entries, plugins)
+    # Assert
+    assert companions == ["figrecipe._django.apps.ScitexAppChatConfig"]
+
+
+def test_fig_b6_merged_list_has_no_duplicate_primary():
+    # Arrange
+    from scitex_sdk.app.plugins import partition_companions
+
+    plugins = [PluginApp("figrecipe", "figrecipe._django.apps.FigRecipeEditorConfig")]
+    entries = ("figrecipe._django", "figrecipe._django.apps.ScitexAppChatConfig")
+    # Act
+    merged = installed_app_paths([], plugins, partition_companions(entries, plugins))
+    # Assert
+    assert merged == [
+        "figrecipe._django.apps.FigRecipeEditorConfig",
+        "figrecipe._django.apps.ScitexAppChatConfig",
+    ]

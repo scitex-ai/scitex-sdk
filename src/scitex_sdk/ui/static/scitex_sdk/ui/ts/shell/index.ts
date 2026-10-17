@@ -12,6 +12,10 @@ export type { ShellInstances } from "./_shell-init";
 export type { ShellConfig } from "./types";
 export { ThemeProvider } from "./theme-provider";
 export type { Theme, ThemeProviderConfig } from "./theme-provider";
+export { CommandRegistry, Keymap, globalRegistry } from "./keymap";
+export type { CommandDef, CallerInfo } from "./keymap";
+export { WorkspaceCommands } from "./workspace-commands";
+export type { WorkspaceCommandsConfig, ShortcutPreferences } from "./workspace-commands";
 
 export { AppShell, Sidebar } from "./app-shell";
 export type { AppShellConfig } from "./app-shell";

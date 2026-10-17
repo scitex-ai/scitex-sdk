@@ -73,7 +73,7 @@
   /* Text - warm neutrals for eye-friendly readability */
   --text-primary: var(--_scitex-01); /* Near-black, no blue tint */
   --text-secondary: var(--_scitex-02); /* Dark gray for secondary text */
-  --text-muted: var(--_scitex-04); /* Medium gray for muted text */
+  --text-muted: var(--_scitex-03); /* Muted text; AA on light surfaces */
   --text-inverse: var(--_white);
   --text-color: var(--text-primary); /* Alias for legacy compatibility */
   /* Links. Consumed by 5 app stylesheets as `var(--text-link, #58a6ff)` and

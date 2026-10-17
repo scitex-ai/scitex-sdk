@@ -1,8 +1,10 @@
-"""Linter plugin for scitex-ui: UI-101..105 component-usage rules.
+"""SDK-owned UI-101..107 component-usage linter rules.
 
 Registered via entry point `scitex_dev.linter.plugins` so the rules
-appear in `scitex-linter list-rules` once both `scitex-ui` and
-`scitex-dev` are installed.
+appear in `scitex-linter list-rules` once both `scitex-sdk` and a compatible
+`scitex-dev` are installed. The SDK declares the exact predecessor provider
+whose seven rules it replaces; installing the old UI distribution alongside
+the SDK therefore keeps one canonical rule corpus.
 
 The `checkers` slot is intentionally empty — scitex-dev's in-tree
 checker dispatch is Python-AST-only (each `checker_cls(lines,
@@ -29,15 +31,33 @@ def get_plugin() -> dict:
     Returns
     -------
     dict
-        ``{"rules": [...], "call_rules": {}, "axes_hints": {}, "checkers": []}``
-        following the
-        ``scitex_dev.linter._plugin_loader.load_plugins`` contract.
+        The four historical payload keys remain available, with an additive
+        ``replaces`` tuple following ``scitex_dev.linter.spi``. Importing the
+        SDK or using its standalone UI walker does not require Dev.
     """
+    try:
+        from scitex_dev.linter.spi import ProviderReplacement
+    except ImportError as exc:
+        raise ImportError(
+            "The scitex-sdk UI linter provider requires scitex-dev>=0.62.4.dev0 "
+            "with the declared provider replacement SPI. Install compatible "
+            "scitex-sdk[cli] and scitex-dev builds together; standalone SDK UI "
+            "use does not require this optional tooling."
+        ) from exc
+
     return {
         "rules": list(build_rules().values()),
         "call_rules": {},
         "axes_hints": {},
         "checkers": [],
+        "replaces": (
+            ProviderReplacement(
+                distribution="scitex-ui",
+                entry_point="ui",
+                value="scitex_ui._linter_plugin:get_plugin",
+                rule_ids=tuple(f"STX-UI{number}" for number in range(101, 108)),
+            ),
+        ),
     }
 
 

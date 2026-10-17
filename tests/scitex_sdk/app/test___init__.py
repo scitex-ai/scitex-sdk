@@ -83,4 +83,23 @@ def test_the_public_name_is_available_without_importing_django():
     assert out.stdout.strip() == "True"
 
 
+def test_scitex_app_config_is_the_django_impl_by_identity():
+    # Arrange
+    from scitex_sdk import app as scitex_app
+    from scitex_sdk.app import _django
+
+    # Act
+    # Assert
+    assert scitex_app.ScitexAppConfig is _django.ScitexAppConfig
+
+
+def test_scitex_app_config_is_in_the_public_all():
+    # Arrange
+    from scitex_sdk import app as scitex_app
+
+    # Act
+    # Assert
+    assert "ScitexAppConfig" in scitex_app.__all__
+
+
 # EOF

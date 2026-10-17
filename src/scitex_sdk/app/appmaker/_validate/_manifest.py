@@ -83,6 +83,21 @@ def validate_manifest(app_dir: str | Path) -> list[str]:
             f"explicitly desktop-only; true = a working phone layout."
         )
 
+    # 'mount_policy' is OPTIONAL (absent -> open mount, the back-compatible
+    # default) but when present it is CLOSED: a file-touching plugin
+    # without a jail block, a jail without the login boundary, or a typo'd
+    # scope must fail loud HERE at scaffold/validate time — not as an open
+    # mount in production. Delegates to the jail contract (scitex_sdk.app.jail)
+    # so the validator and the mount-time bar judge by one implementation.
+    if "mount_policy" in data:
+        from ...jail import LeafContractError as _JailContractError
+        from ...jail import validate_mount_policy as _validate_mount_policy
+
+        try:
+            _validate_mount_policy(data, plugin=data.get("name", "app"))
+        except _JailContractError as exc:
+            errors.append(f"manifest.json {exc}")
+
     # The 'name' suffix convention is ADVISORY and lives in
     # validate_manifest_advisory(), not here. See that function for why.
 

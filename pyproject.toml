@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scitex-sdk"
-version = "0.3.1"
+version = "0.3.6"
 description = "SciTeX app contracts, UI components, and host capabilities in one SDK."
 readme = "README.md"
 license = "AGPL-3.0-only"
@@ -24,9 +24,9 @@ dependencies = [
 gui = ["django>=4.2"]
 chat = ["anthropic>=0.25.0", "litellm>=1.0.0", "requests>=2.28.0"]
 mcp = ["fastmcp>=2.0.0"]
-cli = ["scitex-dev>=0.11.7"]
-# This API is absent from published Dev 0.61.0. Keep the genuine release gate.
-project = ["scitex-dev>=0.62.0"]
+cli = ["scitex-dev>=0.62.4.dev0"]
+# SDK tooling requires the project API and declared linter provider SPI.
+project = ["scitex-dev>=0.62.4.dev0"]
 all = ["scitex-sdk[gui,chat,mcp,cli,project]"]
 
 # Contributor tooling is not a public runtime capability. pip >=25.1 supports
@@ -46,7 +46,7 @@ dev = [
     "pytest>=7.0.0",
     "requests>=2.28.0",
     # The real access core used by strict contributor conformance ships here.
-    "scitex-dev>=0.61.0",
+    "scitex-dev>=0.62.4.dev0",
 ]
 docs = [
     "sphinx>=7.0",

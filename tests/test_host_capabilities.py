@@ -357,3 +357,110 @@ def test_local_store_has_no_fallback_for_an_unconfigured_owned_project(tmp_path)
         pytest.raises(CapabilityUnavailable),
     ):
         LocalProjectStore().store_access("owned", req)
+
+
+def test_write_without_grant_refused_before_path_resolution(hosted):
+    # Arrange
+    _, storage = hosted
+    storage.writable = False
+    req = request()
+    # Act
+    failure = _attempt_project_access(req, write=True)
+    # Assert
+    assert failure.status == 403 and storage.calls == []
+
+
+def test_write_to_missing_project_reports_not_found_before_storage(hosted):
+    # Arrange
+    _, storage = hosted
+    storage.writable = False
+    req = request(project="missing")
+    # Act
+    failure = _attempt_project_access(req, write=True)
+    # Assert
+    assert failure.status == 404 and storage.calls == []
+
+
+def test_write_with_grant_resolves_path(hosted):
+    # Arrange
+    req = request()
+    # Act
+    access = project_access(req, write=True)
+    # Assert
+    assert access.can_write is True and access.id == "owned"
+
+
+def test_read_without_grant_still_resolves_path(hosted):
+    # Arrange
+    _, storage = hosted
+    storage.writable = False
+    req = request()
+    # Act
+    access = project_access(req)
+    # Assert
+    assert access.can_write is False and storage.calls == ["owned"]
+
+
+def test_allowed_write_validates_permission_before_and_after_resolution(hosted):
+    # Arrange
+    _, storage = hosted
+    permission_calls = []
+    real_can_write = storage.can_write
+    storage.can_write = lambda project_id, req: permission_calls.append(project_id) or real_can_write(project_id, req)
+    req = request()
+    # Act
+    access = project_access(req, write=True)
+    # Assert
+    assert access.can_write is True and permission_calls == ["owned", "owned"]
+
+
+def test_missing_permission_check_maps_to_capability_failure(hosted, tmp_path, monkeypatch):
+    # Arrange
+    from types import SimpleNamespace
+
+    from django.test import override_settings
+    from scitex_sdk.host import CapabilityUnavailable
+
+    projects, _ = hosted
+    storage = SimpleNamespace(project_path=lambda project_id, req: str(tmp_path))
+    monkeypatch.setattr(
+        "tests.test_host_capabilities._projects", projects, raising=False
+    )
+    # Act
+    try:
+        with override_settings(
+            SCITEX_APP_MODE="hub", SCITEX_PROJECT_STORAGE=storage, SCITEX_PROJECT_STORE=None,
+        ):
+            project_access(request(), write=True)
+        outcome = "admitted"
+    except Exception as exc:
+        outcome = type(exc).__name__
+    # Assert
+    assert outcome == "CapabilityUnavailable"
+
+
+def test_revocation_during_path_resolution_denies_without_capability(hosted, tmp_path):
+    # Arrange
+    projects, storage = hosted
+    real_project_path = storage.project_path
+    marker = storage.root / "marker.txt"
+
+    def revoking_path(project_id, req):
+        # Genuine revocation inside resolution: resolve, then revoke grant
+        root = real_project_path(project_id, req)
+        storage.writable = False
+        return root
+
+    storage.project_path = revoking_path
+    req = request()
+    # Act
+    try:
+        cap = project_access(req, write=True, remember=False)
+        outcome = "admitted"
+    except Exception as exc:
+        cap = None
+        outcome = type(exc).__name__ + ":" + str(getattr(exc, "status", ""))
+    if cap is not None:
+        marker.write_text("backend-effect", encoding="utf-8")
+    # Assert
+    assert outcome == "AccessError:403" and cap is None and not marker.exists() and projects.selections == []

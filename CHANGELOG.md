@@ -4,6 +4,57 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-10-15
+
+Declared UI provider transition (PR #38): canonical SDK replacement of the
+legacy UI linter provider, the compatible Dev provider SPI required in every
+SDK tooling extra, and import-boundary tests isolated from adjacent installed
+providers.
+
+## [0.3.5] - 2026-10-12
+
+Identity re-export of `ScitexAppConfig` at the `scitex_sdk.app` root
+(lazy, Django-free plain import preserved; PR #50) — the public
+migration target for consumers subclassing the leaf AppConfig.
+
+## [0.3.4] - 2026-10-09
+
+Fail-closed MCP backend selection on file tools, default local (PR #43);
+SDK UI ships under the `scitex_sdk_ui` label, migration-free, resolving
+the retired scitex_ui label collision (PR #44).
+
+## [0.3.3] - 2026-10-09
+
+Leaf API endpoint successors (PRs #39/#40/#41, re-plan of closed #33/#34/#36):
+opt-in leaf API admission with deny-before-import (#39); shared project
+picker commands and configurable shortcuts (#40); agent envelope,
+request-bound scope, companion expansion, canonical chat registration (#41).
+App contract takes the namespaced `scitex_sdk_app` label coexisting with
+the persisted `scitex_app` chat identity (lead call option (a)).
+
+## [0.3.2] — 2026-10-03
+
+### Fixed
+- FileSystemBackend containment is component-based: sibling-prefix escapes
+  (`../project-other/`) are refused on read/write/list/delete/rename/copy,
+  and the tree-listing fallback validates through the same containment while
+  iterating the validated target with logical alias-namespace metadata.
+- `get_files(backend="local"/"filesystem")` selects the filesystem backend
+  explicitly, even under ambient `SCITEX_API_TOKEN`; custom registration
+  still wins and cloud auto-selection is unchanged.
+- `project_access(write=True)` refuses a non-explicit-True grant before
+  project-path resolution and revalidates after; missing/raising permission
+  checks map to `CapabilityUnavailable`.
+
+### Added
+- Optional tagged project-scope capability: `ProjectSelection`,
+  `ScopedProjectProvider`, `supports_scoped_capability`, and
+  `scoped_project_listing_view` (allow_user_scope advertisement, tagged
+  commit via one `remember_scope`, legacy paths byte-compatible).
+- Narrow generic `plugins.leaf_declarations` accessor for Hub consumers
+  (caller-named attributes, absence tolerated, `LeafContractError` on
+  invalid values).
+
 ## [0.3.1] — 2026-10-03
 
 ### Fixed

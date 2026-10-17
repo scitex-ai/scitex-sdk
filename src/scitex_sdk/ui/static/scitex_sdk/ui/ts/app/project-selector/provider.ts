@@ -46,10 +46,27 @@ function csrfToken(): string {
  *  Mirrors scitex_sdk.ui.project_scope.PROJECT_PROVIDER_META_NAME. */
 export const PROJECT_PROVIDER_META_NAME = "stx-project-provider";
 
+export interface HttpProjectProviderOptions {
+  /** Request the supporting host's scoped protocol. Off for legacy callers. */
+  allowUserScope?: boolean;
+}
+
+// Both shipped picker entrypoints bundle this module independently. A shared
+// symbol keeps an injected transport recognizable across those entrypoints.
+const SCOPED_HTTP_TRANSPORT = Symbol.for("scitex-sdk.ui.scoped-http-project-provider");
+
+/** A pending scoped HTTP transport, not evidence of server capability or permission. */
+export function usesScopedHttpTransport(provider: ProjectProvider | undefined): boolean {
+  return provider !== undefined && Reflect.get(provider, SCOPED_HTTP_TRANSPORT) === true;
+}
+
 /** The host's project provider (the hub's project list), or null when the page has none. */
-export function hostProjectProvider(doc: Document = document): ProjectProvider | null {
+export function hostProjectProvider(
+  doc: Document = document,
+  options: HttpProjectProviderOptions = {},
+): ProjectProvider | null {
   const url = doc.querySelector(`meta[name="${PROJECT_PROVIDER_META_NAME}"]`)?.getAttribute("content");
-  return url ? httpProjectProvider(url) : null;
+  return url ? httpProjectProvider(url, options) : null;
 }
 
 /**
@@ -57,16 +74,45 @@ export function hostProjectProvider(doc: Document = document): ProjectProvider |
  *   GET  <url>            -> {"projects": [{id, name, detail?}], "current": id|null}
  *   POST <url> {"id": id} -> remembers the last visited project
  */
-export function httpProjectProvider(url: string): ProjectProvider {
-  return {
+export function httpProjectProvider(
+  url: string,
+  options: HttpProjectProviderOptions = {},
+): ProjectProvider {
+  const scoped = options.allowUserScope === true;
+  let authority = 0;
+  let enabled = false;
+  const provider: ProjectProvider = {
     async listProjects(): Promise<ProjectListing> {
+      const listingAuthority = scoped ? ++authority : authority;
+      if (scoped) {
+        enabled = false;
+        delete provider.rememberScope;
+      }
       const response = await fetch(url, {
         credentials: "same-origin",
         headers: { Accept: "application/json" },
       });
       if (!response.ok) throw new Error(`project listing failed: HTTP ${response.status}`);
       const body = (await response.json()) as ProjectListing;
-      return { projects: body.projects ?? [], current: body.current ?? null };
+      if (!scoped) return { projects: body.projects ?? [], current: body.current ?? null };
+      if (body.allow_user_scope !== true || !Array.isArray(body.projects)) {
+        throw new Error("scoped project provider is not enabled");
+      }
+      const scope = body.current_scope;
+      const current = body.current ?? null;
+      if ((scope !== undefined && scope !== "user" && scope !== "project") ||
+          (scope === "user" && body.current !== null) ||
+          (scope === "project" && (typeof current !== "string" || !current.trim())) ||
+          (scope === undefined && current !== null)) {
+        throw new Error("invalid current scope selection");
+      }
+      if (authority !== listingAuthority) throw new Error("scope listing superseded");
+      enabled = true;
+      provider.rememberScope = rememberScope;
+      return {
+        projects: body.projects, current, allow_user_scope: true,
+        ...(scope === undefined ? {} : { current_scope: scope }),
+      };
     },
     async rememberProject(id: string): Promise<void> {
       if (typeof id !== "string" || !id.trim()) throw new Error("project id required");
@@ -79,4 +125,34 @@ export function httpProjectProvider(url: string): ProjectProvider {
       if (!response.ok) throw new Error(`project selection failed: HTTP ${response.status}`);
     },
   };
+
+  async function rememberScope(selection: ProjectSelection): Promise<void> {
+    if (!enabled || provider.rememberScope !== rememberScope) {
+      throw new Error("scoped project provider is not enabled");
+    }
+    const { scope, id } = selection;
+    if (scope === "user" ? id !== null :
+        scope !== "project" || typeof id !== "string" || !id.trim()) {
+      throw new Error("explicit scope selection required");
+    }
+    const requested = { scope, id };
+    const acceptedAuthority = authority;
+    const response = await fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
+      body: JSON.stringify(requested),
+    });
+    if (!response.ok) throw new Error(`scope selection failed: HTTP ${response.status}`);
+    const body = (await response.json()) as ProjectListing;
+    if (body.current_scope !== requested.scope || body.current !== requested.id) {
+      throw new Error("scope selection acknowledgement does not match");
+    }
+    if (!enabled || authority !== acceptedAuthority || provider.rememberScope !== rememberScope) {
+      throw new Error("scope provider authority changed");
+    }
+  }
+
+  if (scoped) Object.defineProperty(provider, SCOPED_HTTP_TRANSPORT, { value: true });
+  return provider;
 }
