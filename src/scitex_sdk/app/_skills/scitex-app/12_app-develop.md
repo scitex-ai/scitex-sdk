@@ -124,13 +124,21 @@ self-contained — no `<html>`, `<head>`, or `<body>` tags.
 
 ```html
 <!-- templates/my_awesome_app/index_partial.html -->
+{% load static %}
+<link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/app/app-header.css' %}">
 <div class="my-awesome-app-container">
-    <div class="my-awesome-app-header">
-        <h2>My Awesome App</h2>
-        {% if current_project %}
-            <span class="my-awesome-app-project">{{ current_project.name }}</span>
-        {% endif %}
-    </div>
+    <!-- SDK SSoT header row: the leaf owns the VALUES, the SDK owns the
+         chrome. Never restyle `.stx-app-header` or fork a `-header` div —
+         every app renders this same row. -->
+    <header class="stx-app-header my-awesome-app-app-header">
+        <div class="stx-app-header__identity">
+            <span class="stx-app-header__title">My Awesome App</span>
+            {% if app_version %}<span class="stx-app-header__version">v{{ app_version }}</span>{% endif %}
+        </div>
+        <div class="stx-app-header__slot--project-selector">
+        </div>
+        <div class="stx-app-header__actions"></div>
+    </header>
 
     <div class="my-awesome-app-body">
         <button id="my-awesome-app-run-btn" class="my-awesome-app-btn">
