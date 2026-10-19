@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Views for the SciTeX App Creator wizard.
+"""Views for the SciTeX SDK App (app-maker) wizard.
 
 ``index`` is the server-rendered wizard (starter cards + forms); every
 mutation is a JSON API wired to the SDK-owned appmaker engine

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Standalone server adapter for the SciTeX App Creator wizard.
+"""Standalone server adapter for the SciTeX SDK App (app-maker) wizard.
 
 Boots the SAME Django app a host mounts (``scitex_sdk.creator``). The
 serving machinery (guarded launcher, runtime state, workspace shell)

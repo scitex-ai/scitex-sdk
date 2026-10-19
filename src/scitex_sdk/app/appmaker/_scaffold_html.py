@@ -225,6 +225,10 @@ def _manifest_json(
         "hidden_patterns": ["__pycache__", "node_modules", ".git", ".venv"],
         "privileges": [],
         "wip": True,
+        # Auth by default: hub gates mounts on this policy; a scaffolded
+        # app without it would serve unauthenticated. Mirrors the SDK's own
+        # creator manifest (scitex_sdk/creator/manifest.json).
+        "mount_policy": {"login_required": True},
         "standalone": True,
         "standalone_command": f"{slug} gui",
         "standalone_port": 8050,
