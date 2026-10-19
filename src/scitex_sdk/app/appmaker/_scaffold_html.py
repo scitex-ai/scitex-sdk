@@ -26,6 +26,7 @@ class {class_name}Config(ScitexAppConfig):
 
 def _views_py(name, label, description):
     desc = description or f"A SciTeX Cloud app for {label}."
+    slug = name.replace("_", "-")
     return f'''"""Views for {label} workspace app."""
 
 from __future__ import annotations
@@ -36,12 +37,29 @@ from scitex_sdk.app.project_context import project_context
 from scitex_sdk.ui.mount import mount_context
 
 
+def _leaf_version():
+    """Installed dist version for the header badge, or None when unknown.
+
+    Read from the installed ``pip_package`` dist (importlib.metadata,
+    stdlib-only), never from the hand-written manifest ``version`` (the
+    validator forbids it; it drifts). An unknown version stays ABSENT
+    from the header — never a placeholder badge.
+    """
+    try:
+        from importlib.metadata import version
+
+        return version("{slug}")
+    except Exception:
+        return None
+
+
 def build_{name}_context(request, current_project=None):
     """Context builder called by workspace registry for AJAX partial loads."""
     return {{
         "current_project": current_project,
         "app_name": "{label}",
         "app_description": "{desc}",
+        "app_version": _leaf_version(),
         "features": [
             "Workspace app integration",
             "AJAX partial loading",
@@ -106,6 +124,32 @@ class {class_label}ContextTest(SimpleTestCase):
         self.assertIn("app_description", ctx)
         self.assertIn("features", ctx)
         self.assertIsInstance(ctx["features"], list)
+
+
+class {class_label}HeaderTest(SimpleTestCase):
+    """SDK SSoT header contract: the header badge reads the leaf version."""
+
+    def test_context_exposes_app_version_key(self):
+        """Header badge source — build context carries `app_version`."""
+        from django.test import RequestFactory
+        from .views import build_{name}_context
+
+        factory = RequestFactory()
+        request = factory.get("/{name}/")
+
+        ctx = build_{name}_context(request)
+        self.assertIn("app_version", ctx)
+
+    def test_app_version_is_str_or_none(self):
+        """Unknown version stays absent — never a placeholder badge."""
+        from django.test import RequestFactory
+        from .views import build_{name}_context
+
+        factory = RequestFactory()
+        request = factory.get("/{name}/")
+
+        ctx = build_{name}_context(request)
+        self.assertTrue(ctx["app_version"] is None or isinstance(ctx["app_version"], str))
 
 
 # EOF
@@ -181,6 +225,10 @@ def _manifest_json(
         "hidden_patterns": ["__pycache__", "node_modules", ".git", ".venv"],
         "privileges": [],
         "wip": True,
+        # Auth by default: hub gates mounts on this policy; a scaffolded
+        # app without it would serve unauthenticated. Mirrors the SDK's own
+        # creator manifest (scitex_sdk/creator/manifest.json).
+        "mount_policy": {"login_required": True},
         "standalone": True,
         "standalone_command": f"{slug} gui",
         "standalone_port": 8050,
@@ -226,12 +274,31 @@ def _index_partial_html(name, label, icon, *, react_mount: bool = False):
     if react_mount:
         mount_div = f'\n    <div id="{name}-root"></div>\n'
     return f"""{{% load static %}}
+{{% comment %}}SDK SSoT header row (scitex-sdk, css/app/app-header.css — linked below).
+   The ROW is shared: identity (title + live leaf version) on the left, the
+   canonical project-selector slot, then the actions slot. The leaf owns the
+   VALUES, the SDK owns the chrome — never restyle `.stx-app-header` here.
+   - version: `app_version` comes from the context builder (installed dist
+     version); the badge renders only when passed — unknown stays ABSENT.
+   - picker slot: EMPTY on purpose. Wire the project picker here only when
+     this surface is project-scoped (user-scope surfaces correctly render no
+     picker); the slot stays so there is exactly one place for it.
+   - actions: EMPTY on purpose. Page-level actions live in the app content,
+     which already knows their state; a second set here would be a second
+     source of truth.{{% endcomment %}}
+<link rel="stylesheet" href="{{% static 'scitex_sdk/ui/css/app/app-header.css' %}}">
 <div class="{name}-container" data-pane-type="app"
      data-ai-hint="Main container for {label} app">
-    <div class="{name}-header" data-ai-hint="{label} app header">
-        <h2><i class="{icon}"></i> {label}</h2>
-        <p class="{name}-subtitle">Welcome to {label}. Edit this template to build your app.</p>
-    </div>
+    <header class="stx-app-header {name}-app-header" data-ai-hint="{label} app header">
+        <div class="stx-app-header__identity">
+            <span class="stx-app-header__title">{label}</span>
+            {{% if app_version %}}<span class="stx-app-header__version"
+                  title="{label} package serving this page">v{{{{ app_version }}}}</span>{{% endif %}}
+        </div>
+        <div class="stx-app-header__slot--project-selector">
+        </div>
+        <div class="stx-app-header__actions"></div>
+    </header>
 
     <div class="{name}-content" data-ai-hint="{label} content area">
         <div class="{name}-getting-started">
@@ -270,22 +337,11 @@ def _app_css(name, label):
     padding: 1.5rem;
 }}
 
-.{name}-header {{
-    margin-bottom: 1.5rem;
-}}
-
-.{name}-header h2 {{
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--workspace-text-primary);
-    margin: 0 0 0.5rem;
-}}
-
-.{name}-subtitle {{
-    font-size: 0.875rem;
-    color: var(--workspace-text-secondary);
-    margin: 0;
-}}
+/* NOTE: no `{name}-header` rules live here. The header row is the shared SDK
+   SSoT row (`.stx-app-header`, scitex-sdk css/app/app-header.css — linked in
+   index_partial.html). The leaf owns the VALUES, the SDK owns the chrome, so
+   a restyle here would fork every app's header again. App-specific content
+   starts BELOW the header row. */
 
 .{name}-content {{
     background: var(--workspace-bg-secondary);

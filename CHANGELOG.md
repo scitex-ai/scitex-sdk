@@ -4,6 +4,16 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-10-19
+
+SciTeX SDK App as canonical custom-app creation (PR #57): creator
+product renamed (manifest label, AppConfig verbose_name, CLI/skill copy;
+slug, URLs, DB label unchanged); scaffolds emit `mount_policy
+login_required` by default; shared `.stx-layout-fill` utility; stale
+hub-mount claims fixed. Plus appmaker shared SSoT header row in the
+create-app scaffold (PR #54) and `--bg-primary` theme alias for both
+shell themes (PR #55).
+
 ## [0.3.7] - 2026-10-19
 
 Standardized selected-tab state in the shared Tabs primitive (PR #53):
