@@ -97,3 +97,25 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* ── Fill ─────────────────────────────────────────────────
+ * Opt-in full-pane content width for leaf app roots.
+ *
+ * WHY THIS EXISTS. Leaves kept their own `width: 100%` + `max-width: none`
+ * overrides to undo inherited caps (measured 2026-10-19: storage's
+ * `.stx-storage` capped at 960px while the shell pane is uncapped —
+ * `.ws-module-pane` is `flex: 1` with no max-width anywhere). One shared
+ * class instead of one private rule per leaf.
+ *
+ * USAGE
+ *   <div class="stx-storage stx-layout-fill">…</div>
+ *
+ * Deliberately carries NO `!important` (same contract as
+ * `.stx-layout-pane-row` above): an adopting app must not also set a
+ * competing width/max-width on the same element. If it does not bite,
+ * the app has a conflicting rule — fix that instead.
+ */
+.stx-layout-fill {
+  width: 100%;
+  max-width: none;
+}
