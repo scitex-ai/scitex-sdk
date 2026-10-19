@@ -259,6 +259,13 @@ def test_manifest_name_field_matches_module(scaffolded_wrapper: Path) -> None:
     assert data["name"] == SCAFFOLD_NAME
 
 
+def test_manifest_requires_login_by_default(scaffolded_wrapper: Path) -> None:
+    """Scaffolded apps gate on auth: hub enforces mount_policy.login_required."""
+    manifest_path = scaffolded_wrapper / SCAFFOLD_NAME / "manifest.json"
+    data = json.loads(manifest_path.read_text())
+    assert data.get("mount_policy", {}).get("login_required") is True
+
+
 # ---------------------------------------------------------------------------
 # Real pip-install gate (no mocks)
 # ---------------------------------------------------------------------------

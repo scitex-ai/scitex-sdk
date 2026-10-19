@@ -21,9 +21,13 @@ shell selectors — validation rejects them.
 
 /* Correct — scoped to app prefix */
 .my-awesome-app-container { padding: 1rem; }
-.my-awesome-app-header    { font-size: 1.2rem; font-weight: bold; }
 .my-awesome-app-btn       { background: #0066cc; color: white; padding: 0.5rem 1rem; }
 .my-awesome-app-output    { font-family: monospace; margin-top: 1rem; }
+
+/* The header row is NOT styled here — it is the shared SDK SSoT row
+   (`.stx-app-header`, scitex-sdk css/app/app-header.css, linked in
+   index_partial.html). A `-header` fork (e.g. `.my-awesome-app-header
+   { font-size: 1.2rem }`) would disagree with every other app's header. */
 
 /* Forbidden — validation error (these target workspace shell) */
 /* #scitex-ai-panel { ... }         */

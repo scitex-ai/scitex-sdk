@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""URL patterns for the SciTeX App Creator wizard.
+"""URL patterns for the SciTeX SDK App (app-maker) wizard.
 
-scitex-hub mounts this module at ``path("apps/new/", include(...))``;
-the standalone server (``scitex-sdk gui serve``) serves it at the root
-via ``ROOT_URLCONF = "scitex_sdk.creator.urls"``.
+The standalone server (``scitex-sdk gui serve``) serves this module at the
+root via ``ROOT_URLCONF = "scitex_sdk.creator.urls"``. A host (e.g.
+scitex-hub) MAY mount it under its own prefix, e.g.
+``path("apps/new/", include("scitex_sdk.creator.urls"))`` — no host does
+so yet, so the standalone server is currently the only mount.
 
-Namespaced via ``app_name`` so the hub's ``{% url %}`` lookups never
+Namespaced via ``app_name`` so a host's ``{% url %}`` lookups never
 collide with another app's route names. Client fetch URLs are RELATIVE
 (``api/create``), so both layouts work with no mount-prefix plumbing.
 """
