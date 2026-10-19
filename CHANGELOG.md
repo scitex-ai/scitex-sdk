@@ -4,6 +4,13 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-10-19
+
+Standardized selected-tab state in the shared Tabs primitive (PR #53):
+selected = subtle surface + brand-blue text + semibold + 2px underline
+indicator read from `aria-selected`; new `css/app/content-tabs.css`
+shared primitive with `panes.css` phone tab bar aligned to the same tokens.
+
 ## [0.3.6] - 2026-10-15
 
 Declared UI provider transition (PR #38): canonical SDK replacement of the
