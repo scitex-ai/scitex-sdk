@@ -308,6 +308,53 @@ def test_shell_font_tokens_match_the_primitives_layer():
     assert shell == {k: primitives[k] for k in shell}
 
 
+# --- background alias ---------------------------------------------------------
+
+def _theme_blocks():
+    """Split theme.css into its light (``:root``) and dark blocks."""
+    light, _, dark = _css("css/shell/theme.css").partition('[data-theme="dark"] {')
+    return light, dark
+
+
+def _bg_primary_alias(css):
+    """The ``--bg-primary`` compatibility alias a CSS block declares, if any."""
+    found = re.findall(r"--bg-primary\s*:\s*([^;]+);", css)
+    return [" ".join(value.split()) for value in found]
+
+
+def test_shell_theme_css_defines_the_bg_primary_alias_in_both_themes():
+    # Arrange — body.workspace-page paints the page background from
+    # --bg-primary, but a page linking only shell/*.css never sees
+    # primitives/colors.css. Without the alias in theme.css the var is
+    # undefined there and the #0d1117 fallback paints a dark body in light
+    # mode (sdk-shell-light-mode-body-bg-undefined-20261019).
+    light, dark = _theme_blocks()
+    # Act
+    light_alias = _bg_primary_alias(light)
+    dark_alias = _bg_primary_alias(dark)
+    # Assert
+    assert light_alias == ["var(--bg-page)"]
+    assert dark_alias == ["var(--workspace-bg-primary)"]
+
+
+def test_shell_bg_primary_alias_matches_the_primitives_layer():
+    # Arrange — theme.css mirrors the primitives alias under the same no-drift
+    # contract as the font tokens. That copy must not drift, so compare the
+    # values.
+    light, dark = _theme_blocks()
+    # Act
+    shell = {
+        "light": _bg_primary_alias(light),
+        "dark": _bg_primary_alias(dark),
+    }
+    primitives = {
+        "light": _bg_primary_alias(_css("css/primitives/colors/_light.css")),
+        "dark": _bg_primary_alias(_css("css/primitives/colors/_dark.css")),
+    }
+    # Assert
+    assert shell == primitives
+
+
 # --- mobile layout ----------------------------------------------------------
 
 def test_shell_links_the_mobile_stylesheet():

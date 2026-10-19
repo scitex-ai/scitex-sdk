@@ -62,6 +62,14 @@
   --bg-page: #faf9f7;
   --bg-surface: #f8f7f5;
   --bg-muted: #f3f2f0;
+  /* MIRRORS primitives/colors/_light.css, value unchanged. --bg-primary is the
+     compatibility alias tool templates consume — body.workspace-page in
+     standalone-resizer-pos.css paints the page background with it. A page
+     linking only shell/*.css never sees primitives/colors.css, so without this
+     alias the var is undefined there and the #0d1117 fallback paints a dark
+     body in light mode (card
+     sdk-shell-light-mode-body-bg-undefined-20261019). */
+  --bg-primary: var(--bg-page);
 
   /* --- Border --- */
   --border-default: #999999;
@@ -279,6 +287,10 @@
   --bg-page: #0d1117;
   --bg-surface: #161b22;
   --bg-muted: #21262d;
+  /* MIRRORS primitives/colors/_dark.css, value unchanged — same alias, dark
+     target. See the light block for why theme.css declares a token its own
+     shell rule consumes but no palette in this file defines. */
+  --bg-primary: var(--workspace-bg-primary);
 
   --border-default: #30363d;
   --border-muted: #21262d;
