@@ -46,6 +46,17 @@ will flag it by design; do not "fix" the SDK manifest to silence it.
    (Operator 2026-10-20: all applications, leaf owns icons. Hub's
    `launcher_links/*.json` hardcodes — chat, create-app, settings — are
    App-lane debt to align with the leaf manifests.)
+7. Favicon (operator 2026-10-20: drift intolerable). Single canonical
+   mark: `scitex_sdk/ui/img/scitex-favicon.svg` (the SciTeX snake),
+   served via the shared `_branding_head.html` partial (or the shell,
+   which includes it) — never a leaf-local `<link rel="icon">`.
+   Per-platform PNG set (generated from the SVG, same pixels):
+   16 + 32 (classic tab), 180 (apple-touch-icon), 192 + 512 (PWA
+   manifest), at `scitex_sdk/ui/img/favicon-{16,32,180,192,512}.png`.
+   Leaf-local favicon files (`favicon*.png`, PWA icon copies) and
+   hand-rolled data-URI views (`_favicon.py` pattern) are validator
+   ADVISORIES to migrate; App lane deletes the copies and points PWA
+   manifests at the SDK paths.
 
 ## Approval flow
 
