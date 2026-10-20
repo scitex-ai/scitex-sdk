@@ -45,6 +45,10 @@ def test_get_plugin_ships_the_declared_corpus():
         "STX-UI105",
         "STX-UI106",
         "STX-UI107",
+        "STX-UI108",
+        "STX-UI109",
+        "STX-UI110",
+        "STX-UI111",
     }
 
 
@@ -90,7 +94,13 @@ def test_get_plugin_is_idempotent():
 
 
 def test_replacement_identifies_only_the_complete_predecessor_provider():
-    """Seven SDK rules replace the exact old UI entry point as one corpus."""
+    """Seven SDK rules replace the exact old UI entry point as one corpus.
+
+    The replaces contract is FROZEN at the predecessor's seven — new
+    drift-pack rules (108+) are additive, not replacements, so extending
+    the range here breaks the installed-registry check that pins the
+    predecessor's complete advertised set.
+    """
     from scitex_dev.linter.spi import ProviderReplacement
 
     plugin = get_plugin()
@@ -102,7 +112,7 @@ def test_replacement_identifies_only_the_complete_predecessor_provider():
             rule_ids=tuple(f"STX-UI{number}" for number in range(101, 108)),
         ),
     )
-    assert set(plugin["replaces"][0].rule_ids) == {
+    assert set(plugin["replaces"][0].rule_ids) <= {
         rule.id for rule in plugin["rules"]
     }
 
@@ -170,10 +180,13 @@ def test_installed_sdk_and_legacy_ui_keep_one_declared_rule_owner():
         code: rule for code, rule in forward["rules"].items()
         if code.startswith("STX-UI")
     }
-    assert set(ui_rules) == {f"STX-UI{number}" for number in range(101, 108)}
+    assert set(ui_rules) == {f"STX-UI{number}" for number in range(101, 112)}
     assert all(rule.requires == "scitex-sdk" for rule in ui_rules.values())
     assert len(forward["provider_replacements"]) == 1
     receipt = forward["provider_replacements"][0]
     assert receipt["successor_distribution"] == "scitex-sdk"
     assert receipt["predecessor_distribution"] == "scitex-ui"
-    assert set(receipt["rule_ids"]) == set(ui_rules)
+    # The receipt covers the replaced predecessor contract only (101-107);
+    # additive drift-pack rules (108+) are enforced, not replaced.
+    assert set(receipt["rule_ids"]) == {f"STX-UI{number}" for number in range(101, 108)}
+    assert set(receipt["rule_ids"]) < set(ui_rules)

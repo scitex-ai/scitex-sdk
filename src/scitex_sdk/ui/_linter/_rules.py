@@ -1,4 +1,4 @@
-"""Rule definitions for scitex-ui's UI-101..105 component-usage corpus.
+"""Rule definitions for scitex-ui's UI-101..111 component-usage corpus.
 
 Imported by both:
 - :mod:`scitex_sdk.ui._linter_plugin` — the entry-point that registers the
@@ -303,6 +303,85 @@ def build_rules() -> Mapping[str, Rule]:
         requires="scitex-sdk",
     )
 
+    # Drift pack (operator CCT4948-4950): SSOT enforcement. All four are
+    # warnings, per UI-107's measured lesson — a rule whose first run is
+    # red gets disabled rather than obeyed.
+    UI108 = Rule(
+        id="STX-UI108",
+        severity="warning",
+        category=CATEGORY,
+        message=(
+            "leaf-local `<header>` element instead of the shared AppHeader "
+            "primitive (`data-stx-app-header`) — the row forks the moment "
+            "the SDK ships a header tweak"
+        ),
+        suggestion=(
+            "Mount the primitive like every other leaf:\n"
+            '  <div data-stx-app-header data-app-title="..." '
+            '[data-app-version="..."]></div>\n'
+            "plus app-header.css and the prebuilt app-header.js module. "
+            "No leaf-local `<header>` element. See the SDK App wizard "
+            "(scitex_sdk/creator) as the reference adopter. Run "
+            "`scitex-sdk ui lint` to find leaf-local headers."
+        ),
+        requires="scitex-sdk",
+    )
+
+    UI109 = Rule(
+        id="STX-UI109",
+        severity="warning",
+        category=CATEGORY,
+        message=(
+            "hub-side duplicate builtin manifest disagrees with the leaf's "
+            "own manifest (label / icon) — the tile renders hub "
+            "copy, and the copy has already drifted once (writer label+icon)"
+        ),
+        suggestion=(
+            "Read display metadata from the leaf manifest (the plugin mount "
+            "already does) or delete the duplicate so the registry falls "
+            "through to it. The leaf manifest is the single source. Run "
+            "`scitex-sdk ui lint` (STX-UI109) over the hub tree."
+        ),
+        requires="scitex-sdk",
+    )
+
+    UI110 = Rule(
+        id="STX-UI110",
+        severity="warning",
+        category=CATEGORY,
+        message=(
+            "hardcoded `icon` in a hub launcher JSON — tiles must render "
+            "the leaf manifest icon, never a hub-side glyph"
+        ),
+        suggestion=(
+            "Resolve the icon from the leaf manifest at render time "
+            "(registry already carries manifest_icon_fa) and drop the "
+            "hardcode. Operator rule: leaf owns icons. Run "
+            "`scitex-sdk ui lint` (STX-UI110) to list hardcoded icons."
+        ),
+        requires="scitex-sdk",
+    )
+
+    UI111 = Rule(
+        id="STX-UI111",
+        severity="warning",
+        category=CATEGORY,
+        message=(
+            "unconditional `!important` layout override (display / "
+            "flex-direction / flex-wrap) in a file that also carries an "
+            "@media block — the override wins over the responsive rules "
+            "and the layout forks by viewport"
+        ),
+        suggestion=(
+            "Scope the override to the breakpoint that needs it (move it "
+            "inside the @media block) or drop the `!important` so the "
+            "media query can win. See the writer fork that killed its own "
+            "600px breakpoint this way. Run `scitex-sdk ui lint` to list "
+            "files where a top-level !important beats @media."
+        ),
+        requires="scitex-sdk",
+    )
+
     return {
         UI101.id: UI101,
         UI102.id: UI102,
@@ -311,6 +390,10 @@ def build_rules() -> Mapping[str, Rule]:
         UI105.id: UI105,
         UI106.id: UI106,
         UI107.id: UI107,
+        UI108.id: UI108,
+        UI109.id: UI109,
+        UI110.id: UI110,
+        UI111.id: UI111,
     }
 
 

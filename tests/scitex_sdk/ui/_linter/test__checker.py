@@ -458,3 +458,218 @@ def test_ui107_does_not_flag_a_relative_path(tmp_path: Path) -> None:
     fired = _ui107(tmp_path, "client.ts", body)
     # Assert
     assert "STX-UI107" not in fired
+
+
+# --------------------------------------------------------------------------- #
+# UI-108 — leaf-local <header> instead of the shared AppHeader primitive      #
+# --------------------------------------------------------------------------- #
+
+
+def test_ui108_flags_literal_header_element(tmp_path: Path) -> None:
+    # Arrange
+    (tmp_path / "page.html").write_text("<header class=\"app-head\">\n<h1>Hi</h1>\n</header>\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    ids = [v.rule.id for v in violations]
+    assert "STX-UI108" in ids
+
+
+def test_ui108_skips_data_stx_app_header_mount(tmp_path: Path) -> None:
+    # Arrange — the primitive mount is a div, not a header: the recommended
+    # fix must not trip the rule that recommends it.
+    (tmp_path / "page.html").write_text('<div data-stx-app-header data-app-title="X"></div>\n')
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI108" for v in violations)
+
+
+# --------------------------------------------------------------------------- #
+# UI-109 — hub duplicate builtin manifest vs the leaf's own manifest         #
+# --------------------------------------------------------------------------- #
+
+
+def test_ui109_flags_label_drift_between_hub_copy_and_leaf(tmp_path: Path, monkeypatch) -> None:
+    # Arrange — hub copy says "Writer", the installed dist's leaf says
+    # "SciTeX Writer": the writer fork, reproduced in miniature. The dist
+    # lookup is pointed at a fake install root via the metadata path.
+    import json
+
+    hub = {
+        "name": "writer_app",
+        "label": "Writer",
+        "icon": "fas fa-pen",
+        "pip_package": "scitex-writer",
+    }
+    leaf = {
+        "name": "writer_app",
+        "label": "SciTeX Writer",
+        "icon": "fas fa-file-alt",
+        "pip_package": "scitex-writer",
+    }
+    target = tmp_path / "apps" / "workspace" / "writer_app"
+    target.mkdir(parents=True)
+    (target / "manifest.json").write_text(json.dumps(hub))
+
+    import scitex_sdk.ui._linter._checker as checker
+
+    monkeypatch.setattr(
+        checker, "_leaf_manifest_from_dist", lambda pip: leaf if pip == "scitex-writer" else None
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    hits = [v for v in violations if v.rule.id == "STX-UI109"]
+    assert len(hits) == 1
+    assert "label" in hits[0].source_line
+
+
+def test_ui109_stays_silent_when_leaf_dist_is_not_installed(tmp_path: Path) -> None:
+    # Arrange — unresolvable leaf is not evidence of drift.
+    import json
+
+    target = tmp_path / "apps" / "workspace" / "ghost_app"
+    target.mkdir(parents=True)
+    (target / "manifest.json").write_text(
+        json.dumps({"name": "ghost", "label": "Ghost", "icon": "fas fa-ghost", "pip_package": "scitex-ghost"})
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI109" for v in violations)
+
+
+def test_ui109_ignores_name_only_difference(tmp_path: Path, monkeypatch) -> None:
+    # Arrange — hub `name` is module identity, leaf `name` package identity:
+    # they differ by design (writer module vs writer_app leaf), so a
+    # name-only difference with matching label/icon is not drift.
+    import json
+
+    target = tmp_path / "apps" / "workspace" / "writer_app"
+    target.mkdir(parents=True)
+    (target / "manifest.json").write_text(
+        json.dumps({"name": "writer", "label": "SciTeX Writer", "icon": "fas fa-file-alt", "pip_package": "scitex-writer"})
+    )
+
+    import scitex_sdk.ui._linter._checker as checker
+
+    leaf = {"name": "writer_app", "label": "SciTeX Writer", "icon": "fas fa-file-alt", "pip_package": "scitex-writer"}
+    monkeypatch.setattr(
+        checker, "_leaf_manifest_from_dist", lambda pip: leaf if pip == "scitex-writer" else None
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI109" for v in violations)
+
+
+# --------------------------------------------------------------------------- #
+# UI-110 — hardcoded icon in hub launcher JSON                                #
+# --------------------------------------------------------------------------- #
+
+
+def test_ui110_flags_hardcoded_icon_in_launcher_json(tmp_path: Path) -> None:
+    # Arrange
+    d = tmp_path / "apps" / "workspace" / "apps_app" / "launcher_links"
+    d.mkdir(parents=True)
+    (d / "create-app.json").write_text('{"name": "create-app", "icon": "fas fa-plus"}\n')
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert any(v.rule.id == "STX-UI110" for v in violations)
+
+
+def test_ui110_ignores_icon_keys_outside_launcher_links(tmp_path: Path) -> None:
+    # Arrange — a leaf manifest's own icon is the source of truth, not drift.
+    (tmp_path / "manifest.json").write_text('{"name": "x_app", "icon": "fas fa-x"}\n')
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI110" for v in violations)
+
+
+# --------------------------------------------------------------------------- #
+# UI-111 — unconditional !important layout override beating @media            #
+# --------------------------------------------------------------------------- #
+
+
+def test_ui111_flags_top_level_important_display_with_media_block(tmp_path: Path) -> None:
+    # Arrange — the writer fork shape: unconditional override plus a media
+    # query it silently beats.
+    css = tmp_path / "app.css"
+    css.write_text(
+        ".pane { display: flex; }\n"
+        ".pane-row { flex-direction: row !important; }\n"
+        "@media (max-width: 600px) {\n"
+        "  .pane-row { flex-direction: column; }\n"
+        "}\n"
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    hits = [v for v in violations if v.rule.id == "STX-UI111"]
+    assert len(hits) == 1
+    assert hits[0].line == 2
+
+
+def test_ui111_skips_important_scoped_inside_media(tmp_path: Path) -> None:
+    # Arrange — legitimate breakpoint scoping is never the fork.
+    css = tmp_path / "app.css"
+    css.write_text(
+        "@media (max-width: 600px) {\n"
+        "  .pane { display: flex !important; }\n"
+        "}\n"
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI111" for v in violations)
+
+
+def test_ui111_skips_important_without_any_media_block(tmp_path: Path) -> None:
+    # Arrange — no @media anywhere: nothing to fork, nothing to flag.
+    css = tmp_path / "app.css"
+    css.write_text(".pane { display: none !important; }\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI111" for v in violations)
+
+
+def test_ui111_suppressed_when_running_inside_scitex_ui_itself(tmp_path: Path) -> None:
+    # Arrange — the shell legitimately uses !important (mobile.css); the
+    # rule fires on consumers, not on the SDK's own tree.
+    css = tmp_path / "app.css"
+    css.write_text(
+        ".pane-row { flex-direction: row !important; }\n"
+        "@media (max-width: 600px) {\n"
+        "  .pane-row { flex-direction: column; }\n"
+        "}\n"
+    )
+
+    # Act
+    violations = scan_path(tmp_path, treat_as_consumer=False)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI111" for v in violations)

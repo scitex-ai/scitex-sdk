@@ -159,11 +159,43 @@ are documented with the contract they enforce, not here:
 Splitting a rule's *what* from its *why* across two pages is how one of
 them goes stale, and the mount contract is already that page's subject.
 
+### UI-108 — `leaf-local-header-element` (WARN)
+
+A literal `<header` tag in consumer HTML. The shared AppHeader primitive
+(`data-stx-app-header`) owns that row; a leaf-local header forks the
+moment the SDK ships a header tweak. Reference adopter: the SDK App
+wizard (`scitex_sdk/creator`). Comment lines mentioning the tag are
+exempt — a doc discussing the pattern is not the pattern.
+
+### UI-109 — `hub-duplicate-manifest-drift` (WARN)
+
+A `apps/workspace/*_app/manifest.json` hub-side copy whose `label` or
+`icon` disagrees with the leaf's own manifest (resolved from the
+installed dist named by `pip_package`). `name` is deliberately not
+compared: hub `name` is module identity, leaf `name` package identity.
+The leaf manifest is the single source for display metadata; the copy
+is the drift. Silent when the dist is not installed — unresolvable is
+not evidence.
+
+### UI-110 — `hardcoded-launcher-icon` (WARN)
+
+A hardcoded `"icon"` key in a hub `launcher_links/*.json`. Tiles must
+resolve the icon from the leaf manifest at render time (the registry
+already carries `manifest_icon_fa`); operator rule: leaf owns icons.
+
+### UI-111 — `unconditional-important-layout-override` (WARN)
+
+A top-level `display` / `flex-direction` / `flex-wrap` `!important` in a
+file that also carries `@media`. The override silently beats the
+responsive rules (writer killed its own 600px breakpoint this way).
+Overrides already inside a media query are legitimate scoping and are
+never flagged; the SDK's own shell is exempt via `treat_as_consumer=False`.
+
 ---
 
 ## How the linter is wired
 
-`scitex-ui` registers the 7 rules above with scitex-dev's linter via
+`scitex-ui` registers the 11 rules above with scitex-dev's linter via
 the canonical entry-point:
 
 ```toml
