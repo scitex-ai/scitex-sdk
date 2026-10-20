@@ -603,14 +603,28 @@ def test_ui110_ignores_icon_keys_outside_launcher_links(tmp_path: Path) -> None:
     assert all(v.rule.id != "STX-UI110" for v in violations)
 
 
+def test_ui110_skips_declared_hub_native_tiles(tmp_path: Path) -> None:
+    # Arrange — chat/settings have no leaf manifest; the explicit
+    # "hub_native": true declaration keeps that auditable, not silent.
+    d = tmp_path / "apps" / "workspace" / "apps_app" / "launcher_links"
+    d.mkdir(parents=True)
+    (d / "chat.json").write_text('{"name": "chat", "icon": "fas fa-comment", "hub_native": true}\n')
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI110" for v in violations)
+
+
 # --------------------------------------------------------------------------- #
 # UI-111 — unconditional !important layout override beating @media            #
 # --------------------------------------------------------------------------- #
 
 
-def test_ui111_flags_top_level_important_display_with_media_block(tmp_path: Path) -> None:
-    # Arrange — the writer fork shape: unconditional override plus a media
-    # query it silently beats.
+def test_ui111_flags_top_level_important_flex_direction_with_media_block(tmp_path: Path) -> None:
+    # Arrange — the writer fork shape: unconditional directional override
+    # plus a media query it silently beats.
     css = tmp_path / "app.css"
     css.write_text(
         ".pane { display: flex; }\n"
@@ -627,6 +641,25 @@ def test_ui111_flags_top_level_important_display_with_media_block(tmp_path: Path
     hits = [v for v in violations if v.rule.id == "STX-UI111"]
     assert len(hits) == 1
     assert hits[0].line == 2
+
+
+def test_ui111_ignores_display_toggles(tmp_path: Path) -> None:
+    # Arrange — tab-visibility state is JS-driven, not layout direction:
+    # flagging it would push state into media queries where it belongs.
+    css = tmp_path / "app.css"
+    css.write_text(
+        ".tab { display: none !important; }\n"
+        ".tab.active { display: block !important; }\n"
+        "@media (max-width: 600px) {\n"
+        "  .tab { font-size: 12px; }\n"
+        "}\n"
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI111" for v in violations)
 
 
 def test_ui111_skips_important_scoped_inside_media(tmp_path: Path) -> None:

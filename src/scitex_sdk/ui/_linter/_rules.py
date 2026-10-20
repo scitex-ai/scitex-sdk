@@ -367,17 +367,19 @@ def build_rules() -> Mapping[str, Rule]:
         severity="warning",
         category=CATEGORY,
         message=(
-            "unconditional `!important` layout override (display / "
-            "flex-direction / flex-wrap) in a file that also carries an "
-            "@media block — the override wins over the responsive rules "
-            "and the layout forks by viewport"
+            "unconditional `!important` directional override (flex-direction "
+            "/ flex-wrap) in a file that also carries an @media block — "
+            "the override silently beats the responsive rules and the "
+            "layout forks by viewport"
         ),
         suggestion=(
             "Scope the override to the breakpoint that needs it (move it "
             "inside the @media block) or drop the `!important` so the "
             "media query can win. See the writer fork that killed its own "
             "600px breakpoint this way. Run `scitex-sdk ui lint` to list "
-            "files where a top-level !important beats @media."
+            "files where a top-level !important beats @media. `display` "
+            "toggles are deliberately out of scope: tab-visibility state "
+            "is JS-driven, not layout direction."
         ),
         requires="scitex-sdk",
     )

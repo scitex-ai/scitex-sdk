@@ -165,7 +165,10 @@ A literal `<header` tag in consumer HTML. The shared AppHeader primitive
 (`data-stx-app-header`) owns that row; a leaf-local header forks the
 moment the SDK ships a header tweak. Reference adopter: the SDK App
 wizard (`scitex_sdk/creator`). Comment lines mentioning the tag are
-exempt — a doc discussing the pattern is not the pattern.
+exempt — a doc discussing the pattern is not the pattern. Document
+pages (legal/landing/docs) are out of scope: gates should scope UI-108
+to app surfaces rather than exempting the rule — a document `<header>`
+is semantics, not an app row.
 
 ### UI-109 — `hub-duplicate-manifest-drift` (WARN)
 
@@ -182,14 +185,20 @@ not evidence.
 A hardcoded `"icon"` key in a hub `launcher_links/*.json`. Tiles must
 resolve the icon from the leaf manifest at render time (the registry
 already carries `manifest_icon_fa`); operator rule: leaf owns icons.
+Escaped ONLY by an explicit `"hub_native": true` declaration in the
+same file — hub-native tiles (chat, settings) have no leaf manifest,
+and the declaration keeps that auditable. `create-app` is not
+hub-native: it resolves from the SDK manifest.
 
-### UI-111 — `unconditional-important-layout-override` (WARN)
+### UI-111 — `unconditional-important-directional-override` (WARN)
 
-A top-level `display` / `flex-direction` / `flex-wrap` `!important` in a
-file that also carries `@media`. The override silently beats the
-responsive rules (writer killed its own 600px breakpoint this way).
-Overrides already inside a media query are legitimate scoping and are
-never flagged; the SDK's own shell is exempt via `treat_as_consumer=False`.
+A top-level `flex-direction` / `flex-wrap` `!important` in a file that
+also carries `@media`. The override silently beats the responsive rules
+(writer killed its own 600px breakpoint this way). `display` toggles are
+deliberately out of scope: tab-visibility state is JS-driven, not layout
+direction. Overrides already inside a media query are legitimate scoping
+and are never flagged; the SDK's own shell is exempt via
+`treat_as_consumer=False`. Third-party `vendor/` trees are never scanned.
 
 ---
 

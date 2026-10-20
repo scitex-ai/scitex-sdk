@@ -137,12 +137,18 @@ _HUB_BUILTIN_MANIFEST_RE = re.compile(
 )
 _MANIFEST_COMPARE_KEYS = ("label", "icon")
 
-# UI-111 — unconditional `!important` layout override (display /
-# flex-direction / flex-wrap). Matched mid-line too: single-line rules
-# (`.pane { display: none !important; }`) are as unconditional as
-# own-line declarations — the anchor is the preceding `{` or `;`.
+# UI-111 — unconditional `!important` DIRECTIONAL override
+# (flex-direction / flex-wrap) in a file that also carries @media.
+# `display` toggles are deliberately NOT matched: tab-visibility state
+# (`display: none/block !important`) is JS-driven state, not layout
+# direction, and flagging it would push state into media queries where it
+# does not belong. The measured defect is directional: writer's
+# unconditional `flex-direction: row !important` sat later in its file
+# than the @media block meant to override it and silently killed the
+# 600px breakpoint. Overrides already inside a media query are
+# legitimate scoping and never flagged.
 _LAYOUT_IMPORTANT_RE = re.compile(
-    r"(?:^|[{;])\s*(display|flex-direction|flex-wrap)\s*:[^;{}]*!important",
+    r"(?:^|[{;])\s*(flex-direction|flex-wrap)\s*:[^;{}]*!important",
     re.IGNORECASE,
 )
 
@@ -169,6 +175,7 @@ _DEFAULT_SKIP_DIRS = (
     "__pycache__",
     "dist",
     "build",
+    "vendor",
     ".tox",
     ".mypy_cache",
     ".pytest_cache",
@@ -456,18 +463,28 @@ def _leaf_manifest_from_dist(pip_package: str) -> dict | None:
 
 def _scan_json(path: Path, text: str, rules) -> Iterator[UIViolation]:
     # UI-110 — hardcoded `"icon"` in a hub launcher JSON. Tiles must
-    # resolve the icon from the leaf manifest at render time.
+    # resolve the icon from the leaf manifest at render time. Escaped
+    # ONLY by an explicit `"hub_native": true` declaration in the same
+    # file: hub-native tiles (chat, settings) have no leaf manifest to
+    # resolve from, and the declaration keeps that auditable instead of
+    # silent. create-app is NOT hub-native — it resolves from the SDK
+    # manifest — so the hatch does not apply to it.
     if _LAUNCHER_LINKS_RE.search(str(path)):
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            m = _ICON_KEY_RE.search(line)
-            if m:
-                yield UIViolation(
-                    rule=rules["STX-UI110"],
-                    path=str(path),
-                    line=lineno,
-                    col=m.start(),
-                    source_line=line.rstrip("\n"),
-                )
+        hub_native = '"hub_native"' in text and re.search(
+            r'"hub_native"\s*:\s*true', text
+        )
+        if not hub_native:
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                m = _ICON_KEY_RE.search(line)
+                if m:
+                    yield UIViolation(
+                        rule=rules["STX-UI110"],
+                        path=str(path),
+                        line=lineno,
+                        col=m.start(),
+                        source_line=line.rstrip("\n"),
+                    )
+                    break
 
     # UI-109 — hub-side duplicate builtin manifest vs the leaf's own.
     if _HUB_BUILTIN_MANIFEST_RE.search(str(path).replace("\\", "/")):
