@@ -4,7 +4,13 @@
 {% block scitex_app_content %}
 <link rel="stylesheet" href="{% static 'scitex_sdk_creator/wizard.css' %}">
 <div class="stx-creator">
-  <h1>Create a SciTeX app</h1>
+  {# Shared AppHeader primitive (data-stx-app-header mount), like every other #}
+  {# leaf app — no leaf-local <header>. Title/version flow from the view. #}
+  <link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/app/app-header.css' %}">
+  <div data-stx-app-header
+       data-app-title="SciTeX SDK App"
+       {% if sdk_version %}data-app-version="{{ sdk_version }}"{% endif %}></div>
+  <script type="module" src="{% static 'scitex_sdk/ui/js/app/app-header.js' %}"></script>
   <p>Pick a starter, name the app, and scaffold it. Then validate it here
     before dev-installing or publishing it to SciTeX Cloud.</p>
 

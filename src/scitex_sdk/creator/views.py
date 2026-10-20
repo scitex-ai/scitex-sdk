@@ -55,12 +55,32 @@ def _starter_payload():
     ]
 
 
+def _sdk_version() -> str | None:
+    """Installed SDK dist version for the AppHeader badge, or None.
+
+    Same SSoT rule as leaf ``app_version``: importlib.metadata, never
+    hand-written. Absent stays absent — no placeholder badge.
+    """
+    try:
+        from importlib.metadata import version
+
+        return version("scitex-sdk")
+    except Exception:
+        return None
+
+
 def index(request):
     """The wizard page: starter cards, create form, validate/publish tools."""
     return render(
         request,
         "scitex_sdk_creator/wizard.html",
-        {"starters": _starter_payload(), "default_starter": DEFAULT_STARTER},
+        {
+            "starters": _starter_payload(),
+            "default_starter": DEFAULT_STARTER,
+            "sdk_version": _sdk_version(),
+            # Standalone shell <title>: "SciTeX SDK App", like the leaf tiles.
+            "app_label": "SciTeX SDK App",
+        },
     )
 
 
