@@ -4,6 +4,15 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-10-20
+
+Underline-only selected tab in theme `--accent` (PR #60): selected tab
+is now underline-only (SciTeX navy in light theme, gold in dark) with
+no box, no surface tint, and no weight change. Applied to
+`content-tabs.css` and `panes.css` together so the selected look does
+not fork by viewport. Contract tests repinned; a11y half
+(`aria-selected`, roving tabindex, outside focus ring) unchanged.
+
 ## [0.3.8] - 2026-10-19
 
 SciTeX SDK App as canonical custom-app creation (PR #57): creator
