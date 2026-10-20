@@ -4,6 +4,32 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-10-20
+
+Underline-only selected tab in theme `--accent` (PR #60): selected tab
+is now underline-only (SciTeX navy in light theme, gold in dark) with
+no box, no surface tint, and no weight change. Applied to
+`content-tabs.css` and `panes.css` together so the selected look does
+not fork by viewport. Contract tests repinned; a11y half
+(`aria-selected`, roving tabindex, outside focus ring) unchanged.
+
+## [0.3.8] - 2026-10-19
+
+SciTeX SDK App as canonical custom-app creation (PR #57): creator
+product renamed (manifest label, AppConfig verbose_name, CLI/skill copy;
+slug, URLs, DB label unchanged); scaffolds emit `mount_policy
+login_required` by default; shared `.stx-layout-fill` utility; stale
+hub-mount claims fixed. Plus appmaker shared SSoT header row in the
+create-app scaffold (PR #54) and `--bg-primary` theme alias for both
+shell themes (PR #55).
+
+## [0.3.7] - 2026-10-19
+
+Standardized selected-tab state in the shared Tabs primitive (PR #53):
+selected = subtle surface + brand-blue text + semibold + 2px underline
+indicator read from `aria-selected`; new `css/app/content-tabs.css`
+shared primitive with `panes.css` phone tab bar aligned to the same tokens.
+
 ## [0.3.6] - 2026-10-15
 
 Declared UI provider transition (PR #38): canonical SDK replacement of the

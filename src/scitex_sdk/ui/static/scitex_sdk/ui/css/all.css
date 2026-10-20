@@ -14,6 +14,7 @@
 @import "./app/collapsible-panel.css";
 @import "./app/combobox.css";
 @import "./app/confirm-modal.css";
+@import "./app/content-tabs.css";
 @import "./app/context-menu.css";
 @import "./app/data-table.css";
 @import "./app/dim.css";
@@ -81,6 +82,7 @@
 @import "./shell/terminal.css";
 @import "./shell/theme.css";
 @import "./shell/viewer.css";
+@import "./shell/workspace-commands.css";
 @import "./shell/workspace-files-tree.css";
 @import "./shell/workspace-files-tree/base.css";
 @import "./shell/workspace-files-tree/breadcrumb.css";

@@ -97,17 +97,22 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Selected: the shared content-tabs contract (see app/content-tabs.css) —
+ * underline ONLY in theme --accent. Deliberately the same token values:
+ * the selected look must not fork by viewport, and panes tabs render on
+ * phones while content-tabs renders anywhere. */
 .stx-panes__tab[aria-selected="true"] {
-  border-color: var(--border-default, #999);
-  background: var(--bg-surface, #fff);
-  color: var(--text-primary, #222);
-  font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--text-primary, #222);
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent, #1a2a40);
+  box-shadow: inset 0 -2px 0 var(--accent, #1a2a40);
 }
 
+/* Focus keeps its own ring (--focus-ring-color, drawn outside), distinct
+ * from the selected underline above. */
 .stx-panes__tab:focus-visible {
-  outline: 2px solid var(--text-primary, #222);
-  outline-offset: -2px;
+  outline: 2px solid var(--focus-ring-color, rgba(26, 42, 64, 0.35));
+  outline-offset: 2px;
 }
 
 .stx-panes__tab-icon {
