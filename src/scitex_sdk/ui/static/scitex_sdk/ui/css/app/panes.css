@@ -98,15 +98,14 @@
 }
 
 /* Selected: the shared content-tabs contract (see app/content-tabs.css) —
- * subtle surface, brand-blue text, semibold, 2px underline. Deliberately the
- * same token values: the selected look must not fork by viewport, and panes
- * tabs render on phones while content-tabs renders anywhere. */
+ * underline ONLY in theme --accent. Deliberately the same token values:
+ * the selected look must not fork by viewport, and panes tabs render on
+ * phones while content-tabs renders anywhere. */
 .stx-panes__tab[aria-selected="true"] {
-  border-color: var(--border-default, #999);
-  background: var(--bg-surface, #fff);
-  color: var(--text-link, #2c5d8f);
-  font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--text-link, #2c5d8f);
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent, #1a2a40);
+  box-shadow: inset 0 -2px 0 var(--accent, #1a2a40);
 }
 
 /* Focus keeps its own ring (--focus-ring-color, drawn outside), distinct

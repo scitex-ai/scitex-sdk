@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Selected-tab state contract: one visual language on every viewport.
 
-Card ui-tabs-selected-state-standard-20260918 (operator mandate CCT 3707/3710):
-selected tab = subtle surface + brand-blue text + semibold + 2px underline
-indicator, read from ``aria-selected``; keyboard focus keeps its own ring.
-Responsive differences are limited to overflow/scroll/wrapping — the selected
-look must not fork by viewport, so these tests pin ``content-tabs.css`` (the
-shared primitive, renders anywhere) and ``panes.css`` (phone tab bar) to the
-same token values, plus source/bundle parity for the new file.
+Operator 2026-10-20 (card scholar-sdk-tabs-underline-polish-20261020),
+superseding the boxed visual language of ui-tabs-selected-state-standard-20260918:
+selected tab = underline ONLY in theme --accent (SciTeX navy #1a2a40 light /
+gold #d4a87a dark) — no box, no surface tint, no weight change — read from
+``aria-selected``; keyboard focus keeps its own ring. The a11y half of the
+original contract is unchanged: responsive differences are limited to
+overflow/scroll/wrapping — the selected look must not fork by viewport, so
+these tests pin ``content-tabs.css`` (the shared primitive, renders anywhere)
+and ``panes.css`` (phone tab bar) to the same token values, plus
+source/bundle parity for the file.
 """
 
 from __future__ import annotations
@@ -46,17 +49,18 @@ def test_content_tabs_is_in_both_bundles():
         assert '@import "./app/content-tabs.css";' in text, bundle.name
 
 
-def test_selected_reads_aria_selected_with_brand_blue_underline():
+def test_selected_reads_aria_selected_with_accent_underline_only():
     block = _rule_block(CONTENT_TABS.read_text(encoding="utf-8"), SELECTED)
-    assert "var(--text-link, #2c5d8f)" in block  # brand blue, both palettes
-    assert re.search(r"color:\s*var\(--text-link", block)
-    assert re.search(r"font-weight:\s*600", block)  # semibold
-    assert re.search(r"box-shadow:\s*inset 0 -2px 0 var\(--text-link", block)
+    assert "var(--accent, #1a2a40)" in block  # navy light / gold dark
+    assert re.search(r"color:\s*var\(--accent", block)
+    assert re.search(r"box-shadow:\s*inset 0 -2px 0 var\(--accent", block)
 
 
-def test_selected_keeps_subtle_surface():
+def test_selected_has_no_box_surface_or_weight_change():
     block = _rule_block(CONTENT_TABS.read_text(encoding="utf-8"), SELECTED)
-    assert re.search(r"background:\s*var\(--bg-surface", block)
+    assert re.search(r"background:\s*transparent", block)
+    assert re.search(r"border-color:\s*transparent", block)
+    assert "font-weight" not in block
 
 
 def test_focus_ring_is_distinct_from_selected_indicator():
@@ -93,9 +97,9 @@ def test_panes_selected_state_matches_the_shared_contract():
     """No viewport fork: the phone tab bar reads the same tokens."""
     css = PANES.read_text(encoding="utf-8")
     selected = _rule_block(css, PANES_SELECTED)
-    assert re.search(r"color:\s*var\(--text-link", selected)
-    assert re.search(r"box-shadow:\s*inset 0 -2px 0 var\(--text-link", selected)
-    assert re.search(r"font-weight:\s*600", selected)
+    assert re.search(r"color:\s*var\(--accent", selected)
+    assert re.search(r"box-shadow:\s*inset 0 -2px 0 var\(--accent", selected)
+    assert "font-weight" not in selected
     focus = _rule_block(css, PANES_FOCUS)
     assert "var(--focus-ring-color" in focus
     assert "var(--text-primary" not in focus

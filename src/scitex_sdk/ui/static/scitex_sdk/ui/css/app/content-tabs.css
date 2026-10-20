@@ -24,9 +24,12 @@
  * - 13px label: Writer .writer-section-tab, Scholar .tab-nav/.tab-btn and
  *   FigRecipe .inner-editor__tab all render 13px (scitex-ui audit
  *   2026-10-16). The SDK had no content-tabs primitive at all.
- * - Selected = subtle surface + brand-blue text + semibold + 2px underline
- *   indicator (card DoD). Brand blue is --text-link (#2c5d8f light /
- *   #58a6ff dark), the one blue with documented contrast in both palettes.
+ * - Selected = underline ONLY in theme --accent (SciTeX navy #1a2a40 light /
+ *   gold #d4a87a dark, via shell/theme.css): no box, no surface tint, no
+ *   weight change. Operator 2026-10-20 (card
+ *   scholar-sdk-tabs-underline-polish-20261020): the boxed + brand-blue
+ *   selected state is superseded — the polished version is the simple
+ *   scitex-colour underline Scholar rendered before convergence.
  * - Focus ring is --focus-ring-color, a different token from the indicator,
  *   drawn OUTSIDE the tab so it never sits on the selected underline.
  * ============================================================================= */
@@ -71,13 +74,14 @@
   background: var(--bg-surface, #f8f7f5);
 }
 
-/* Selected: subtle surface, brand-blue text, semibold, 2px underline. */
+/* Selected: underline ONLY in theme --accent (SciTeX navy light / gold dark).
+ * No box (border stays transparent), no surface tint, no weight change —
+ * the tab reads exactly like its siblings except for the 2px underline. */
 .stx-content-tabs__tab[aria-selected="true"] {
-  border-color: var(--border-default, #999999);
-  background: var(--bg-surface, #f8f7f5);
-  color: var(--text-link, #2c5d8f);
-  font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--text-link, #2c5d8f);
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent, #1a2a40);
+  box-shadow: inset 0 -2px 0 var(--accent, #1a2a40);
 }
 
 /* Focus keeps its own ring: --focus-ring-color is a different token from the
