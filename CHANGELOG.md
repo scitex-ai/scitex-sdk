@@ -4,6 +4,18 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.10] - 2026-10-20
+
+Naming contract draft + SDK App GUI parity (PR #59): `APP_NAMING_CONTRACT.md`
+(slug is mount leaf, label family form advisory, AppConfig namespaced),
+validator slug-format error + label advisory, wizard mounts shared AppHeader.
+Operator label decisions (PR #61): SDK tile `SDK`, renames recorded for
+Storage/Scholar/Stats. Leaf icon ownership (PR #63): SDK tile
+`fa-wand-magic-sparkles`, contract rule 6, wizard full-pane width.
+Favicon SSOT (PR #64): canonical SVG + PNG set (16/32/180/192/512),
+branding partial emits SVG + PNG alternate + apple-touch-icon, validator
+favicon-drift advisory.
+
 ## [0.3.9] - 2026-10-20
 
 Underline-only selected tab in theme `--accent` (PR #60): selected tab
