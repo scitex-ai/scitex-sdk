@@ -3,10 +3,10 @@
 """URL patterns for the SciTeX SDK App (app-maker) wizard.
 
 The standalone server (``scitex-sdk gui serve``) serves this module at the
-root via ``ROOT_URLCONF = "scitex_sdk.creator.urls"``. A host (e.g.
-scitex-hub) MAY mount it under its own prefix, e.g.
-``path("apps/new/", include("scitex_sdk.creator.urls"))`` — no host does
-so yet, so the standalone server is currently the only mount.
+root via ``ROOT_URLCONF = "scitex_sdk.creator.urls"``. Hosts mount the
+same module under their own prefix — scitex-hub mounts it at ``apps/new/``
+(login-wrapped); ``apps/sdk/`` is the prepared canonical app home for
+consistency with the other ``/apps/<slug>/`` leaves.
 
 Namespaced via ``app_name`` so a host's ``{% url %}`` lookups never
 collide with another app's route names. Client fetch URLs are RELATIVE
