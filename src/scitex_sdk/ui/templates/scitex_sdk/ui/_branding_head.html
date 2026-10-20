@@ -15,4 +15,6 @@ should be able to take the shared mark without adopting the workspace layout.
 
 The shell includes this partial rather than duplicating the markup, so there
 is one source for what SciTeX tab branding is.
-{% endcomment %}<link rel="icon" href="{% if favicon_href %}{{ favicon_href }}{% else %}{% static 'scitex_sdk/ui/img/scitex-favicon.svg' %}{% endif %}" />
+{% endcomment %}{% if favicon_href %}<link rel="icon" href="{{ favicon_href }}" />{% else %}<link rel="icon" type="image/svg+xml" href="{% static 'scitex_sdk/ui/img/scitex-favicon.svg' %}" />
+<link rel="alternate icon" type="image/png" href="{% static 'scitex_sdk/ui/img/favicon-32.png' %}" />
+<link rel="apple-touch-icon" href="{% static 'scitex_sdk/ui/img/favicon-180.png' %}" />{% endif %}
