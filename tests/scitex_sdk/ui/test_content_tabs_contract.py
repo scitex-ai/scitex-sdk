@@ -53,7 +53,9 @@ def test_selected_reads_aria_selected_with_accent_underline_only():
     block = _rule_block(CONTENT_TABS.read_text(encoding="utf-8"), SELECTED)
     assert "var(--accent, #1a2a40)" in block  # navy light / gold dark
     assert re.search(r"color:\s*var\(--accent", block)
-    assert re.search(r"box-shadow:\s*inset 0 -2px 0 var\(--accent", block)
+    assert re.search(r"border-bottom:\s*2px solid var\(--accent", block)
+    assert re.search(r"box-shadow:\s*none", block)
+    assert re.search(r"border-radius:\s*0", block)
 
 
 def test_selected_has_no_box_surface_or_weight_change():
@@ -98,7 +100,9 @@ def test_panes_selected_state_matches_the_shared_contract():
     css = PANES.read_text(encoding="utf-8")
     selected = _rule_block(css, PANES_SELECTED)
     assert re.search(r"color:\s*var\(--accent", selected)
-    assert re.search(r"box-shadow:\s*inset 0 -2px 0 var\(--accent", selected)
+    assert re.search(r"border-bottom:\s*2px solid var\(--accent", selected)
+    assert re.search(r"box-shadow:\s*none", selected)
+    assert re.search(r"border-radius:\s*0", selected)
     assert "font-weight" not in selected
     focus = _rule_block(css, PANES_FOCUS)
     assert "var(--focus-ring-color" in focus

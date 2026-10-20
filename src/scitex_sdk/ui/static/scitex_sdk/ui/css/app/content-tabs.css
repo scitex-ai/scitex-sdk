@@ -79,9 +79,11 @@
  * the tab reads exactly like its siblings except for the 2px underline. */
 .stx-content-tabs__tab[aria-selected="true"] {
   border-color: transparent;
+  border-bottom: 2px solid var(--accent, #1a2a40);
   background: transparent;
   color: var(--accent, #1a2a40);
-  box-shadow: inset 0 -2px 0 var(--accent, #1a2a40);
+  box-shadow: none;
+  border-radius: 0;
 }
 
 /* Focus keeps its own ring: --focus-ring-color is a different token from the
