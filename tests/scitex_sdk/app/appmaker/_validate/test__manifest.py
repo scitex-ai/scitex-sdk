@@ -138,6 +138,7 @@ class TestValidateManifest:
         # Arrange
         data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
         data["name"] = "my_app"
+        data["label"] = "SciTeX Test App"
         write_manifest(tmp_path, data)
         # Act
         warnings = validate_manifest_advisory(tmp_path)
@@ -242,6 +243,92 @@ class TestValidateManifest:
         errors = validate_manifest(tmp_path)
         # Assert
         assert errors == []
+
+
+class TestSlugIsMountLeaf:
+    """slug becomes /apps/<slug>/: malformed is an ERROR."""
+
+    def test_malformed_slug_is_an_error(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["slug"] = "Bad_Slug!"
+        write_manifest(tmp_path, data)
+        # Act
+        errors = validate_manifest(tmp_path)
+        # Assert
+        assert any("'slug'" in e for e in errors)
+
+    def test_wellformed_slug_passes(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["slug"] = "my-app"
+        write_manifest(tmp_path, data)
+        # Act
+        errors = validate_manifest(tmp_path)
+        # Assert
+        assert not [e for e in errors if "'slug'" in e]
+
+
+class TestLabelFamilyFormIsAdvisory:
+    """label 'SciTeX <Name>' is taste: warn, never fail."""
+
+    def test_bare_label_is_not_an_error(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["slug"] = "my-app"
+        data["label"] = "Storage"
+        write_manifest(tmp_path, data)
+        # Act
+        errors = validate_manifest(tmp_path)
+        # Assert
+        assert not [e for e in errors if "'label'" in e]
+
+    def test_bare_label_is_an_advisory(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["label"] = "Storage"
+        write_manifest(tmp_path, data)
+        # Act
+        warnings = validate_manifest_advisory(tmp_path)
+        # Assert
+        assert any("SciTeX <Name>" in w for w in warnings)
+
+    def test_family_label_raises_no_advisory(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["label"] = "SciTeX Stats"
+        write_manifest(tmp_path, data)
+        # Act
+        warnings = validate_manifest_advisory(tmp_path)
+        # Assert
+        assert not [w for w in warnings if "SciTeX <Name>" in w]
+
+
+class TestFaviconSSOTIsAdvisory:
+    """Leaf-local favicons are drift to migrate, never a failure."""
+
+    def test_leaf_favicon_file_is_an_advisory(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["label"] = "SciTeX Test"
+        write_manifest(tmp_path, data)
+        (tmp_path / "favicon-32x32.png").touch()
+        # Act
+        errors = validate_manifest(tmp_path)
+        warnings = validate_manifest_advisory(tmp_path)
+        # Assert
+        assert errors == []
+        assert any("favicon drift" in w for w in warnings)
+
+    def test_no_leaf_favicon_raises_no_advisory(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["label"] = "SciTeX Test"
+        write_manifest(tmp_path, data)
+        # Act
+        warnings = validate_manifest_advisory(tmp_path)
+        # Assert
+        assert not [w for w in warnings if "favicon drift" in w]
 
 
 # EOF

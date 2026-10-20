@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 # THE ONE REQUIRED-KEY LIST. scitex_sdk.app.validator imports this rather than
@@ -39,6 +40,16 @@ def validate_manifest(app_dir: str | Path) -> list[str]:
     for key in MANIFEST_REQUIRED_KEYS:
         if key not in data:
             errors.append(f"manifest.json missing required key: '{key}'")
+
+    # 'slug' IS the mount leaf (/apps/<slug>/): a malformed slug is a broken
+    # URL, so the format is an ERROR, not advice. All five shipped leaves
+    # (storage, scholar, writer, stats, create-app) already match.
+    slug = data.get("slug", "")
+    if slug and not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", slug):
+        errors.append(
+            f"manifest.json 'slug' must be lowercase alphanumeric with single "
+            f"hyphens (got: '{slug}') — it becomes /apps/<slug>/."
+        )
 
     # The app version is the SINGLE SOURCE OF TRUTH: the installed package's own
     # version, read at runtime via importlib.metadata from `pip_package`. A
@@ -133,6 +144,33 @@ def validate_manifest_advisory(app_dir: str | Path) -> list[str]:
         warnings.append(
             f"manifest.json 'name' should end with '_app' or '-app' (got: '{name}')"
         )
+
+    # 'label' family form ("SciTeX <Name>") is taste with precedent both ways
+    # (writer/SDK App vs Storage/Scholar/Stats), so it is ADVICE: warn, never
+    # fail. New leaves should follow the family form; existing bare labels are
+    # grandfathered drift, and renaming a tile is the App lane's call.
+    label = data.get("label", "")
+    if label and not label.startswith("SciTeX "):
+        warnings.append(
+            f"manifest.json 'label' should use the family form 'SciTeX <Name>' "
+            f"(got: '{label}')"
+        )
+
+    # Favicon SSOT (operator 2026-10-20): the canonical mark is
+    # scitex_sdk/ui/img/scitex-favicon.svg served via the shared
+    # _branding_head.html partial. Leaf-local favicon files or hand-rolled
+    # data-URI views are drift — advice to migrate, never a failure.
+    _SKIP_DIRS = {"__pycache__", "node_modules", ".venv", ".git", ".old"}
+    for path in sorted(root.rglob("*favicon*")):
+        if not path.is_file():
+            continue
+        if any(part in _SKIP_DIRS for part in path.parts):
+            continue
+        warnings.append(
+            f"favicon drift: {path.name} should come from the SDK "
+            f"(_branding_head.html + scitex-favicon.svg), not the leaf"
+        )
+        break  # one finding names the class; the list would just be long
 
     return warnings
 

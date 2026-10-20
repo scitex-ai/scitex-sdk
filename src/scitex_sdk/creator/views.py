@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Views for the SciTeX SDK App (app-maker) wizard.
+"""Views for the SciTeX SDK (app-maker) wizard.
 
 ``index`` is the server-rendered wizard (starter cards + forms); every
 mutation is a JSON API wired to the SDK-owned appmaker engine
@@ -55,12 +55,32 @@ def _starter_payload():
     ]
 
 
+def _sdk_version() -> str | None:
+    """Installed SDK dist version for the AppHeader badge, or None.
+
+    Same SSoT rule as leaf ``app_version``: importlib.metadata, never
+    hand-written. Absent stays absent — no placeholder badge.
+    """
+    try:
+        from importlib.metadata import version
+
+        return version("scitex-sdk")
+    except Exception:
+        return None
+
+
 def index(request):
     """The wizard page: starter cards, create form, validate/publish tools."""
     return render(
         request,
         "scitex_sdk_creator/wizard.html",
-        {"starters": _starter_payload(), "default_starter": DEFAULT_STARTER},
+        {
+            "starters": _starter_payload(),
+            "default_starter": DEFAULT_STARTER,
+            "sdk_version": _sdk_version(),
+            # Standalone shell <title>: "SciTeX SDK", like the leaf tiles.
+            "app_label": "SDK",
+        },
     )
 
 

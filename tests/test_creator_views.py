@@ -58,6 +58,17 @@ def test_index_lists_starter_cards(client):
     assert "Data entry form" in client.get("/").content.decode()
 
 
+def test_index_mounts_shared_app_header(client):
+    """The SDK App GUI uses the shared AppHeader primitive, like every leaf.
+
+    No leaf-local <h1>: title/version flow through data-stx-app-header.
+    """
+    html = client.get("/").content.decode()
+    assert "data-stx-app-header" in html
+    assert "scitex_sdk/ui/js/app/app-header.js" in html
+    assert "<h1>Create a SciTeX app</h1>" not in html
+
+
 def test_healthz_reports_ok(client):
     assert json.loads(client.get("/healthz").content) == {
         "ok": True,
