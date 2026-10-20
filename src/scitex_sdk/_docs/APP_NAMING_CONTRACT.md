@@ -40,6 +40,12 @@ will flag it by design; do not "fix" the SDK manifest to silence it.
 5. Mount namespace (`app_name`) is stable per leaf. One mount path per
    namespace — mounting the same app at two paths breaks `{% url %}`
    reverse; a second path is a redirect, not a second mount (App lane).
+6. Tile icon: the leaf manifest `icon` is the SOLE source. Hosts render
+   it, never substitute a hardcoded glyph — a tile showing something
+   other than the manifest icon is a host bug, not leaf debt.
+   (Operator 2026-10-20: all applications, leaf owns icons. Hub's
+   `launcher_links/*.json` hardcodes — chat, create-app, settings — are
+   App-lane debt to align with the leaf manifests.)
 
 ## Approval flow
 

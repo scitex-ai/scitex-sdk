@@ -4,16 +4,14 @@
 
 .stx-creator {
   color-scheme: dark light;
-  max-width: 920px;
-  margin: 0 auto;
+  /* Full pane width: the shell pane is uncapped, so a centered 920px column
+     wastes the space (same class as the leaf 960px caps). Prose keeps its
+     own ch caps below; the root must not impose one. */
+  max-width: none;
+  margin: 0;
   padding: 8px 20px 48px;
   font-size: 14px;
   line-height: 1.55;
-}
-
-.stx-creator h1 {
-  font-size: 24px;
-  margin: 12px 0 4px;
 }
 
 .stx-creator > p {
