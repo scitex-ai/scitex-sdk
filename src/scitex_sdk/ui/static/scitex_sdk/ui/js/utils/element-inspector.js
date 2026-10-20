@@ -600,6 +600,7 @@
       for (const element of allElements) {
         if (!element || !element.tagName) continue;
         if (element.closest("#element-inspector-overlay")) continue;
+        if (element.closest("header.global-header")) continue;
         const tagName = element.tagName.toLowerCase();
         if (["script", "style", "link", "meta", "head", "noscript", "br"].includes(
           tagName
@@ -820,6 +821,7 @@
         if (!el || !el.tagName) continue;
         if (el.closest("#element-inspector-overlay")) continue;
         if (el.closest(".element-inspector-layer-picker")) continue;
+        if (el.closest("header.global-header")) continue;
         const tag = el.tagName.toLowerCase();
         if (["html", "body", "script", "style", "head"].includes(tag)) continue;
         elements.push(el);
