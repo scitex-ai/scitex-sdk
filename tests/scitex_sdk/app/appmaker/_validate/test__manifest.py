@@ -296,7 +296,7 @@ class TestLabelFamilyFormIsAdvisory:
     def test_family_label_raises_no_advisory(self, tmp_path):
         # Arrange
         data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
-        data["label"] = "SciTeX SDK App"
+        data["label"] = "SciTeX Stats"
         write_manifest(tmp_path, data)
         # Act
         warnings = validate_manifest_advisory(tmp_path)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""``scitex-sdk gui {serve,open,status,stop}`` — the SciTeX SDK App wizard GUI.
+"""``scitex-sdk gui {serve,open,status,stop}`` — the SciTeX SDK wizard GUI.
 
 The ecosystem-standard GUI verbs (matching sac, scitex-cards,
 scitex-storage): ``serve`` runs the wizard in the foreground,
@@ -68,7 +68,7 @@ def _log_path() -> Path:
 @click.version_option(None, "-V", "--version", prog_name="scitex-sdk")
 @click.pass_context
 def main(ctx: click.Context) -> None:
-    """SciTeX SDK — app contract + UI shell + SciTeX SDK App wizard."""
+    """SciTeX SDK — app contract + UI shell + SciTeX SDK wizard."""
     if ctx.invoked_subcommand is not None:
         return
     click.echo(ctx.get_help())
@@ -77,7 +77,7 @@ def main(ctx: click.Context) -> None:
 @main.group("gui", invoke_without_command=True)
 @click.pass_context
 def gui(ctx: click.Context) -> None:
-    """Serve the SciTeX SDK App wizard (open/serve/status/stop)."""
+    """Serve the SciTeX SDK wizard (open/serve/status/stop)."""
     if ctx.invoked_subcommand is not None:
         return
     click.echo(
@@ -108,7 +108,7 @@ def gui_serve(
     dry_run: bool,
     as_json: bool,
 ) -> None:
-    """Run the SciTeX SDK App wizard in the foreground (blocking, headless)."""
+    """Run the SciTeX SDK wizard in the foreground (blocking, headless)."""
     _guard_bind(host, allow_remote)
     if dry_run:
         payload = {"would_serve": True, "host": host, "port": port, "force": force}
@@ -120,7 +120,7 @@ def gui_serve(
         import django  # noqa: F401
     except ImportError as exc:
         raise click.ClickException(
-            "The SciTeX SDK App GUI requires Django. Install with: "
+            "The SciTeX SDK GUI requires Django. Install with: "
             f"pip install 'scitex-sdk[gui]'  ({exc})"
         ) from exc
     from scitex_sdk.creator._server import serve
@@ -205,7 +205,7 @@ def gui_open(
 @gui.command("status")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
 def gui_status(as_json: bool) -> None:
-    """Report whether the SciTeX SDK App wizard is running."""
+    """Report whether the SciTeX SDK wizard is running."""
     current = _gui_status()
     if as_json:
         click.echo(json.dumps(current))
@@ -220,7 +220,7 @@ def gui_status(as_json: bool) -> None:
 @click.option("--yes", "-y", "yes", is_flag=True, help="Confirm stopping the server.")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
 def gui_stop(dry_run: bool, yes: bool, as_json: bool) -> None:
-    """Stop the SciTeX SDK App wizard."""
+    """Stop the SciTeX SDK wizard."""
     current = _gui_status()
     if not current.get("running"):
         payload = {"running": False, "stopped": False}

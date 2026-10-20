@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""URL patterns for the SciTeX SDK App (app-maker) wizard.
+"""URL patterns for the SciTeX SDK (app-maker) wizard.
 
 The standalone server (``scitex-sdk gui serve``) serves this module at the
 root via ``ROOT_URLCONF = "scitex_sdk.creator.urls"``. Hosts mount the

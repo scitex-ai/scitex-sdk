@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""SciTeX SDK App — the app-maker scaffolding wizard as a web UI.
+"""SciTeX SDK — the app-maker scaffolding wizard as a web UI.
 
 Served from the SDK via ``scitex-sdk gui serve`` (see
 :mod:`scitex_sdk.cli`), mounted by hosts (scitex-hub) as a generic
