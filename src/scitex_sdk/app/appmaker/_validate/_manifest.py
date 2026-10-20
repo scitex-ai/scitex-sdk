@@ -156,6 +156,22 @@ def validate_manifest_advisory(app_dir: str | Path) -> list[str]:
             f"(got: '{label}')"
         )
 
+    # Favicon SSOT (operator 2026-10-20): the canonical mark is
+    # scitex_sdk/ui/img/scitex-favicon.svg served via the shared
+    # _branding_head.html partial. Leaf-local favicon files or hand-rolled
+    # data-URI views are drift — advice to migrate, never a failure.
+    _SKIP_DIRS = {"__pycache__", "node_modules", ".venv", ".git", ".old"}
+    for path in sorted(root.rglob("*favicon*")):
+        if not path.is_file():
+            continue
+        if any(part in _SKIP_DIRS for part in path.parts):
+            continue
+        warnings.append(
+            f"favicon drift: {path.name} should come from the SDK "
+            f"(_branding_head.html + scitex-favicon.svg), not the leaf"
+        )
+        break  # one finding names the class; the list would just be long
+
     return warnings
 
 
