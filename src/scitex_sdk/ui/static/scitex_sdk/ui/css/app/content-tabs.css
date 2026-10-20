@@ -84,7 +84,6 @@
   background: transparent;
   box-shadow: none;
   color: var(--accent, #1a2a40);
-  font-weight: 700;
 }
 
 /* Focus keeps its own ring: --focus-ring-color is a different token from the
