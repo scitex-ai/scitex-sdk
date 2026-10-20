@@ -9,7 +9,13 @@ Measured base (2026-10-20): storage (`storage_app`/slug `storage`/label
 because `scholar_app` collides in hub's registry), writer
 (`writer_app`/`writer`/`SciTeX Writer`), stats
 (`stats_calculator`/`stats`/`Stats`), SDK App (`app_creator_app`/slug
-`create-app`/label `SciTeX SDK App`, mount `/apps/sdk/` prepared).
+`create-app`/label `SDK`, mount `/apps/sdk/` prepared).
+
+Operator label decisions (2026-10-20, binding): `SciTeX Storage`,
+`SciTeX Scholar`, `SciTeX Stats` — App lane executes (manifest + hub
+tiles). The SDK App itself carries the operator-ruled short label `SDK`
+— a RECORDED EXCEPTION, not drift, so the family-form advisory below
+will flag it by design; do not "fix" the SDK manifest to silence it.
 
 ## Rules
 

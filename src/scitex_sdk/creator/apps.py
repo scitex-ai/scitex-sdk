@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Django AppConfig for the SciTeX SDK App (app-maker wizard).
+"""Django AppConfig for the SciTeX SDK (app-maker wizard).
 
 Uses the SDK-owned leaf AppConfig contract.
 
@@ -21,7 +21,7 @@ class AppCreatorConfig(ScitexAppConfig):  # type: ignore[misc]
     default = True
     name = "scitex_sdk.creator"
     label = "scitex_sdk_creator"
-    verbose_name = "SciTeX SDK App"
+    verbose_name = "SDK"
 
 
 __all__ = ["AppCreatorConfig"]

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Views for the SciTeX SDK App (app-maker) wizard.
+"""Views for the SciTeX SDK (app-maker) wizard.
 
 ``index`` is the server-rendered wizard (starter cards + forms); every
 mutation is a JSON API wired to the SDK-owned appmaker engine
@@ -78,8 +78,8 @@ def index(request):
             "starters": _starter_payload(),
             "default_starter": DEFAULT_STARTER,
             "sdk_version": _sdk_version(),
-            # Standalone shell <title>: "SciTeX SDK App", like the leaf tiles.
-            "app_label": "SciTeX SDK App",
+            # Standalone shell <title>: "SciTeX SDK", like the leaf tiles.
+            "app_label": "SDK",
         },
     )
 
