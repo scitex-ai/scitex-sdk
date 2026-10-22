@@ -8,13 +8,31 @@ registration semantics (register wins, unknown names KeyError) are unchanged.
 
 from __future__ import annotations
 
+import os
+
+import pytest
+
 from scitex_sdk.app.sdk import get_files, register_backend
 from scitex_sdk.app.sdk._filesystem import FileSystemBackend
 
 
-def test_explicit_local_with_token_present_selects_filesystem(tmp_path, monkeypatch):
+@pytest.fixture
+def clean_api_token_env():
+    # Arrange — real env-var swap, not monkeypatch.
+    original = os.environ.get("SCITEX_API_TOKEN")
+    os.environ.pop("SCITEX_API_TOKEN", None)
+    try:
+        yield original
+    finally:
+        if original is None:
+            os.environ.pop("SCITEX_API_TOKEN", None)
+        else:
+            os.environ["SCITEX_API_TOKEN"] = original
+
+
+def test_explicit_local_with_token_present_selects_filesystem(tmp_path, clean_api_token_env):
     # Arrange
-    monkeypatch.setenv("SCITEX_API_TOKEN", "token-present")
+    os.environ["SCITEX_API_TOKEN"] = "token-present"
     # Act
     files = get_files(tmp_path, backend="local")
     files.write("probe.txt", "local-wins")
@@ -22,18 +40,18 @@ def test_explicit_local_with_token_present_selects_filesystem(tmp_path, monkeypa
     assert isinstance(files, FileSystemBackend) and files.read("probe.txt") == "local-wins"
 
 
-def test_explicit_filesystem_name_selects_filesystem(tmp_path, monkeypatch):
+def test_explicit_filesystem_name_selects_filesystem(tmp_path, clean_api_token_env):
     # Arrange
-    monkeypatch.delenv("SCITEX_API_TOKEN", raising=False)
+    clean_api_token_env
     # Act
     files = get_files(tmp_path, backend="filesystem")
     # Assert
     assert isinstance(files, FileSystemBackend)
 
 
-def test_token_absent_default_selects_filesystem(tmp_path, monkeypatch):
+def test_token_absent_default_selects_filesystem(tmp_path, clean_api_token_env):
     # Arrange
-    monkeypatch.delenv("SCITEX_API_TOKEN", raising=False)
+    clean_api_token_env
     # Act
     files = get_files(tmp_path)
     # Assert

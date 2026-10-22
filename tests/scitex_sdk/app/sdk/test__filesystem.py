@@ -64,50 +64,38 @@ class TestWrite:
 class TestList:
     def test_list_root_a_txt_in_result(self, backend, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "a.txt").touch()
         (tmp_path / "b.yaml").touch()
         # Act
         result = backend.list()
-        # Act
-        # Assert
         # Assert
         assert "a.txt" in result
 
     def test_list_root_b_yaml_in_result(self, backend, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "a.txt").touch()
         (tmp_path / "b.yaml").touch()
         # Act
         result = backend.list()
-        # Act
-        # Assert
         # Assert
         assert "b.yaml" in result
 
 
     def test_list_with_extension_filter_b_yaml_in_result(self, backend, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "a.txt").touch()
         (tmp_path / "b.yaml").touch()
         # Act
         result = backend.list(extensions=[".yaml"])
-        # Act
-        # Assert
         # Assert
         assert "b.yaml" in result
 
     def test_list_with_extension_filter_a_txt_not_in_result(self, backend, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "a.txt").touch()
         (tmp_path / "b.yaml").touch()
         # Act
         result = backend.list(extensions=[".yaml"])
-        # Act
-        # Assert
         # Assert
         assert "a.txt" not in result
 
@@ -155,23 +143,17 @@ class TestDelete:
 class TestRename:
     def test_rename_not_tmp_path_old_txt_exists(self, backend, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "old.txt").write_text("content", encoding="utf-8")
         # Act
         backend.rename("old.txt", "new.txt")
-        # Act
-        # Assert
         # Assert
         assert not (tmp_path / "old.txt").exists()
 
     def test_rename_tmp_path_new_txt_read_text_encoding_utf_8_content(self, backend, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "old.txt").write_text("content", encoding="utf-8")
         # Act
         backend.rename("old.txt", "new.txt")
-        # Act
-        # Assert
         # Assert
         assert (tmp_path / "new.txt").read_text(encoding="utf-8") == "content"
 
@@ -196,23 +178,17 @@ class TestRename:
 class TestCopy:
     def test_copy_tmp_path_src_txt_exists(self, backend, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "src.txt").write_text("data", encoding="utf-8")
         # Act
         backend.copy("src.txt", "dst.txt")
-        # Act
-        # Assert
         # Assert
         assert (tmp_path / "src.txt").exists()
 
     def test_copy_tmp_path_dst_txt_read_text_encoding_utf_8_data(self, backend, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "src.txt").write_text("data", encoding="utf-8")
         # Act
         backend.copy("src.txt", "dst.txt")
-        # Act
-        # Assert
         # Assert
         assert (tmp_path / "dst.txt").read_text(encoding="utf-8") == "data"
 
@@ -261,41 +237,122 @@ class TestSiblingRootContainment:
         return tmp_path
 
     def test_read_sibling_escape_refused(self, siblings):
+        # Arrange
         fs = FileSystemBackend(siblings / "project")
+        # Act
+        # Assert
         with pytest.raises(ValueError, match="Path traversal"):
             fs.read("../project-other/sentinel.txt")
 
     def test_write_sibling_escape_refused(self, siblings):
+        # Arrange
         fs = FileSystemBackend(siblings / "project")
+        # Act
+        # Assert
         with pytest.raises(ValueError, match="Path traversal"):
             fs.write("../project-other/evil.txt", "x")
-        assert not (siblings / "project-other" / "evil.txt").exists()
+
+    def test_write_sibling_escape_leaves_no_file(self, siblings):
+        # Arrange
+        fs = FileSystemBackend(siblings / "project")
+        target = siblings / "project-other" / "evil.txt"
+        # Act
+        try:
+            fs.write("../project-other/evil.txt", "x")
+        except ValueError:
+            pass
+        # Assert
+        assert not target.exists()
 
     def test_list_sibling_escape_refused(self, siblings):
+        # Arrange
         fs = FileSystemBackend(siblings / "project")
+        # Act
+        # Assert
         with pytest.raises(ValueError, match="Path traversal"):
             fs.list("../project-other")
 
-    def test_delete_rename_copy_sibling_escape_refused(self, siblings):
+    def test_delete_sibling_escape_refused(self, siblings):
+        # Arrange
         fs = FileSystemBackend(siblings / "project")
         (siblings / "project" / "own.txt").write_text("own")
+        # Act
+        # Assert
         with pytest.raises(ValueError, match="Path traversal"):
             fs.delete("../project-other/sentinel.txt")
+
+    def test_rename_sibling_escape_refused(self, siblings):
+        # Arrange
+        fs = FileSystemBackend(siblings / "project")
+        (siblings / "project" / "own.txt").write_text("own")
+        # Act
+        # Assert
         with pytest.raises(ValueError, match="Path traversal"):
             fs.rename("own.txt", "../project-other/moved.txt")
+
+    def test_copy_sibling_escape_refused(self, siblings):
+        # Arrange
+        fs = FileSystemBackend(siblings / "project")
+        (siblings / "project" / "own.txt").write_text("own")
+        # Act
+        # Assert
         with pytest.raises(ValueError, match="Path traversal"):
             fs.copy("own.txt", "../project-other/copied.txt")
+
+    def test_sibling_escape_attempts_keep_own_file(self, siblings):
+        # Arrange
+        fs = FileSystemBackend(siblings / "project")
+        (siblings / "project" / "own.txt").write_text("own")
+        # Act
+        try:
+            fs.delete("../project-other/sentinel.txt")
+        except ValueError:
+            pass
+        try:
+            fs.rename("own.txt", "../project-other/moved.txt")
+        except ValueError:
+            pass
+        try:
+            fs.copy("own.txt", "../project-other/copied.txt")
+        except ValueError:
+            pass
+        # Assert
         assert (siblings / "project" / "own.txt").exists()
 
-    def test_valid_root_requests_still_work(self, siblings):
+    def test_valid_root_write_then_read_roundtrip(self, siblings):
+        # Arrange
         fs = FileSystemBackend(siblings / "project")
+        # Act
         fs.write("sub/ok.txt", "fine")
+        # Assert
         assert fs.read("sub/ok.txt") == "fine"
+
+    def test_valid_root_written_file_exists(self, siblings):
+        # Arrange
+        fs = FileSystemBackend(siblings / "project")
+        # Act
+        fs.write("sub/ok.txt", "fine")
+        # Assert
         assert fs.exists("sub/ok.txt")
+
+    def test_valid_root_list_sub_returns_entry(self, siblings):
+        # Arrange
+        fs = FileSystemBackend(siblings / "project")
+        # Act
+        fs.write("sub/ok.txt", "fine")
+        # Assert
         assert fs.list("sub") == ["sub/ok.txt"]
+
+    def test_valid_root_list_root_covers_entry(self, siblings):
+        # Arrange
+        fs = FileSystemBackend(siblings / "project")
+        # Act
+        fs.write("sub/ok.txt", "fine")
+        # Assert
         assert fs.list("") == ["sub"] or "sub/ok.txt" in fs.list("sub")
 
     def test_symlink_pointing_outside_stays_refused(self, siblings):
+        # Arrange
         import os
         target = siblings / "project-other" / "sentinel.txt"
         link = siblings / "project" / "link.txt"
@@ -304,5 +361,7 @@ class TestSiblingRootContainment:
         except OSError:
             pytest.skip("symlinks unavailable")
         fs = FileSystemBackend(siblings / "project")
+        # Act
+        # Assert
         with pytest.raises(ValueError, match="Path traversal"):
             fs.read("link.txt")

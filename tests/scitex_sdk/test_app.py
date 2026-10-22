@@ -11,13 +11,23 @@ NAMES = ["FilesBackend", "build_tree", "chat", "copy_file", "delete_file",
 
 @pytest.mark.parametrize("name", NAMES)
 def test_app_public_implementation_is_sdk_owned(name):
+    # Arrange
     obj = getattr(app, name)
+    # Act
     owner = obj.__name__ if isinstance(obj, types.ModuleType) else obj.__module__
+    # Assert
     assert owner.startswith("scitex_sdk.app")
 
 def test_app_version_has_one_distribution_owner():
+    # Arrange
+    # Act
+    # Assert
     assert app.__version__ == __version__
 
 @pytest.mark.parametrize("name", ["embed", "sdk", "_django", "appmaker", "paths"])
 def test_app_submodules_are_physical_canonical_imports(name):
-    assert importlib.import_module(f"scitex_sdk.app.{name}").__name__ == f"scitex_sdk.app.{name}"
+    # Arrange
+    # Act
+    module_name = importlib.import_module(f"scitex_sdk.app.{name}").__name__
+    # Assert
+    assert module_name == f"scitex_sdk.app.{name}"

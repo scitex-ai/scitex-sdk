@@ -29,7 +29,8 @@ def test_get_plugin_returns_dict_with_expected_keys():
 
 
 def test_get_plugin_ships_the_declared_corpus():
-    # Arrange — the plugin roster is what scitex-dev's registry actually sees,
+    # Arrange
+    # the plugin roster is what scitex-dev's registry actually sees,
     # so this is the REACH assertion: a rule present in build_rules() but
     # missing here would be written, tested, and enforced nowhere. Verified
     # against the live registry too — 41 rules with UI-107, 40 without.
@@ -56,7 +57,8 @@ def test_get_plugin_ships_the_declared_corpus():
 
 
 def test_get_plugin_checkers_is_empty_list():
-    # Arrange — scitex-dev's checker is Python-AST-only; UI rules
+    # Arrange
+    # scitex-dev's checker is Python-AST-only; UI rules
     # target CSS/HTML/TSX and are enforced via `scitex-ui lint`.
     plugin = get_plugin()
     # Act
@@ -66,7 +68,8 @@ def test_get_plugin_checkers_is_empty_list():
 
 
 def test_get_plugin_call_rules_is_empty_dict():
-    # Arrange — UI rules are not call-pattern rules.
+    # Arrange
+    # UI rules are not call-pattern rules.
     plugin = get_plugin()
     # Act
     call_rules = plugin["call_rules"]
@@ -75,7 +78,8 @@ def test_get_plugin_call_rules_is_empty_dict():
 
 
 def test_get_plugin_axes_hints_is_empty_dict():
-    # Arrange — UI rules don't contribute axes hints.
+    # Arrange
+    # UI rules don't contribute axes hints.
     plugin = get_plugin()
     # Act
     axes_hints = plugin["axes_hints"]
@@ -83,8 +87,9 @@ def test_get_plugin_axes_hints_is_empty_dict():
     assert axes_hints == {}
 
 
-def test_get_plugin_is_idempotent():
-    # Arrange — `load_plugins` may call get_plugin once and cache; the
+def test_get_plugin_is_idempotent_rule_ids_are_stable():
+    # Arrange
+    # `load_plugins` may call get_plugin once and cache; the
     # function must be safe to call repeatedly with stable shape.
     first = get_plugin()
     second = get_plugin()
@@ -93,6 +98,16 @@ def test_get_plugin_is_idempotent():
     second_ids = sorted(r.id for r in second["rules"])
     # Assert
     assert first_ids == second_ids
+
+
+def test_get_plugin_is_idempotent_replaces_is_stable():
+    # Arrange
+    # `load_plugins` may call get_plugin once and cache; the
+    # function must be safe to call repeatedly with stable shape.
+    first = get_plugin()
+    second = get_plugin()
+    # Act
+    # Assert
     assert first["replaces"] == second["replaces"]
 
 
@@ -104,10 +119,14 @@ def test_replacement_identifies_only_the_complete_predecessor_provider():
     the range here breaks the installed-registry check that pins the
     predecessor's complete advertised set.
     """
+    # Arrange
     from scitex_dev.linter.spi import ProviderReplacement
 
     plugin = get_plugin()
-    assert plugin["replaces"] == (
+    # Act
+    replaces = plugin["replaces"]
+    # Assert
+    assert replaces == (
         ProviderReplacement(
             distribution="scitex-ui",
             entry_point="ui",
@@ -115,13 +134,21 @@ def test_replacement_identifies_only_the_complete_predecessor_provider():
             rule_ids=tuple(f"STX-UI{number}" for number in range(101, 108)),
         ),
     )
-    assert set(plugin["replaces"][0].rule_ids) <= {
-        rule.id for rule in plugin["rules"]
-    }
+
+
+def test_replacement_rule_ids_are_covered_by_the_plugin_corpus():
+    # Arrange
+    plugin = get_plugin()
+    # Act
+    replaced = set(plugin["replaces"][0].rule_ids)
+    shipped = {rule.id for rule in plugin["rules"]}
+    # Assert
+    assert replaced <= shipped
 
 
 def test_runtime_and_provider_imports_keep_dev_optional(tmp_path):
     """A real interpreter without site packages imports before activation."""
+    # Arrange
     # Installed wheels may share a site-packages directory with Dev. Copy only
     # the SDK package so this interpreter sees the actual shipped SDK bytes
     # without inheriting any adjacent distribution.
@@ -152,11 +179,19 @@ else:
         timeout=30,
         check=False,
     )
-    assert result.returncode == 0, result.stderr
+    # Act
+    returncode = result.returncode
+    # Assert
+    assert returncode == 0, result.stderr
 
 
-def test_installed_sdk_and_legacy_ui_keep_one_declared_rule_owner():
-    """Exercise real installed entry points when the predecessor is present."""
+def _load_forward_and_reverse_rule_tables():
+    """Shared arrange for the coexistence tests below.
+
+    Exercises real installed entry points when the predecessor is present;
+    skips when the SDK, legacy UI, and logging provider wheels are not all
+    installed. Returns the (forward, reverse) loads.
+    """
     from scitex_dev.linter._plugin_loader import load_plugins
 
     wanted = {
@@ -177,19 +212,95 @@ def test_installed_sdk_and_legacy_ui_keep_one_declared_rule_owner():
 
     forward = load_plugins(entry_points_iter=lambda: iter(points))
     reverse = load_plugins(entry_points_iter=lambda: iter(reversed(points)))
-    assert forward["rules"] == reverse["rules"]
-    assert forward["provider_replacements"] == reverse["provider_replacements"]
-    ui_rules = {
+    return forward, reverse
+
+
+def _ui_rules_of(forward):
+    """Shared arrange: the UI-owned slice of a loaded rule table."""
+    return {
         code: rule for code, rule in forward["rules"].items()
         if code.startswith("STX-UI")
     }
+
+
+def test_installed_rule_tables_are_order_independent():
+    """Exercise real installed entry points when the predecessor is present."""
+    # Arrange
+    forward, reverse = _load_forward_and_reverse_rule_tables()
+    # Act
+    # Assert
+    assert forward["rules"] == reverse["rules"]
+
+
+def test_installed_replacement_tables_are_order_independent():
+    # Arrange
+    forward, reverse = _load_forward_and_reverse_rule_tables()
+    # Act
+    # Assert
+    assert forward["provider_replacements"] == reverse["provider_replacements"]
+
+
+def test_installed_ui_rule_set_covers_ui101_to_ui114():
+    # Arrange
+    forward, _reverse = _load_forward_and_reverse_rule_tables()
+    # Act
+    ui_rules = _ui_rules_of(forward)
+    # Assert
     assert set(ui_rules) == {f"STX-UI{number}" for number in range(101, 115)}
+
+
+def test_installed_ui_rules_require_the_sdk():
+    # Arrange
+    forward, _reverse = _load_forward_and_reverse_rule_tables()
+    # Act
+    ui_rules = _ui_rules_of(forward)
+    # Assert
     assert all(rule.requires == "scitex-sdk" for rule in ui_rules.values())
-    assert len(forward["provider_replacements"]) == 1
+
+
+def test_installed_coexistence_declares_exactly_one_replacement():
+    # Arrange
+    forward, _reverse = _load_forward_and_reverse_rule_tables()
+    # Act
+    replacements = forward["provider_replacements"]
+    # Assert
+    assert len(replacements) == 1
+
+
+def test_installed_replacement_names_sdk_as_successor():
+    # Arrange
+    forward, _reverse = _load_forward_and_reverse_rule_tables()
+    # Act
     receipt = forward["provider_replacements"][0]
+    # Assert
     assert receipt["successor_distribution"] == "scitex-sdk"
+
+
+def test_installed_replacement_names_ui_as_predecessor():
+    # Arrange
+    forward, _reverse = _load_forward_and_reverse_rule_tables()
+    # Act
+    receipt = forward["provider_replacements"][0]
+    # Assert
     assert receipt["predecessor_distribution"] == "scitex-ui"
+
+
+def test_installed_replacement_covers_only_the_predecessor_contract():
+    # Arrange
+    forward, _reverse = _load_forward_and_reverse_rule_tables()
+    # Act
+    receipt = forward["provider_replacements"][0]
+    # Assert
     # The receipt covers the replaced predecessor contract only (101-107);
     # additive drift-pack rules (108+) are enforced, not replaced.
     assert set(receipt["rule_ids"]) == {f"STX-UI{number}" for number in range(101, 108)}
+
+
+def test_installed_replacement_is_strictly_narrower_than_enforced_rules():
+    # Arrange
+    forward, _reverse = _load_forward_and_reverse_rule_tables()
+    # Act
+    receipt = forward["provider_replacements"][0]
+    ui_rules = _ui_rules_of(forward)
+    # Assert
     assert set(receipt["rule_ids"]) < set(ui_rules)

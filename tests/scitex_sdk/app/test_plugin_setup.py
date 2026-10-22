@@ -113,7 +113,8 @@ def test_helper_path_boots_without_duplicate_primary(tmp_path):
     _scaffold(tmp_path)
     # Act
     result = _run_setup(tmp_path, [])
-    # Assert — bare primary dropped by partition, exact entries installed once.
+    # Assert
+    # bare primary dropped by partition, exact entries installed once.
     assert result["installed"] == [
         "django.contrib.contenttypes",
         "django.contrib.auth",
@@ -141,7 +142,8 @@ def test_shipped_migrations_match_models_without_database(tmp_path):
 
 
 def test_second_scitex_app_label_fails_loud(tmp_path):
-    # Arrange — same label, different module: shadowing is refused, not merged.
+    # Arrange
+    # same label, different module: shadowing is refused, not merged.
     _scaffold(tmp_path)
     # Act
     result = _run_setup(tmp_path, ["synother.apps.SynClashConfig"])
@@ -209,7 +211,8 @@ def _run_core_setup() -> dict:
 
 
 def test_core_plus_chat_canonical_setup():
-    # Arrange — relabelled canonical coexists with the chat owner.
+    # Arrange
+    # relabelled canonical coexists with the chat owner.
     # Act
     result = _run_core_setup()
     # Assert
