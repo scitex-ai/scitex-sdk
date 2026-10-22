@@ -1,7 +1,7 @@
-"""File-tree walker that emits UI-101..107 violations.
+"""File-tree walker that emits UI-101..111 violations.
 
 Walks an input path (directory or single file), classifies each file by
-extension into ``css | tsx | html``, and dispatches to a per-extension
+extension into ``css | tsx | html | json``, and dispatches to a per-extension
 regex-driven checker. Each match becomes a :class:`UIViolation`.
 
 Why regex (not a parser)
@@ -112,6 +112,60 @@ _SCROLLBAR_SELECTOR_RE = re.compile(
     re.IGNORECASE,
 )
 
+# UI-108 — a literal `<header` opening tag in consumer HTML: the shared
+# AppHeader primitive (`data-stx-app-header`) owns that row. Multi-line
+# tag bodies allowed, same join trick as UI-101.
+_HEADER_RE = re.compile(
+    r"<header\b(?P<attrs>[^>]*)>",
+    re.IGNORECASE,
+)
+
+# UI-110 — a hardcoded `"icon"` key inside a hub launcher JSON. Tiles
+# must resolve the icon from the leaf manifest at render time.
+_LAUNCHER_LINKS_RE = re.compile(r"launcher_links[\\/]")
+_ICON_KEY_RE = re.compile(r'"icon"\s*:')
+
+# UI-109 — hub-side duplicate builtin manifest compared LABEL/ICON only
+# against the leaf's own manifest resolved from the installed
+# distribution named by `pip_package`. `name` is deliberately NOT
+# compared: the hub copy's `name` is module identity (routes/registry),
+# the leaf's is package identity — they differ by design (writer:
+# module "writer" served by leaf "writer_app"). Display metadata is the
+# drift surface: tiles render label/icon, never the module name.
+_HUB_BUILTIN_MANIFEST_RE = re.compile(
+    r"apps[\\/]workspace[\\/][^\\/]+_app[\\/]manifest\.json$"
+)
+_MANIFEST_COMPARE_KEYS = ("label", "icon")
+
+# UI-112 — hardcoded `<title>` text in a Django template. The tab must
+# read the same name as the tile: `<title>{{ app_label }}</title>` via
+# the shared shell or _branding_head.html partial. Generated docs trees
+# are never scanned (see _DEFAULT_SKIP_DIRS).
+_TITLE_LITERAL_RE = re.compile(r"<title>(?P<text>[^<>{}]+)</title>", re.IGNORECASE)
+
+# UI-113 — consumer CSS overriding the shared AppHeader row. Row height,
+# placement and font size come from the SDK alone; any leaf restyle is
+# a fork. Matched on the primitive's selectors, not on property names,
+# so the fix (delete the override) cannot trip it.
+_APPHEADER_SELECTOR_RE = re.compile(
+    r"(?:\.stx-app-header(?![a-zA-Z0-9-])|\[data-stx-app-header\])"
+)
+
+# UI-111 — unconditional `!important` DIRECTIONAL override
+# (flex-direction / flex-wrap) in a file that also carries @media.
+# `display` toggles are deliberately NOT matched: tab-visibility state
+# (`display: none/block !important`) is JS-driven state, not layout
+# direction, and flagging it would push state into media queries where it
+# does not belong. The measured defect is directional: writer's
+# unconditional `flex-direction: row !important` sat later in its file
+# than the @media block meant to override it and silently killed the
+# 600px breakpoint. Overrides already inside a media query are
+# legitimate scoping and never flagged.
+_LAYOUT_IMPORTANT_RE = re.compile(
+    r"(?:^|[{;])\s*(flex-direction|flex-wrap)\s*:[^;{}]*!important",
+    re.IGNORECASE,
+)
+
 
 # --------------------------------------------------------------------------- #
 # Walker                                                                      #
@@ -125,6 +179,7 @@ _EXT_TO_KIND = {
     ".jsx": "tsx",
     ".ts": "tsx",
     ".js": "tsx",
+    ".json": "json",
 }
 
 _DEFAULT_SKIP_DIRS = (
@@ -134,6 +189,8 @@ _DEFAULT_SKIP_DIRS = (
     "__pycache__",
     "dist",
     "build",
+    "vendor",
+    "_sphinx_html",
     ".tox",
     ".mypy_cache",
     ".pytest_cache",
@@ -268,6 +325,49 @@ def _scan_css(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
                 source_line=line.rstrip("\n"),
             )
 
+    # UI-113 — consumer restyle of the shared AppHeader row. Row height,
+    # placement and font size come from the SDK alone.
+    for lineno, line in enumerate(lines, start=1):
+        if _is_comment_line(line):
+            continue
+        m = _APPHEADER_SELECTOR_RE.search(line)
+        if m:
+            yield UIViolation(
+                rule=rules["STX-UI113"],
+                path=str(path),
+                line=lineno,
+                col=m.start(),
+                source_line=line.rstrip("\n"),
+            )
+
+    # UI-111 — unconditional `!important` directional override in a file that
+    # also carries @media. Overrides already inside a media query are
+    # legitimate scoping (the shell's own mobile.css does exactly that),
+    # so media-depth is tracked and only top-level overrides are flagged.
+    if any("@media" in line for line in lines):
+        media_stack: list[bool] = []
+        pending_media = False
+        for lineno, line in enumerate(lines, start=1):
+            if "@media" in line:
+                pending_media = True
+            in_media = any(media_stack)
+            m = _LAYOUT_IMPORTANT_RE.search(line)
+            if m and not in_media:
+                yield UIViolation(
+                    rule=rules["STX-UI111"],
+                    path=str(path),
+                    line=lineno,
+                    col=m.start(),
+                    source_line=line.rstrip("\n"),
+                )
+            for ch in line:
+                if ch == "{":
+                    media_stack.append(pending_media)
+                    pending_media = False
+                elif ch == "}":
+                    if media_stack:
+                        media_stack.pop()
+
 
 def _scan_tsx_html(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
     # UI-101 — `<select>` without `data-app-themed`. We join lines so a
@@ -340,6 +440,132 @@ def _scan_tsx_html(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolat
                 source_line=line.rstrip("\n"),
             )
 
+    # UI-108 — a literal `<header>` element: the shared AppHeader primitive
+    # owns that row. Same join trick as UI-101; comment lines skipped so a
+    # doc that MENTIONS the tag is not flagged for discussing it.
+    for match in _HEADER_RE.finditer(joined):
+        pre = joined[: match.start()]
+        lineno = pre.count("\n") + 1
+        if 1 <= lineno <= len(lines) and _is_comment_line(lines[lineno - 1]):
+            continue
+        last_nl = pre.rfind("\n")
+        col = match.start() - (last_nl + 1)
+        yield UIViolation(
+            rule=rules["STX-UI108"],
+            path=str(path),
+            line=lineno,
+            col=col,
+            source_line=(
+                lines[lineno - 1].rstrip("\n") if 1 <= lineno <= len(lines) else ""
+            ),
+        )
+
+    # UI-112 — hardcoded `<title>` text: the tab must read the tile name
+    # via `{{ app_label }}`. Django templates only (.html/.htm — TSX never
+    # carries a document title). A title containing template syntax is
+    # dynamic by construction and never flagged.
+    if str(path).lower().endswith((".html", ".htm")):
+        for match in _TITLE_LITERAL_RE.finditer(joined):
+            pre = joined[: match.start()]
+            lineno = pre.count("\n") + 1
+            last_nl = pre.rfind("\n")
+            col = match.start() - (last_nl + 1)
+            yield UIViolation(
+                rule=rules["STX-UI112"],
+                path=str(path),
+                line=lineno,
+                col=col,
+                source_line=(
+                    lines[lineno - 1].rstrip("\n") if 1 <= lineno <= len(lines) else ""
+                ),
+            )
+
+
+def _leaf_manifest_from_dist(pip_package: str) -> dict | None:
+    """Load the leaf's own manifest.json from its installed distribution.
+
+    Returns None when the dist is not installed or ships no
+    ``_django/manifest.json`` — the rule then stays silent rather than
+    guessing, because an unresolvable leaf is not evidence of drift.
+    """
+    try:
+        from importlib import metadata
+    except Exception:
+        return None
+    try:
+        dist = metadata.distribution(pip_package)
+        dist_files = dist.files or []
+    except Exception:
+        return None
+    for item in dist_files:
+        if str(item).replace("\\", "/").endswith("_django/manifest.json"):
+            try:
+                import json
+
+                data = json.loads(
+                    dist.locate_file(item).read_text(encoding="utf-8")
+                )
+            except Exception:
+                return None
+            return data if isinstance(data, dict) else None
+    return None
+
+
+def _scan_json(path: Path, text: str, rules) -> Iterator[UIViolation]:
+    # UI-110 — hardcoded `"icon"` in a hub launcher JSON. Tiles must
+    # resolve the icon from the leaf manifest at render time. Escaped
+    # ONLY by an explicit `"hub_native": true` declaration in the same
+    # file: hub-native tiles (chat, settings) have no leaf manifest to
+    # resolve from, and the declaration keeps that auditable instead of
+    # silent. create-app is NOT hub-native — it resolves from the SDK
+    # manifest — so the hatch does not apply to it.
+    if _LAUNCHER_LINKS_RE.search(str(path)):
+        hub_native = '"hub_native"' in text and re.search(
+            r'"hub_native"\s*:\s*true', text
+        )
+        if not hub_native:
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                m = _ICON_KEY_RE.search(line)
+                if m:
+                    yield UIViolation(
+                        rule=rules["STX-UI110"],
+                        path=str(path),
+                        line=lineno,
+                        col=m.start(),
+                        source_line=line.rstrip("\n"),
+                    )
+                    break
+
+    # UI-109 — hub-side duplicate builtin manifest vs the leaf's own.
+    if _HUB_BUILTIN_MANIFEST_RE.search(str(path).replace("\\", "/")):
+        try:
+            import json
+
+            hub_data = json.loads(text)
+        except Exception:
+            return
+        if not isinstance(hub_data, dict):
+            return
+        pip_package = hub_data.get("pip_package")
+        if not pip_package:
+            return
+        leaf_data = _leaf_manifest_from_dist(pip_package)
+        if leaf_data is None:
+            return
+        for key in _MANIFEST_COMPARE_KEYS:
+            if hub_data.get(key) != leaf_data.get(key):
+                yield UIViolation(
+                    rule=rules["STX-UI109"],
+                    path=str(path),
+                    line=1,
+                    col=0,
+                    source_line=(
+                        f"hub {key}={hub_data.get(key)!r} vs "
+                        f"leaf {key}={leaf_data.get(key)!r}"
+                    ),
+                )
+                break
+
 
 def scan_path(
     target: Path | str,
@@ -347,7 +573,7 @@ def scan_path(
     treat_as_consumer: bool = True,
     skip_dirs: Sequence[str] = _DEFAULT_SKIP_DIRS,
 ) -> list[UIViolation]:
-    """Walk ``target`` and return all UI-101..107 violations found.
+    """Walk ``target`` and return all UI-101..111 violations found.
 
     Parameters
     ----------
@@ -355,9 +581,12 @@ def scan_path(
         Path to a single file or to a directory tree.
     treat_as_consumer
         If True (default), this is a consumer repo lint — UI-104
-        (shell/primitives edits) fires when consumer CSS lives under
-        the shell/primitives path. Pass False to run inside scitex-ui
-        itself, where editing shell/primitives is allowed.
+        (shell/primitives edits), UI-111 (unconditional `!important`
+        layout overrides, which the shell itself uses legitimately)
+        and UI-113 (AppHeader restyles; the SDK defines that row)
+        fire. Pass False to run inside scitex-ui itself, where editing
+        shell/primitives, using `!important` and defining the header
+        row are the point.
     skip_dirs
         Directory NAMES to skip while walking. Defaults skip
         ``node_modules``, ``.venv``, ``.git`` etc.
@@ -380,11 +609,13 @@ def scan_path(
         lines = text.splitlines()
         if kind == "css":
             for v in _scan_css(path, lines, rules):
-                if v.rule.id == "STX-UI104" and not treat_as_consumer:
+                if v.rule.id in ("STX-UI104", "STX-UI111", "STX-UI113") and not treat_as_consumer:
                     continue
                 violations.append(v)
         elif kind in {"tsx", "html"}:
             violations.extend(_scan_tsx_html(path, lines, rules))
+        elif kind == "json":
+            violations.extend(_scan_json(path, text, rules))
     return violations
 
 

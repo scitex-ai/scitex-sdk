@@ -159,11 +159,68 @@ are documented with the contract they enforce, not here:
 Splitting a rule's *what* from its *why* across two pages is how one of
 them goes stale, and the mount contract is already that page's subject.
 
+### UI-108 — `leaf-local-header-element` (WARN)
+
+A literal `<header` tag in consumer HTML. The shared AppHeader primitive
+(`data-stx-app-header`) owns that row; a leaf-local header forks the
+moment the SDK ships a header tweak. Reference adopter: the SDK App
+wizard (`scitex_sdk/creator`). Comment lines mentioning the tag are
+exempt — a doc discussing the pattern is not the pattern. Document
+pages (legal/landing/docs) are out of scope: gates should scope UI-108
+to app surfaces rather than exempting the rule — a document `<header>`
+is semantics, not an app row.
+
+### UI-109 — `hub-duplicate-manifest-drift` (WARN)
+
+A `apps/workspace/*_app/manifest.json` hub-side copy whose `label` or
+`icon` disagrees with the leaf's own manifest (resolved from the
+installed dist named by `pip_package`). `name` is deliberately not
+compared: hub `name` is module identity, leaf `name` package identity.
+The leaf manifest is the single source for display metadata; the copy
+is the drift. Silent when the dist is not installed — unresolvable is
+not evidence.
+
+### UI-110 — `hardcoded-launcher-icon` (WARN)
+
+A hardcoded `"icon"` key in a hub `launcher_links/*.json`. Tiles must
+resolve the icon from the leaf manifest at render time (the registry
+already carries `manifest_icon_fa`); operator rule: leaf owns icons.
+Escaped ONLY by an explicit `"hub_native": true` declaration in the
+same file — hub-native tiles (chat, settings) have no leaf manifest,
+and the declaration keeps that auditable. `create-app` is not
+hub-native: it resolves from the SDK manifest.
+
+### UI-111 — `unconditional-important-directional-override` (WARN)
+
+A top-level `flex-direction` / `flex-wrap` `!important` in a file that
+also carries `@media`. The override silently beats the responsive rules
+(writer killed its own 600px breakpoint this way). `display` toggles are
+deliberately out of scope: tab-visibility state is JS-driven, not layout
+direction. Overrides already inside a media query are legitimate scoping
+and are never flagged; the SDK's own shell is exempt via
+`treat_as_consumer=False`. Third-party `vendor/` trees are never scanned.
+
+### UI-112 — `hardcoded-tab-title` (WARN)
+
+A literal `<title>…</title>` in a Django template. The tab must read the
+same name as the tile: `<title>{{ app_label }}</title>` via the shared
+shell or `_branding_head.html` partial, with the manifest label passed
+as `app_label` (operator: cards showed "Card Board" for a "Cards"
+tile). Generated `_sphinx_html` trees are never scanned.
+
+### UI-113 — `appheader-row-override` (WARN)
+
+Consumer CSS touching `.stx-app-header*` / `[data-stx-app-header]`
+selectors. Row height, placement and font size come from the SDK alone
+so the title + version + project-picker row renders identically in
+every app. The SDK's own defining stylesheet is exempt via
+`treat_as_consumer=False` (same gate as UI-104/111).
+
 ---
 
 ## How the linter is wired
 
-`scitex-ui` registers the 7 rules above with scitex-dev's linter via
+`scitex-ui` registers the 11 rules above with scitex-dev's linter via
 the canonical entry-point:
 
 ```toml
