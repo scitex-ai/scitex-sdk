@@ -143,7 +143,7 @@ class TestValidateManifest:
         # Arrange
         data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
         data["name"] = "my_app"
-        data["label"] = "SciTeX Test App"
+        data["label"] = "Test App"
         write_manifest(tmp_path, data)
         # Act
         warnings = validate_manifest_advisory(tmp_path)
@@ -277,21 +277,31 @@ class TestSlugIsMountLeaf:
         assert not [e for e in errors if "'slug'" in e]
 
 
-class TestLabelFamilyFormIsAdvisory:
-    """label 'SciTeX <Name>' is taste: warn, never fail."""
+class TestLabelShortFormIsAdvisory:
+    """label short tile form is taste: warn on the prefix, never fail."""
 
-    def test_bare_label_is_not_an_error(self, tmp_path):
+    def test_prefixed_label_is_not_an_error(self, tmp_path):
         # Arrange
         data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
         data["slug"] = "my-app"
-        data["label"] = "Storage"
+        data["label"] = "SciTeX Storage"
         write_manifest(tmp_path, data)
         # Act
         errors = validate_manifest(tmp_path)
         # Assert
         assert not [e for e in errors if "'label'" in e]
 
-    def test_bare_label_is_an_advisory(self, tmp_path):
+    def test_prefixed_label_is_an_advisory(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["label"] = "SciTeX Storage"
+        write_manifest(tmp_path, data)
+        # Act
+        warnings = validate_manifest_advisory(tmp_path)
+        # Assert
+        assert any("short tile form" in w for w in warnings)
+
+    def test_short_label_raises_no_advisory(self, tmp_path):
         # Arrange
         data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
         data["label"] = "Storage"
@@ -299,17 +309,54 @@ class TestLabelFamilyFormIsAdvisory:
         # Act
         warnings = validate_manifest_advisory(tmp_path)
         # Assert
-        assert any("SciTeX <Name>" in w for w in warnings)
+        assert not [w for w in warnings if "short tile form" in w]
 
-    def test_family_label_raises_no_advisory(self, tmp_path):
+
+class TestGroupIsClosedEnum:
+    """group declares the launcher section: typo is an ERROR, absent is fine."""
+
+    def test_omitted_group_is_not_an_error(self, tmp_path):
         # Arrange
         data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
-        data["label"] = "SciTeX Stats"
+        data["slug"] = "my-app"
         write_manifest(tmp_path, data)
         # Act
-        warnings = validate_manifest_advisory(tmp_path)
+        errors = validate_manifest(tmp_path)
         # Assert
-        assert not [w for w in warnings if "SciTeX <Name>" in w]
+        assert not [e for e in errors if "'group'" in e]
+
+    def test_valid_group_passes(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["slug"] = "my-app"
+        data["group"] = "foundation"
+        write_manifest(tmp_path, data)
+        # Act
+        errors = validate_manifest(tmp_path)
+        # Assert
+        assert not [e for e in errors if "'group'" in e]
+
+    def test_group_matches_case_insensitively(self, tmp_path):
+        # Arrange — same convention as scope: canonical lowercase, any case in.
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["slug"] = "my-app"
+        data["group"] = "Work"
+        write_manifest(tmp_path, data)
+        # Act
+        errors = validate_manifest(tmp_path)
+        # Assert
+        assert not [e for e in errors if "'group'" in e]
+
+    def test_typo_group_is_an_error(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["slug"] = "my-app"
+        data["group"] = "foundatoin"
+        write_manifest(tmp_path, data)
+        # Act
+        errors = validate_manifest(tmp_path)
+        # Assert
+        assert any("'group'" in e for e in errors)
 
 
 class TestFaviconSSOTIsAdvisory:
@@ -329,7 +376,7 @@ class TestFaviconSSOTIsAdvisory:
     def test_leaf_favicon_file_is_an_advisory(self, tmp_path):
         # Arrange
         data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
-        data["label"] = "SciTeX Test"
+        data["label"] = "Test"
         write_manifest(tmp_path, data)
         (tmp_path / "favicon-32x32.png").touch()
         # Act
@@ -340,7 +387,7 @@ class TestFaviconSSOTIsAdvisory:
     def test_no_leaf_favicon_raises_no_advisory(self, tmp_path):
         # Arrange
         data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
-        data["label"] = "SciTeX Test"
+        data["label"] = "Test"
         write_manifest(tmp_path, data)
         # Act
         warnings = validate_manifest_advisory(tmp_path)

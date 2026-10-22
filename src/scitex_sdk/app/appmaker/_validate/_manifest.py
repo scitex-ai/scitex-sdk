@@ -19,6 +19,39 @@ from pathlib import Path
 # every caller in the interpreter. (scitex-writer, 2026-09-06.)
 MANIFEST_REQUIRED_KEYS = ("name", "slug", "label", "pip_package", "icon", "license")
 
+#: Launcher-page sections a leaf may declare via the manifest ``group`` field.
+#: CLOSED enum: anything else is a hard manifest ERROR (fail loud, per the
+#: consuming-agent rules) rather than a silently mis-grouped tile. Lowercase
+#: canonical, matched case-insensitively — the same convention as scope
+#: (``_app_scope.VALID_SCOPES``). Omitted ``group`` is NOT an error: the host
+#: keeps its existing grouping as the fallback, so adoption is per-leaf.
+GROUP_FOUNDATION = "foundation"
+GROUP_WORK = "work"
+GROUP_PUBLICATION = "publication"
+VALID_GROUPS = (GROUP_FOUNDATION, GROUP_WORK, GROUP_PUBLICATION)
+
+
+def normalize_group(value: str | None) -> str | None:
+    """Return the canonical launcher group for a raw manifest value.
+
+    ``None`` / empty -> ``None`` (undeclared: the host keeps its existing
+    grouping). A value already in :data:`VALID_GROUPS` (case-insensitive) is
+    returned lower-cased. Any other value RAISES ``ValueError`` — a typo'd
+    group must fail loud at validation/render, never degrade to a guessed
+    launcher section.
+    """
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    norm = str(value).strip().lower()
+    if norm in VALID_GROUPS:
+        return norm
+    raise ValueError(
+        f"manifest 'group' must be one of {VALID_GROUPS} (got {value!r}). "
+        f"'group' declares the launcher-page section "
+        f"(foundation / work / publication); omit it and the host keeps "
+        f"its existing grouping."
+    )
+
 
 def validate_manifest(app_dir: str | Path) -> list[str]:
     """Check manifest.json schema and content."""
@@ -77,6 +110,16 @@ def validate_manifest(app_dir: str | Path) -> list[str]:
                 f"(got {scope!r}). 'project' opts the app into a per-app "
                 f"project selector; 'user' (or omit) renders with none."
             )
+
+    # 'group' is OPTIONAL (absent -> undeclared, the host keeps its existing
+    # grouping as the fallback) but when present it is a CLOSED enum: a typo'd
+    # group must fail loud HERE, not degrade to a mis-grouped tile at render
+    # time. Same convention as 'scope' above.
+    if "group" in data:
+        try:
+            normalize_group(data["group"])
+        except ValueError as exc:
+            errors.append(f"manifest.json {exc}")
 
     # 'mobile_layout' is OPTIONAL and TRISTATE (ADR: mobile-layout card).
     # Semantics (hub-decided 2026-09-14): absent (None) = no claim — the hub
@@ -145,15 +188,16 @@ def validate_manifest_advisory(app_dir: str | Path) -> list[str]:
             f"manifest.json 'name' should end with '_app' or '-app' (got: '{name}')"
         )
 
-    # 'label' family form ("SciTeX <Name>") is taste with precedent both ways
-    # (writer/SDK App vs Storage/Scholar/Stats), so it is ADVICE: warn, never
-    # fail. New leaves should follow the family form; existing bare labels are
-    # grandfathered drift, and renaming a tile is the App lane's call.
+    # 'label' short tile form (operator 2026-10-23): the launcher page carries
+    # the family brand, so tiles read Cards / Agent Container / Storage /
+    # Scholar / Stats / FigRecipe / Writer — no 'SciTeX ' prefix. A prefixed
+    # label is taste drift, so it is ADVICE: warn, never fail. Renaming a tile
+    # is the App lane's call (leaf manifest + hub launcher entry).
     label = data.get("label", "")
-    if label and not label.startswith("SciTeX "):
+    if label and label.startswith("SciTeX "):
         warnings.append(
-            f"manifest.json 'label' should use the family form 'SciTeX <Name>' "
-            f"(got: '{label}')"
+            f"manifest.json 'label' should use the short tile form without "
+            f"the 'SciTeX ' prefix (got: '{label}')"
         )
 
     # Favicon SSOT (operator 2026-10-20): the canonical mark is

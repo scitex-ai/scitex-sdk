@@ -158,6 +158,20 @@ class ScitexAppConfig(AppConfig):
         return self.app_scope == SCOPE_PROJECT
 
     @property
+    def app_group(self) -> Optional[str]:
+        """The app's declared launcher group, or ``None`` when undeclared.
+
+        Read from the manifest ``group`` field and normalized via the shared
+        contract (``appmaker._validate._manifest.normalize_group``), which
+        fails loud on a typo rather than guessing. ``None`` (field omitted)
+        is a real state, not a missing value: the host keeps its existing
+        grouping as the fallback, so adoption is per-leaf.
+        """
+        from .appmaker._validate._manifest import normalize_group
+
+        return normalize_group(self.manifest.get("group"))
+
+    @property
     def frontend_type(self) -> str:
         return self.manifest.get("frontend_type", "django")
 
