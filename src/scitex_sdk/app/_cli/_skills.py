@@ -12,6 +12,8 @@ from pathlib import Path
 
 import click
 
+from ._cli_help import cli_help, examples, spec_command, spec_group
+
 PKG = "scitex-app"
 _PKG_SHORT = "app"  # scitex-sdk app → app (prefix-stripping rule)
 
@@ -96,7 +98,24 @@ def _list_skill_files(root: Path) -> list[Path]:
 # ---------------------------------------------------------------------------
 
 
-@click.group(name="skills", invoke_without_command=True)
+_SKILLS_SPEC = cli_help(
+    summary="Agent-facing skills bundled with scitex-app.",
+    description=(
+        "Self-contained: walks the package's own `_skills/scitex-app/` "
+        "directory with no scitex-dev runtime dep.",
+    ),
+    examples=examples(
+        ("{prog} list", "list bundled skill files"),
+        ("{prog} get 01_installation", "print one skill file"),
+        (
+            "{prog} install",
+            "install to the default skills dir",
+        ),
+    ),
+)
+
+
+@click.group(name="skills", invoke_without_command=True, **spec_group(_SKILLS_SPEC))
 @click.pass_context
 def skills_group(ctx) -> None:
     """Agent-facing skills bundled with scitex-app.
@@ -112,7 +131,18 @@ def skills_group(ctx) -> None:
         click.echo(ctx.get_help())
 
 
-@skills_group.command(name="list")
+@skills_group.command(
+    name="list",
+    **spec_command(
+        cli_help(
+            summary="List skill files bundled with this package.",
+            examples=examples(
+                ("{prog} list", "list bundled skill files"),
+                ("{prog} list --json", "machine-readable"),
+            ),
+        )
+    ),
+)
 @click.option("--json", "as_json", is_flag=True, help="Emit machine-readable JSON.")
 def skills_list(as_json: bool) -> None:
     """List skill files bundled with this package.
@@ -142,7 +172,18 @@ def skills_list(as_json: bool) -> None:
         click.echo(f"{p.stem:36s}  {rel}")
 
 
-@skills_group.command(name="get")
+@skills_group.command(
+    name="get",
+    **spec_command(
+        cli_help(
+            summary="Print the contents of a skill file by NAME.",
+            examples=examples(
+                ("{prog} get 01_installation", "print one skill"),
+                ("{prog} get 02_quick-start --json", "as JSON"),
+            ),
+        )
+    ),
+)
 @click.argument("name")
 @click.option("--json", "as_json", is_flag=True, help="Emit machine-readable JSON.")
 def skills_get(name: str, as_json: bool) -> None:
@@ -178,7 +219,25 @@ def skills_get(name: str, as_json: bool) -> None:
     click.echo(match.read_text(encoding="utf-8"))
 
 
-@skills_group.command(name="install")
+@skills_group.command(
+    name="install",
+    **spec_command(
+        cli_help(
+            summary="Install this package's skills into a target directory.",
+            description=(
+                "Symlinks by default so the installed copy follows package "
+                "upgrades; --no-link copies instead.",
+            ),
+            examples=examples(
+                ("{prog} install", "symlink into the default dir"),
+                (
+                    "{prog} install --claude-symlink",
+                    "also expose to Claude Code",
+                ),
+            ),
+        )
+    ),
+)
 @click.option(
     "--dest",
     type=click.Path(),
