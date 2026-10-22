@@ -16,6 +16,7 @@ implementation consolidates into the SDK.
 
 from __future__ import annotations
 
+import importlib.metadata
 import json
 import copy
 import os
@@ -28,6 +29,18 @@ from pathlib import Path
 import click
 
 PACKAGE = "scitex-sdk"
+
+
+def _installed_version() -> str:
+    try:
+        return importlib.metadata.version(PACKAGE)
+    except importlib.metadata.PackageNotFoundError:
+        from scitex_sdk import __version__ as src_version
+
+        return src_version
+
+
+SDK_VERSION = _installed_version()
 
 DEFAULT_PORT = 31301
 DEFAULT_HOST = "127.0.0.1"
@@ -65,13 +78,68 @@ def _log_path() -> Path:
     context_settings={"help_option_names": ["-h", "--help"]},
     invoke_without_command=True,
 )
-@click.version_option(None, "-V", "--version", prog_name="scitex-sdk")
+@click.version_option(SDK_VERSION, "-V", "--version", prog_name="scitex-sdk")
+@click.option(
+    "--help-recursive",
+    is_flag=True,
+    default=False,
+    help="Show help for all commands.",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit structured JSON output (propagates to subcommands that honour it).",
+)
 @click.pass_context
-def main(ctx: click.Context) -> None:
-    """SciTeX SDK — app contract + UI shell + SciTeX SDK wizard."""
+def main(
+    ctx: click.Context, help_recursive: bool, as_json: bool
+) -> None:
+    """scitex-sdk (vX.Y.Z) — app contract + UI shell + SciTeX SDK wizard.
+
+    Config is loaded per component group with the SciTeX precedence chain:
+    config.yaml -> $SCITEX_<GROUP>_CONFIG -> ~/.scitex/<group>/config.yaml
+    -> defaults (see `scitex-sdk app --help` and `scitex-sdk ui --help`).
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["json"] = as_json
+    if help_recursive:
+        _print_help_recursive(ctx)
+        ctx.exit(0)
     if ctx.invoked_subcommand is not None:
         return
     click.echo(ctx.get_help())
+
+
+main.help = main.help.replace("(vX.Y.Z)", f"(v{SDK_VERSION})")
+
+
+def _print_help_recursive(ctx: click.Context) -> None:
+    """Print help for the root and every subcommand, depth-first."""
+    click.secho("=== scitex-sdk ===", fg="cyan", bold=True)
+    click.echo(ctx.get_help())
+    for name in sorted(main.list_commands(ctx) or []):
+        cmd = main.get_command(ctx, name)
+        if cmd is None:
+            continue
+        click.echo()
+        click.secho(f"=== scitex-sdk {name} ===", fg="cyan", bold=True)
+        sub = click.Context(cmd, info_name=name, parent=ctx)
+        click.echo(cmd.get_help(sub))
+        if isinstance(cmd, click.Group):
+            for sub_name in sorted(cmd.list_commands(sub) or []):
+                sub_cmd = cmd.get_command(sub, sub_name)
+                if sub_cmd is None:
+                    continue
+                click.echo()
+                click.secho(
+                    f"=== scitex-sdk {name} {sub_name} ===", fg="cyan", bold=True
+                )
+                with click.Context(
+                    sub_cmd, info_name=sub_name, parent=sub
+                ) as sub_sub:
+                    click.echo(sub_cmd.get_help(sub_sub))
 
 
 @main.group("gui", invoke_without_command=True)
@@ -108,7 +176,13 @@ def gui_serve(
     dry_run: bool,
     as_json: bool,
 ) -> None:
-    """Run the SciTeX SDK wizard in the foreground (blocking, headless)."""
+    """Run the SciTeX SDK wizard in the foreground (blocking, headless).
+
+    \b
+    Example:
+      $ scitex-sdk gui serve --port 31301
+      $ scitex-sdk gui serve --dry-run
+    """
     _guard_bind(host, allow_remote)
     if dry_run:
         payload = {"would_serve": True, "host": host, "port": port, "force": force}
@@ -152,7 +226,13 @@ def gui_open(
     dry_run: bool,
     as_json: bool,
 ) -> None:
-    """Open the wizard, starting a detached server when necessary."""
+    """Open the wizard, starting a detached server when necessary.
+
+    \b
+    Example:
+      $ scitex-sdk gui open
+      $ scitex-sdk gui open --no-browser
+    """
     _guard_bind(host, allow_remote)
     if dry_run:
         payload = {"would_open": True, "host": host, "port": port}
@@ -205,7 +285,13 @@ def gui_open(
 @gui.command("status")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
 def gui_status(as_json: bool) -> None:
-    """Report whether the SciTeX SDK wizard is running."""
+    """Report whether the SciTeX SDK wizard is running.
+
+    \b
+    Example:
+      $ scitex-sdk gui status
+      $ scitex-sdk gui status --json
+    """
     current = _gui_status()
     if as_json:
         click.echo(json.dumps(current))
@@ -220,7 +306,13 @@ def gui_status(as_json: bool) -> None:
 @click.option("--yes", "-y", "yes", is_flag=True, help="Confirm stopping the server.")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
 def gui_stop(dry_run: bool, yes: bool, as_json: bool) -> None:
-    """Stop the SciTeX SDK wizard."""
+    """Stop the SciTeX SDK wizard.
+
+    \b
+    Example:
+      $ scitex-sdk gui stop --yes
+      $ scitex-sdk gui stop --dry-run
+    """
     current = _gui_status()
     if not current.get("running"):
         payload = {"running": False, "stopped": False}
@@ -238,6 +330,112 @@ def gui_stop(dry_run: bool, yes: bool, as_json: bool) -> None:
         raise click.ClickException("Refusing to stop without --yes/-y")
     result = _gui_stop()
     click.echo(json.dumps(result) if as_json else f"stopped (pid {result.get('pid')})")
+
+
+@main.group("mcp", invoke_without_command=True)
+@click.pass_context
+def mcp(ctx: click.Context) -> None:
+    """MCP (Model Context Protocol) servers for scitex-sdk (app + ui).
+
+    \b
+    Example:
+      $ scitex-sdk mcp list-tools
+      $ scitex-sdk mcp list-tools --json
+    """
+    if ctx.invoked_subcommand is not None:
+        return
+    click.echo(ctx.get_help())
+
+
+@mcp.command("list-tools")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def mcp_list_tools(as_json: bool) -> None:
+    """List MCP tools from every scitex-sdk server (app, ui).
+
+    \b
+    Example:
+      $ scitex-sdk mcp list-tools
+      $ scitex-sdk mcp list-tools --json
+    """
+    import asyncio
+
+    servers: dict[str, object] = {}
+    try:
+        from scitex_sdk.app._mcp.server import mcp as app_server
+
+        servers["app"] = app_server
+    except ImportError as exc:
+        raise click.ClickException(
+            f"fastmcp not installed. Install with: pip install scitex-sdk[all]\n{exc}"
+        ) from exc
+    from scitex_sdk.ui._mcp.server import FASTMCP_AVAILABLE, mcp as ui_server
+
+    if not FASTMCP_AVAILABLE:
+        raise click.ClickException(
+            "fastmcp not installed. Install with: pip install scitex-sdk[all]"
+        )
+    servers["ui"] = ui_server
+
+    merged: list[dict] = []
+    for server_name, server in servers.items():
+        tools = asyncio.run(server.list_tools())  # type: ignore[union-attr]
+        for tool in tools:
+            merged.append(
+                {
+                    "server": server_name,
+                    "name": tool.name,
+                    "description": (tool.description or "").splitlines()[0]
+                    if tool.description
+                    else "",
+                }
+            )
+    if as_json:
+        click.echo(json.dumps(merged, indent=2))
+        return
+    current: str | None = None
+    for entry in merged:
+        if entry["server"] != current:
+            current = entry["server"]
+            click.secho(f"[{current}]", fg="cyan", bold=True)
+        line = f"  {entry['name']}"
+        if entry["description"]:
+            line += f" — {entry['description']}"
+        click.echo(line)
+
+
+@main.command("list-python-apis")
+@click.option(
+    "-v", "--verbose", count=True, help="Verbosity: -v sig+doc1, -vv full doc."
+)
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def list_python_apis(verbose: int, as_json: bool) -> None:
+    """List public Python APIs for every scitex-sdk component (app, ui).
+
+    \b
+    Example:
+      $ scitex-sdk list-python-apis
+      $ scitex-sdk list-python-apis --json
+    """
+    from scitex_sdk import app as scitex_app
+    from scitex_sdk import ui as scitex_ui
+    from scitex_sdk.app._cli._introspect import _get_api_tree
+
+    merged: list[dict] = []
+    for root in (scitex_app, scitex_ui):
+        for row in _get_api_tree(root, max_depth=5, docstring=(verbose >= 1)):
+            merged.append({"component": root.__name__.split(".")[-1], **row})
+    if as_json:
+        click.echo(json.dumps(merged, indent=2))
+        return
+    click.secho(
+        f"API tree of scitex-sdk (app + ui, {len(merged)} items):", fg="cyan"
+    )
+    current: str | None = None
+    for row in merged:
+        if row["component"] != current:
+            current = row["component"]
+            click.secho(f"[{current}]", fg="cyan", bold=True)
+        click.echo(f"  [{row['Type']}] {row['Name']}")
 
 
 def _register_components() -> None:
@@ -262,6 +460,21 @@ def _register_components() -> None:
             app_commands.add_command(command, name)
     main.add_command(app_commands, "app")
     main.add_command(ui_commands, "ui")
+
+    try:
+        from scitex_dev._cli._completion import attach_shell_completion
+
+        attach_shell_completion(main, prog_name="scitex-sdk")
+    except Exception:
+        pass
+
+    try:
+        from scitex_dev.cli import docs_click_group, skills_click_group
+
+        main.add_command(docs_click_group(package="scitex-sdk"))
+        main.add_command(skills_click_group(package="scitex-sdk"))
+    except ImportError:
+        pass
 
 
 _register_components()

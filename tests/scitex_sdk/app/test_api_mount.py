@@ -100,6 +100,19 @@ def test_denied_path_imports_nothing(tmp_path):
             resolve_handler(_ref(), admit(_ref(), review_ref="review-1", enabled=[]), "ping")
     finally:
         _unpath(tmp_path)
+
+
+def test_denied_path_leaves_no_import_marker(tmp_path):
+    # Arrange
+    _write_leaf(tmp_path)
+    try:
+        # Act
+        try:
+            resolve_handler(_ref(), admit(_ref(), review_ref="review-1", enabled=[]), "ping")
+        except AdmissionDenied:
+            pass
+    finally:
+        _unpath(tmp_path)
     # Assert
     assert _marker_absent(tmp_path)
 
@@ -116,6 +129,23 @@ def test_changed_target_refused_before_import(tmp_path):
                 admit(_ref(), review_ref="review-1", enabled=["ping"]),
                 "ping",
             )
+    finally:
+        _unpath(tmp_path)
+
+
+def test_changed_target_leaves_no_import_marker(tmp_path):
+    # Arrange
+    _write_leaf(tmp_path)
+    try:
+        # Act
+        try:
+            resolve_handler(
+                ApiPluginRef(name="leafprobe", target=LEAF_PKG + ".views:OTHER", distribution="leafprobe-dist"),
+                admit(_ref(), review_ref="review-1", enabled=["ping"]),
+                "ping",
+            )
+        except AdmissionDenied:
+            pass
     finally:
         _unpath(tmp_path)
     # Assert
@@ -347,6 +377,22 @@ def test_require_admitted_refuses_drift_without_import(tmp_path):
             )
     finally:
         _unpath(tmp_path)
+
+
+def test_refused_drift_leaves_no_import_marker(tmp_path):
+    # Arrange
+    _write_leaf(tmp_path)
+    try:
+        # Act
+        try:
+            api_mount.require_admitted(
+                ApiPluginRef(name="leafprobe", target="leafprobe_pkg.views:OTHER", distribution="leafprobe-dist"),
+                admit(_ref(), review_ref="review-1", enabled=["ping"]),
+            )
+        except AdmissionDenied:
+            pass
+    finally:
+        _unpath(tmp_path)
     # Assert
     assert _marker_absent(tmp_path)
 
@@ -404,7 +450,8 @@ def test_read_only_falsy_non_bool_refused():
 
 
 def test_lookup_failure_denied_not_absent(tmp_path):
-    # Arrange: a real installed distribution carrying a malformed inert
+    # Arrange
+    # a real installed distribution carrying a malformed inert
     # descriptor, so the reader denies instead of reporting absent. No mocks:
     # the failure comes from real files, not a patched finder. (An unreadable
     # METADATA would read as absent; the denied path needs corrupt content.)

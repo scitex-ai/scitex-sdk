@@ -2,6 +2,7 @@
 import copy
 import importlib.metadata
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -145,50 +146,91 @@ class FixtureDistribution:
         return member
 
 
-def fixture_observe(monkeypatch, distribution):
-    monkeypatch.setattr(importlib.metadata, "distributions", lambda: [distribution])
-    monkeypatch.setattr(gate.importlib.util, "find_spec", lambda name: None)
-    return gate.observe()
+@pytest.fixture
+def _observe():
+    # Arrange — install hermetic metadata stubs without the monkeypatch
+    # fixture: explicit save/restore around the test.
+    prior_distributions = importlib.metadata.distributions
+    prior_find_spec = gate.importlib.util.find_spec
+
+    def observe(distribution):
+        importlib.metadata.distributions = lambda: [distribution]  # noqa: E731
+        gate.importlib.util.find_spec = lambda name: None  # noqa: E731
+        return gate.observe()
+
+    try:
+        yield observe
+    finally:
+        importlib.metadata.distributions = prior_distributions
+        gate.importlib.util.find_spec = prior_find_spec
 
 
-def test_direct_optional_retired_requirement_blocks_bootstrap(monkeypatch):
+@pytest.fixture
+def _argv():
+    # Arrange — swap sys.argv without the monkeypatch fixture.
+    prior = sys.argv
+
+    def set_argv(argv):
+        sys.argv[:] = argv
+
+    try:
+        yield set_argv
+    finally:
+        sys.argv[:] = prior
+
+
+@pytest.fixture
+def _stub_run():
+    # Arrange — swap graphs.subprocess.run without the monkeypatch fixture.
+    prior = graphs.subprocess.run
+
+    def use(run):
+        graphs.subprocess.run = run
+
+    try:
+        yield use
+    finally:
+        graphs.subprocess.run = prior
+
+
+def test_direct_optional_retired_requirement_blocks_bootstrap(_observe):
     # Arrange
     distribution = FixtureDistribution()
     distribution.requires = ['SciTeX_UI>=0.23; extra == "unused"']
     # Act
-    observation = fixture_observe(monkeypatch, distribution)
+    observation = _observe(distribution)
     # Assert
     assert gate.evaluate(observation, "bootstrap-observation", "owned-control")[1] == 1
 
 
-def test_missing_sdk_file_inventory_blocks_bootstrap(monkeypatch):
+def test_missing_sdk_file_inventory_blocks_bootstrap(_observe):
     # Arrange
     distribution = FixtureDistribution()
     distribution.files = None
     # Act
-    observation = fixture_observe(monkeypatch, distribution)
+    observation = _observe(distribution)
     # Assert
     assert observation["direct_sdk_ownership_errors"]
 
 
-def test_canonical_component_entrypoint_names_do_not_require_retired_modules(monkeypatch):
+def test_canonical_component_entrypoint_names_do_not_require_retired_modules(_observe):
     # Arrange
     distribution = FixtureDistribution()
     distribution.entry_points = [importlib.metadata.EntryPoint(
         name="scitex-app", value="scitex_sdk.app", group="scitex_dev.docs")]
     # Act
-    observation = fixture_observe(monkeypatch, distribution)
+    observation = _observe(distribution)
     # Assert
     assert observation["retired_import_references"] == []
 
 
-def test_retired_entrypoint_target_blocks_bootstrap(monkeypatch):
+def test_retired_entrypoint_target_blocks_bootstrap(_observe):
     # Arrange
     distribution = FixtureDistribution()
     distribution.entry_points = [importlib.metadata.EntryPoint(
         name="arbitrary", value="scitex_app:main", group="console_scripts")]
     # Act
-    observation = fixture_observe(monkeypatch, distribution)
+    observation = _observe(distribution)
     # Assert
     assert observation["direct_sdk_ownership_errors"]
 
@@ -267,32 +309,32 @@ def test_bare_npm_retired_dependency_is_detected(tmp_path):
     assert references[0]["reference"] == "scitex-ui"
 
 
-def invoke_incomplete_policy(monkeypatch, tmp_path):
+def invoke_incomplete_policy(_argv, tmp_path):
     policy = Path("scripts/app-ui-retirement-graphs.json").resolve()
-    monkeypatch.setattr("sys.argv", ["retirement_graphs", "--policy", str(policy),
+    _argv(["retirement_graphs", "--policy", str(policy),
         "--scratch", str(tmp_path / "must-not-exist"), "--output", str(tmp_path / "report.json")])
     return graphs.main()
 
 
-def test_unregistered_policy_main_returns_failure(monkeypatch, tmp_path):
+def test_unregistered_policy_main_returns_failure(_argv, tmp_path):
     # Arrange
     scratch = tmp_path
     # Act
-    code = invoke_incomplete_policy(monkeypatch, scratch)
+    code = invoke_incomplete_policy(_argv, scratch)
     # Assert
     assert code == 1
 
 
-def test_unregistered_policy_cannot_create_resolver_environment(monkeypatch, tmp_path):
+def test_unregistered_policy_cannot_create_resolver_environment(_argv, tmp_path):
     # Arrange
     scratch = tmp_path
     # Act
-    invoke_incomplete_policy(monkeypatch, scratch)
+    invoke_incomplete_policy(_argv, scratch)
     # Assert
     assert not (scratch / "must-not-exist").exists()
 
 
-def test_foreign_distribution_retired_import_is_not_omitted(monkeypatch, tmp_path):
+def test_foreign_distribution_retired_import_is_not_omitted(tmp_path):
     # Arrange
     module = tmp_path / "foreignpkg.py"
     module.write_text("from scitex_ui import widgets\n")
@@ -300,20 +342,32 @@ def test_foreign_distribution_retired_import_is_not_omitted(monkeypatch, tmp_pat
     foreign.metadata = {"Name": "foreign-consumer"}
     foreign.files = [Path("foreignpkg.py")]
     foreign.locate_file = lambda member: tmp_path / member
-    monkeypatch.setattr(importlib.metadata, "distributions", lambda: [FixtureDistribution(), foreign])
-    monkeypatch.setattr(gate.importlib.util, "find_spec", lambda name: None)
-    # Act
-    observation = gate.observe()
+    prior_distributions = importlib.metadata.distributions
+    prior_find_spec = gate.importlib.util.find_spec
+    importlib.metadata.distributions = lambda: [FixtureDistribution(), foreign]  # noqa: E731
+    gate.importlib.util.find_spec = lambda name: None  # noqa: E731
+    try:
+        # Act
+        observation = gate.observe()
+    finally:
+        importlib.metadata.distributions = prior_distributions
+        gate.importlib.util.find_spec = prior_find_spec
     # Assert
     assert observation["retired_import_references"][0]["distribution"] == "foreign-consumer"
 
 
-def test_duplicate_sdk_metadata_cannot_mask_direct_ownership(monkeypatch):
+def test_duplicate_sdk_metadata_cannot_mask_direct_ownership():
     # Arrange
-    monkeypatch.setattr(importlib.metadata, "distributions", lambda: [FixtureDistribution(), FixtureDistribution()])
-    monkeypatch.setattr(gate.importlib.util, "find_spec", lambda name: None)
-    # Act
-    observation = gate.observe()
+    prior_distributions = importlib.metadata.distributions
+    prior_find_spec = gate.importlib.util.find_spec
+    importlib.metadata.distributions = lambda: [FixtureDistribution(), FixtureDistribution()]  # noqa: E731
+    gate.importlib.util.find_spec = lambda name: None  # noqa: E731
+    try:
+        # Act
+        observation = gate.observe()
+    finally:
+        importlib.metadata.distributions = prior_distributions
+        gate.importlib.util.find_spec = prior_find_spec
     # Assert
     assert observation["direct_sdk_ownership_errors"]
 
@@ -328,7 +382,7 @@ def test_malformed_npm_dependency_inventory_is_not_silently_ignored(tmp_path):
         gate.file_imports(path)
 
 
-def config_observation(monkeypatch, tmp_path):
+def config_observation(_observe, tmp_path):
     module = tmp_path / "scitex_config.py"
     module.write_text("SCITEX_APP_DIR = '.scitex/app'\nSCITEX_UI_DIR = '.scitex/ui'\n")
     distribution = FixtureDistribution()
@@ -336,16 +390,33 @@ def config_observation(monkeypatch, tmp_path):
     distribution.version = "0.3.6"
     distribution.files = [Path("scitex_config.py")]
     distribution.locate_file = lambda member: tmp_path / member
-    return fixture_observe(monkeypatch, distribution)
+    return _observe(distribution)
 
 
-def test_config_graph_without_sdk_preserves_its_legitimate_contract(monkeypatch, tmp_path):
+def test_config_graph_without_sdk_exit_code(_observe, tmp_path):
     # Arrange
-    observation = config_observation(monkeypatch, tmp_path)
+    observation = config_observation(_observe, tmp_path)
     # Act
     report, code = gate.evaluate(observation, "retirement", "config-core", sdk_requirement="none")
     # Assert
-    assert code == 0 and report["status"] == "RETIREMENT_GRAPH_PASSED"
+    assert code == 0
+
+
+def test_config_graph_without_sdk_status(_observe, tmp_path):
+    # Arrange
+    observation = config_observation(_observe, tmp_path)
+    # Act
+    report, code = gate.evaluate(observation, "retirement", "config-core", sdk_requirement="none")
+    # Assert
+    assert report["status"] == "RETIREMENT_GRAPH_PASSED"
+
+
+def test_config_graph_without_sdk_flags(_observe, tmp_path):
+    # Arrange
+    observation = config_observation(_observe, tmp_path)
+    # Act
+    report, code = gate.evaluate(observation, "retirement", "config-core", sdk_requirement="none")
+    # Assert
     assert report["sdk_required"] is False and report["dependency_retirement_ready"] is False
 
 
@@ -355,28 +426,79 @@ def test_config_graph_without_sdk_preserves_its_legitimate_contract(monkeypatch,
     ("retirement", "sdk-all", "owner"),
     ("retirement", "writer-gui", "active"),
 ])
-def test_missing_sdk_still_blocks_every_required_graph(monkeypatch, tmp_path, mode, graph, requirement):
+def test_missing_sdk_exit_code(_observe, tmp_path, mode, graph, requirement):
     # Arrange
-    observation = config_observation(monkeypatch, tmp_path)
+    observation = config_observation(_observe, tmp_path)
     # Act
     report, code = gate.evaluate(observation, mode, graph, sdk_requirement=requirement)
     # Assert
-    assert code == 1 and report["sdk_required"] is True
+    assert code == 1
+
+
+@pytest.mark.parametrize("mode,graph,requirement", [
+    ("bootstrap-observation", "sdk-all", "owner"),
+    ("bootstrap-observation", "config-core", "owner"),
+    ("retirement", "sdk-all", "owner"),
+    ("retirement", "writer-gui", "active"),
+])
+def test_missing_sdk_still_requires_sdk(_observe, tmp_path, mode, graph, requirement):
+    # Arrange
+    observation = config_observation(_observe, tmp_path)
+    # Act
+    report, code = gate.evaluate(observation, mode, graph, sdk_requirement=requirement)
+    # Assert
+    assert report["sdk_required"] is True
+
+
+@pytest.mark.parametrize("mode,graph,requirement", [
+    ("bootstrap-observation", "sdk-all", "owner"),
+    ("bootstrap-observation", "config-core", "owner"),
+    ("retirement", "sdk-all", "owner"),
+    ("retirement", "writer-gui", "active"),
+])
+def test_missing_sdk_reports_not_installed(_observe, tmp_path, mode, graph, requirement):
+    # Arrange
+    observation = config_observation(_observe, tmp_path)
+    # Act
+    report, code = gate.evaluate(observation, mode, graph, sdk_requirement=requirement)
+    # Assert
     assert "scitex-sdk is not installed" in report["direct_sdk_ownership_errors"]
 
 
-@pytest.mark.parametrize("defect", ["retired-requirement", "retired-entrypoint", "missing-inventory"])
-def test_optional_sdk_if_present_is_still_inspected(monkeypatch, defect):
-    # Arrange
+def _defective_distribution(defect):
+    # Arrange helper — one defective SDK metadata per defect kind.
     distribution = FixtureDistribution()
     if defect == "retired-requirement":
         distribution.requires = ['scitex-ui>=0.23; extra == "unused"']
-    elif defect == "retired-entrypoint":
+    if defect == "retired-entrypoint":
         distribution.entry_points = [importlib.metadata.EntryPoint(
             name="arbitrary", value="scitex_app:main", group="console_scripts")]
-    else:
+    if defect == "missing-inventory":
         distribution.files = None
-    observation = fixture_observe(monkeypatch, distribution)
+    return distribution
+
+
+def test_optional_sdk_retired_requirement_is_inspected(_observe):
+    # Arrange
+    observation = _observe(_defective_distribution("retired-requirement"))
+    # Act
+    report, code = gate.evaluate(observation, "retirement", "config-core", sdk_requirement="none")
+    # Assert
+    assert code == 1 and report["direct_sdk_ownership_errors"]
+
+
+def test_optional_sdk_retired_entrypoint_is_inspected(_observe):
+    # Arrange
+    observation = _observe(_defective_distribution("retired-entrypoint"))
+    # Act
+    report, code = gate.evaluate(observation, "retirement", "config-core", sdk_requirement="none")
+    # Assert
+    assert code == 1 and report["direct_sdk_ownership_errors"]
+
+
+def test_optional_sdk_missing_inventory_is_inspected(_observe):
+    # Arrange
+    observation = _observe(_defective_distribution("missing-inventory"))
     # Act
     report, code = gate.evaluate(observation, "retirement", "config-core", sdk_requirement="none")
     # Assert
@@ -384,7 +506,7 @@ def test_optional_sdk_if_present_is_still_inspected(monkeypatch, defect):
 
 
 @pytest.mark.parametrize("graph", ["sdk-all", "writer-gui", "config-core"])
-def test_graph_executor_carries_validated_sdk_classification(monkeypatch, tmp_path, graph):
+def test_graph_executor_carries_validated_sdk_classification(_observe, _stub_run, tmp_path, graph):
     # Arrange
     row = next(row for row in json.loads(Path("scripts/app-ui-retirement-graphs.json").read_text())["graphs"]
                if row["name"] == graph)
@@ -395,12 +517,30 @@ def test_graph_executor_carries_validated_sdk_classification(monkeypatch, tmp_pa
         from subprocess import CompletedProcess
         return CompletedProcess(command, 0, json.dumps({"version": "0.3.6",
             "requires_dist": ["scitex-sdk>=0.3.0"], "provides_extra": row["extras"]}), "")
-    monkeypatch.setattr(graphs.subprocess, "run", run)
+    _stub_run(run)
     # Act
     result = graphs.run_graph(row, tmp_path)
     # Assert
     assert result["status"] == "PASSED"
+
+
+@pytest.mark.parametrize("graph", ["sdk-all", "writer-gui", "config-core"])
+def test_graph_executor_passes_sdk_requirement(_observe, _stub_run, tmp_path, graph):
+    # Arrange
+    row = next(row for row in json.loads(Path("scripts/app-ui-retirement-graphs.json").read_text())["graphs"]
+               if row["name"] == graph)
+    row["minimum_canonical_version"] = "0.3.6"
+    commands = []
+    def run(command, **kwargs):
+        commands.append(command)
+        from subprocess import CompletedProcess
+        return CompletedProcess(command, 0, json.dumps({"version": "0.3.6",
+            "requires_dist": ["scitex-sdk>=0.3.0"], "provides_extra": row["extras"]}), "")
+    _stub_run(run)
+    # Act
+    graphs.run_graph(row, tmp_path)
     ownership = next(command for command in commands if "--mode" in command)
+    # Assert
     assert ownership[ownership.index("--sdk-requirement") + 1] == row["sdk_requirement"]
 
 
@@ -408,15 +548,19 @@ def test_graph_executor_carries_validated_sdk_classification(monkeypatch, tmp_pa
     ("bootstrap-observation", "config-core"), ("retirement", "sdk-all"),
     ("retirement", "figrecipe-gui"), ("retirement", "unknown-graph"),
 ])
-def test_cli_cannot_relax_sdk_owner_requirement(monkeypatch, mode, graph):
+def test_cli_cannot_relax_sdk_owner_requirement(_argv, mode, graph):
     # Arrange
-    monkeypatch.setattr("sys.argv", ["ownership_gate", "--mode", mode, "--graph", graph,
-                                   "--sdk-requirement", "none"])
+    _argv(["ownership_gate", "--mode", mode, "--graph", graph,
+           "--sdk-requirement", "none"])
     # Act
-    # Assert
-    with pytest.raises(SystemExit) as exc:
+    try:
         gate.main()
-    assert exc.value.code == 2
+    except SystemExit as exc:
+        code = exc.code
+    else:
+        code = None
+    # Assert
+    assert code == 2
 
 
 @pytest.mark.parametrize("mode,graph", [

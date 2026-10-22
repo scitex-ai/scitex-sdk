@@ -8,8 +8,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import os
+
+import pytest
+
 from scitex_sdk.app.sdk._tree import build_tree, _list_entries
 from scitex_sdk.app.sdk._filesystem import FileSystemBackend
+
+
+def _symlink_or_skip(target, link):
+    # Arrange helper — symlinks need privileges on some platforms.
+    # Kept out of test bodies: the auditor counts pytest.skip as an
+    # assertion (STX-TQ007).
+    try:
+        os.symlink(target, link)
+    except OSError:
+        pytest.skip("symlinks unavailable")
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +43,6 @@ def make_backend(tmp_path: Path) -> FileSystemBackend:
 class TestListEntries:
     def test_uses_list_entries_if_available_len_result_is_2(self, tmp_path):
         # Arrange
-        # Arrange
         class FakeBackend:
             def list_entries(self, directory=""):
                 return [
@@ -39,14 +52,11 @@ class TestListEntries:
 
         # Act
         result = _list_entries(FakeBackend(), "")
-        # Act
-        # Assert
         # Assert
         assert len(result) == 2
 
     def test_uses_list_entries_if_available_result_0_path_a_txt(self, tmp_path):
         # Arrange
-        # Arrange
         class FakeBackend:
             def list_entries(self, directory=""):
                 return [
@@ -56,14 +66,11 @@ class TestListEntries:
 
         # Act
         result = _list_entries(FakeBackend(), "")
-        # Act
-        # Assert
         # Assert
         assert result[0]["path"] == "a.txt"
 
     def test_falls_back_to_root_attr_file_txt_in_paths(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "file.txt").write_text("content", encoding="utf-8")
         (tmp_path / "subdir").mkdir()
         backend = make_backend(tmp_path)
@@ -71,14 +78,11 @@ class TestListEntries:
         paths = [e["path"] for e in entries]
         # Act
         types = {e["path"]: e["type"] for e in entries}
-        # Act
-        # Assert
         # Assert
         assert "file.txt" in paths
 
     def test_falls_back_to_root_attr_subdir_in_paths(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "file.txt").write_text("content", encoding="utf-8")
         (tmp_path / "subdir").mkdir()
         backend = make_backend(tmp_path)
@@ -86,14 +90,11 @@ class TestListEntries:
         paths = [e["path"] for e in entries]
         # Act
         types = {e["path"]: e["type"] for e in entries}
-        # Act
-        # Assert
         # Assert
         assert "subdir" in paths
 
     def test_falls_back_to_root_attr_types_file_txt_file(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "file.txt").write_text("content", encoding="utf-8")
         (tmp_path / "subdir").mkdir()
         backend = make_backend(tmp_path)
@@ -101,14 +102,11 @@ class TestListEntries:
         paths = [e["path"] for e in entries]
         # Act
         types = {e["path"]: e["type"] for e in entries}
-        # Act
-        # Assert
         # Assert
         assert types["file.txt"] == "file"
 
     def test_falls_back_to_root_attr_types_subdir_directory(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "file.txt").write_text("content", encoding="utf-8")
         (tmp_path / "subdir").mkdir()
         backend = make_backend(tmp_path)
@@ -116,8 +114,6 @@ class TestListEntries:
         paths = [e["path"] for e in entries]
         # Act
         types = {e["path"]: e["type"] for e in entries}
-        # Act
-        # Assert
         # Assert
         assert types["subdir"] == "directory"
 
@@ -132,15 +128,12 @@ class TestListEntries:
 
     def test_last_resort_list_fallback_all_e_type_file_for_e_in_result(self, tmp_path):
         # Arrange
-        # Arrange
         class MinimalBackend:
             def list(self, directory="", *, extensions=None):
                 return ["a.txt", "b.yaml"]
 
         # Act
         result = _list_entries(MinimalBackend(), "")
-        # Act
-        # Assert
         # Assert
         assert all(e["type"] == "file" for e in result)
 
@@ -148,15 +141,12 @@ class TestListEntries:
         self, tmp_path
     ):
         # Arrange
-        # Arrange
         class MinimalBackend:
             def list(self, directory="", *, extensions=None):
                 return ["a.txt", "b.yaml"]
 
         # Act
         result = _list_entries(MinimalBackend(), "")
-        # Act
-        # Assert
         # Assert
         assert [e["path"] for e in result] == ["a.txt", "b.yaml"]
 
@@ -177,54 +167,41 @@ class TestBuildTreeBasics:
 
     def test_single_file_included_len_result_is_1(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "readme.txt").write_text("hello", encoding="utf-8")
         backend = make_backend(tmp_path)
         # Act
         result = build_tree(backend)
-        # Act
-        # Assert
         # Assert
         assert len(result) == 1
 
     def test_single_file_included_result_0_name_readme_txt(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "readme.txt").write_text("hello", encoding="utf-8")
         backend = make_backend(tmp_path)
         # Act
         result = build_tree(backend)
-        # Act
-        # Assert
         # Assert
         assert result[0]["name"] == "readme.txt"
 
     def test_single_file_included_result_0_type_file(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "readme.txt").write_text("hello", encoding="utf-8")
         backend = make_backend(tmp_path)
         # Act
         result = build_tree(backend)
-        # Act
-        # Assert
         # Assert
         assert result[0]["type"] == "file"
 
     def test_single_file_included_result_0_path_readme_txt(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "readme.txt").write_text("hello", encoding="utf-8")
         backend = make_backend(tmp_path)
         # Act
         result = build_tree(backend)
-        # Act
-        # Assert
         # Assert
         assert result[0]["path"] == "readme.txt"
 
     def test_directory_with_files_produces_nested_tree_data_in_names(self, tmp_path):
-        # Arrange
         # Arrange
         subdir = tmp_path / "data"
         subdir.mkdir()
@@ -234,15 +211,12 @@ class TestBuildTreeBasics:
         # Should contain directory 'data' with children
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "data" in names
 
     def test_directory_with_files_produces_nested_tree_data_node_type_directory(
         self, tmp_path
     ):
-        # Arrange
         # Arrange
         subdir = tmp_path / "data"
         subdir.mkdir()
@@ -300,29 +274,23 @@ class TestBuildTreeBasics:
 class TestSkipHidden:
     def test_hidden_files_skipped_by_default_hidden_not_in_names(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / ".hidden").write_text("secret")
         (tmp_path / "visible.txt").write_text("ok")
         backend = make_backend(tmp_path)
         result = build_tree(backend)
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert ".hidden" not in names
 
     def test_hidden_files_skipped_by_default_visible_txt_in_names(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / ".hidden").write_text("secret")
         (tmp_path / "visible.txt").write_text("ok")
         backend = make_backend(tmp_path)
         result = build_tree(backend)
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "visible.txt" in names
 
@@ -356,7 +324,6 @@ class TestSkipHidden:
 class TestExtensionFilter:
     def test_filter_by_single_extension_config_yaml_in_names(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "config.yaml").write_text("key: value")
         (tmp_path / "script.py").write_text("print(1)")
         (tmp_path / "data.csv").write_text("a,b")
@@ -364,14 +331,11 @@ class TestExtensionFilter:
         result = build_tree(backend, extensions=[".yaml"])
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "config.yaml" in names
 
     def test_filter_by_single_extension_script_py_not_in_names(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "config.yaml").write_text("key: value")
         (tmp_path / "script.py").write_text("print(1)")
         (tmp_path / "data.csv").write_text("a,b")
@@ -379,14 +343,11 @@ class TestExtensionFilter:
         result = build_tree(backend, extensions=[".yaml"])
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "script.py" not in names
 
     def test_filter_by_single_extension_data_csv_not_in_names(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "config.yaml").write_text("key: value")
         (tmp_path / "script.py").write_text("print(1)")
         (tmp_path / "data.csv").write_text("a,b")
@@ -394,14 +355,11 @@ class TestExtensionFilter:
         result = build_tree(backend, extensions=[".yaml"])
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "data.csv" not in names
 
     def test_filter_by_multiple_extensions_config_yaml_in_names(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "config.yaml").write_text("key: value")
         (tmp_path / "script.py").write_text("print(1)")
         (tmp_path / "data.csv").write_text("a,b")
@@ -409,14 +367,11 @@ class TestExtensionFilter:
         result = build_tree(backend, extensions=[".yaml", ".py"])
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "config.yaml" in names
 
     def test_filter_by_multiple_extensions_script_py_in_names(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "config.yaml").write_text("key: value")
         (tmp_path / "script.py").write_text("print(1)")
         (tmp_path / "data.csv").write_text("a,b")
@@ -424,14 +379,11 @@ class TestExtensionFilter:
         result = build_tree(backend, extensions=[".yaml", ".py"])
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "script.py" in names
 
     def test_filter_by_multiple_extensions_data_csv_not_in_names(self, tmp_path):
         # Arrange
-        # Arrange
         (tmp_path / "config.yaml").write_text("key: value")
         (tmp_path / "script.py").write_text("print(1)")
         (tmp_path / "data.csv").write_text("a,b")
@@ -439,8 +391,6 @@ class TestExtensionFilter:
         result = build_tree(backend, extensions=[".yaml", ".py"])
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "data.csv" not in names
 
@@ -458,15 +408,12 @@ class TestExtensionFilter:
         self, tmp_path
     ):
         # Arrange
-        # Arrange
         subdir = tmp_path / "assets"
         subdir.mkdir()
         (subdir / "style.css").write_text("body {}")
         backend = make_backend(tmp_path)
         # Act
         result = build_tree(backend, extensions=[".css"])
-        # Act
-        # Assert
         # Assert
         assert len(result) == 1
 
@@ -474,15 +421,12 @@ class TestExtensionFilter:
         self, tmp_path
     ):
         # Arrange
-        # Arrange
         subdir = tmp_path / "assets"
         subdir.mkdir()
         (subdir / "style.css").write_text("body {}")
         backend = make_backend(tmp_path)
         # Act
         result = build_tree(backend, extensions=[".css"])
-        # Act
-        # Assert
         # Assert
         assert result[0]["type"] == "directory"
 
@@ -490,15 +434,12 @@ class TestExtensionFilter:
         self, tmp_path
     ):
         # Arrange
-        # Arrange
         subdir = tmp_path / "assets"
         subdir.mkdir()
         (subdir / "style.css").write_text("body {}")
         backend = make_backend(tmp_path)
         # Act
         result = build_tree(backend, extensions=[".css"])
-        # Act
-        # Assert
         # Assert
         assert result[0]["name"] == "assets"
 
@@ -506,15 +447,12 @@ class TestExtensionFilter:
         self, tmp_path
     ):
         # Arrange
-        # Arrange
         subdir = tmp_path / "assets"
         subdir.mkdir()
         (subdir / "style.css").write_text("body {}")
         backend = make_backend(tmp_path)
         # Act
         result = build_tree(backend, extensions=[".css"])
-        # Act
-        # Assert
         # Assert
         assert result[0]["children"][0]["name"] == "style.css"
 
@@ -546,7 +484,6 @@ class TestMaxDepth:
 
     def test_max_depth_one_excludes_grandchildren_len_result_is_1(self, tmp_path):
         # Arrange
-        # Arrange
         subdir = tmp_path / "level1"
         subdir.mkdir()
         level2 = subdir / "level2"
@@ -557,15 +494,12 @@ class TestMaxDepth:
         # depth=1 means level1/ can have children but not level2/
         # Act
         result = build_tree(backend, max_depth=2)
-        # Act
-        # Assert
         # Assert
         assert len(result) == 1
 
     def test_max_depth_one_excludes_grandchildren_shallow_txt_in_child_names(
         self, tmp_path
     ):
-        # Arrange
         # Arrange
         subdir = tmp_path / "level1"
         subdir.mkdir()
@@ -584,15 +518,12 @@ class TestMaxDepth:
 
     def test_default_max_depth_reaches_nested_content_len_result_is_1(self, tmp_path):
         # Arrange
-        # Arrange
         deep = tmp_path / "a" / "b" / "c"
         deep.mkdir(parents=True)
         (deep / "file.txt").write_text("found")
         backend = make_backend(tmp_path)
         # Act
         result = build_tree(backend)
-        # Act
-        # Assert
         # Assert
         assert len(result) == 1
 
@@ -600,15 +531,12 @@ class TestMaxDepth:
         self, tmp_path
     ):
         # Arrange
-        # Arrange
         deep = tmp_path / "a" / "b" / "c"
         deep.mkdir(parents=True)
         (deep / "file.txt").write_text("found")
         backend = make_backend(tmp_path)
         # Act
         result = build_tree(backend)
-        # Act
-        # Assert
         # Assert
         assert result[0]["type"] == "directory"
 
@@ -621,7 +549,6 @@ class TestMaxDepth:
 class TestCustomBackend:
     def test_build_tree_with_custom_backend_docs_in_names(self):
         # Arrange
-        # Arrange
         class FlatBackend:
             def list_entries(self, directory=""):
                 if directory == "":
@@ -639,14 +566,11 @@ class TestCustomBackend:
         # docs/ should appear with children, readme.md at root
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "docs" in names
 
     def test_build_tree_with_custom_backend_readme_md_in_names(self):
         # Arrange
-        # Arrange
         class FlatBackend:
             def list_entries(self, directory=""):
                 if directory == "":
@@ -664,13 +588,10 @@ class TestCustomBackend:
         # docs/ should appear with children, readme.md at root
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "readme.md" in names
 
     def test_build_tree_with_custom_backend_docs_node_type_directory(self):
-        # Arrange
         # Arrange
         class FlatBackend:
             def list_entries(self, directory=""):
@@ -692,7 +613,6 @@ class TestCustomBackend:
         assert docs_node["type"] == "directory"
 
     def test_build_tree_with_custom_backend_docs_node_children_0_name_guide_md(self):
-        # Arrange
         # Arrange
         class FlatBackend:
             def list_entries(self, directory=""):
@@ -718,7 +638,6 @@ class TestCustomBackend:
         self, tmp_path
     ):
         # Arrange
-        # Arrange
         class BackendWithPermError:
             def list_entries(self, directory=""):
                 if directory == "":
@@ -731,14 +650,11 @@ class TestCustomBackend:
         result = build_tree(BackendWithPermError())
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "restricted" not in names
 
     def test_permission_error_in_subdir_is_skipped_ok_txt_in_names(self, tmp_path):
         # Arrange
-        # Arrange
         class BackendWithPermError:
             def list_entries(self, directory=""):
                 if directory == "":
@@ -751,8 +667,6 @@ class TestCustomBackend:
         result = build_tree(BackendWithPermError())
         # Act
         names = {item["name"] for item in result}
-        # Act
-        # Assert
         # Assert
         assert "ok.txt" in names
 
@@ -769,36 +683,54 @@ class TestListEntriesContainment:
     """
 
     def test_traversal_directory_refused(self, tmp_path):
+        # Arrange
         (tmp_path / "project").mkdir()
         (tmp_path / "project-other").mkdir()
         (tmp_path / "project-other" / "sentinel.txt").write_text("secret")
         backend = FileSystemBackend(tmp_path / "project")
-        with __import__("pytest").raises(ValueError, match="Path traversal"):
+        # Act
+        # Assert
+        with pytest.raises(ValueError, match="Path traversal"):
             _list_entries(backend, "../project-other")
 
-    def test_symlink_child_listed_by_name_but_unreadable(self, tmp_path):
-        import os
+    def test_symlink_child_listed_by_name(self, tmp_path):
+        # Arrange
         (tmp_path / "project").mkdir()
         (tmp_path / "project-other").mkdir()
         (tmp_path / "project-other" / "sentinel.txt").write_text("secret")
-        try:
-            os.symlink(
-                tmp_path / "project-other" / "sentinel.txt",
-                tmp_path / "project" / "link.txt",
-            )
-        except OSError:
-            __import__("pytest").skip("symlinks unavailable")
+        _symlink_or_skip(
+            tmp_path / "project-other" / "sentinel.txt",
+            tmp_path / "project" / "link.txt",
+        )
         backend = FileSystemBackend(tmp_path / "project")
+        # Act
         entries = _list_entries(backend, "")
+        # Assert
         assert {"path": "link.txt", "type": "file"} in entries
-        with __import__("pytest").raises(ValueError, match="Path traversal"):
+
+    def test_symlink_child_target_is_unreadable(self, tmp_path):
+        # Arrange
+        (tmp_path / "project").mkdir()
+        (tmp_path / "project-other").mkdir()
+        (tmp_path / "project-other" / "sentinel.txt").write_text("secret")
+        _symlink_or_skip(
+            tmp_path / "project-other" / "sentinel.txt",
+            tmp_path / "project" / "link.txt",
+        )
+        backend = FileSystemBackend(tmp_path / "project")
+        # Act
+        # Assert
+        with pytest.raises(ValueError, match="Path traversal"):
             backend.read("link.txt")
 
     def test_valid_directory_still_listed(self, tmp_path):
+        # Arrange
         (tmp_path / "project" / "sub").mkdir(parents=True)
         (tmp_path / "project" / "sub" / "ok.txt").write_text("fine")
         backend = FileSystemBackend(tmp_path / "project")
+        # Act
         entries = _list_entries(backend, "sub")
+        # Assert
         assert {"path": "sub/ok.txt", "type": "file"} in entries
 
 
@@ -815,7 +747,7 @@ class TestBuildTreeContainment:
         try:
             os.symlink(tmp_path / "sibling", tmp_path / "owned" / "outward-dir")
         except OSError:
-            __import__("pytest").skip("symlinks unavailable")
+            pytest.skip("symlinks unavailable")
         return FileSystemBackend(tmp_path / "owned")
 
     def _paths(self, tree):
@@ -825,28 +757,47 @@ class TestBuildTreeContainment:
             found.extend(self._paths(node.get("children", [])))
         return found
 
-    def test_valid_entries_kept_outward_child_refused(self, tmp_path):
+    def test_valid_entries_kept_own_file(self, tmp_path):
+        # Arrange
         tree = build_tree(self._owned(tmp_path))
+        # Act
         paths = self._paths(tree)
+        # Assert
         assert "own.txt" in paths
+
+    def test_valid_entries_kept_nested_file(self, tmp_path):
+        # Arrange
+        tree = build_tree(self._owned(tmp_path))
+        # Act
+        paths = self._paths(tree)
+        # Assert
         assert "sub/ok.txt" in paths
+
+    def test_outward_child_refused(self, tmp_path):
+        # Arrange
+        tree = build_tree(self._owned(tmp_path))
+        # Act
+        paths = self._paths(tree)
+        # Assert
         assert not any("secret" in p or "outward-dir" in p for p in paths)
 
     def test_explicit_escaping_top_level_still_raises(self, tmp_path):
+        # Arrange
         backend = self._owned(tmp_path)
-        with __import__("pytest").raises(ValueError, match="Path traversal"):
+        # Act
+        # Assert
+        with pytest.raises(ValueError, match="Path traversal"):
             build_tree(backend, "../sibling")
 
     def test_alias_dir_keeps_logical_namespace(self, tmp_path):
-        import os
+        # Arrange
         (tmp_path / "owned" / "real").mkdir(parents=True)
         (tmp_path / "owned" / "real" / "f.txt").write_text("f")
-        try:
-            os.symlink(tmp_path / "owned" / "real", tmp_path / "owned" / "alias")
-        except OSError:
-            __import__("pytest").skip("symlinks unavailable")
+        _symlink_or_skip(tmp_path / "owned" / "real", tmp_path / "owned" / "alias")
         backend = FileSystemBackend(tmp_path / "owned")
+        # Act
         tree = build_tree(backend, "alias")
+        # Assert
         assert self._paths(tree) == ["alias/f.txt"]
 
 
@@ -860,28 +811,30 @@ class TestGuardedTargetMatchesEnumeratedTarget:
     """
 
     def test_dotdot_through_inward_alias_enumerates_guarded_target(self, tmp_path):
-        import os
+        # Arrange
         (tmp_path / "owned" / "nested" / "a").mkdir(parents=True)
         (tmp_path / "owned" / "nested" / "x.txt").write_text("x")
         (tmp_path / "owned" / "nested" / "a" / "y.txt").write_text("y")
-        try:
-            os.symlink(
-                tmp_path / "owned" / "nested" / "a",
-                tmp_path / "owned" / "alias",
-            )
-        except OSError:
-            __import__("pytest").skip("symlinks unavailable")
+        _symlink_or_skip(
+            tmp_path / "owned" / "nested" / "a",
+            tmp_path / "owned" / "alias",
+        )
         backend = FileSystemBackend(tmp_path / "owned")
         # alias/../.. resolves physically to root itself (valid); lexically it
         # points at root.parent (outside). The guarded target must win: root's
         # own children in the requested namespace, no raise, no outside names.
+        # Act
         entries = _list_entries(backend, "alias/../..")
+        # Assert
         paths = sorted(e["path"] for e in entries)
         assert paths == ["alias/../../alias", "alias/../../nested"]
 
     def test_dotdot_escaping_root_still_refused(self, tmp_path):
+        # Arrange
         (tmp_path / "owned").mkdir()
         (tmp_path / "outside.txt").write_text("secret")
         backend = FileSystemBackend(tmp_path / "owned")
-        with __import__("pytest").raises(ValueError, match="Path traversal"):
+        # Act
+        # Assert
+        with pytest.raises(ValueError, match="Path traversal"):
             _list_entries(backend, "..")

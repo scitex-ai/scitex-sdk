@@ -75,7 +75,8 @@ class TestValidateManifest:
         write_manifest(tmp_path, data)
         # Act
         errors = validate_manifest(tmp_path)
-        # Assert — a declared phone layout is valid.
+        # Assert
+        # a declared phone layout is valid.
         assert errors == []
 
     def test_mobile_layout_false_is_valid(self, tmp_path):
@@ -85,16 +86,19 @@ class TestValidateManifest:
         write_manifest(tmp_path, data)
         # Act
         errors = validate_manifest(tmp_path)
-        # Assert — an explicit desktop-only claim is valid.
+        # Assert
+        # an explicit desktop-only claim is valid.
         assert errors == []
 
     def test_omitted_mobile_layout_is_valid(self, tmp_path):
-        # Arrange — no claim; the hub falls back to its existing metadata.
+        # Arrange
+        # no claim; the hub falls back to its existing metadata.
         data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
         write_manifest(tmp_path, data)
         # Act
         errors = validate_manifest(tmp_path)
-        # Assert — absence is the safe default, not an error.
+        # Assert
+        # absence is the safe default, not an error.
         assert errors == []
 
     def test_non_bool_mobile_layout_is_rejected(self, tmp_path):
@@ -104,7 +108,8 @@ class TestValidateManifest:
         write_manifest(tmp_path, data)
         # Act
         errors = validate_manifest(tmp_path)
-        # Assert — a typo must fail loud here, naming the field.
+        # Assert
+        # a typo must fail loud here, naming the field.
         assert any("mobile_layout" in e for e in errors)
 
     def test_name_without_app_suffix_is_not_an_error(self, tmp_path):
@@ -147,7 +152,8 @@ class TestValidateManifest:
 
     def test_advisory_on_a_missing_manifest_is_silent(self, tmp_path):
         """validate_manifest() already reports this, as an error; not twice."""
-        # Arrange — tmp_path holds no manifest.json
+        # Arrange
+        # tmp_path holds no manifest.json
         # Act
         warnings = validate_manifest_advisory(tmp_path)
         # Assert
@@ -199,7 +205,8 @@ class TestValidateManifest:
     # --- mount_policy jail contract (closed when present, open when absent) ---
 
     def test_login_only_mount_policy_is_valid(self, tmp_path):
-        # Arrange — the pre-jail contract (creator manifest shape)
+        # Arrange
+        # the pre-jail contract (creator manifest shape)
         data: dict = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
         data["mount_policy"] = {"login_required": True}
         write_manifest(tmp_path, data)
@@ -233,7 +240,8 @@ class TestValidateManifest:
         assert any("scope" in e for e in errors)
 
     def test_full_figrecipe_mount_policy_is_valid(self, tmp_path):
-        # Arrange — the reference declaration the leaf adopts
+        # Arrange
+        # the reference declaration the leaf adopts
         from scitex_sdk.app.jail import FIGRECIPE_MOUNT_POLICY_REFERENCE
 
         data: dict = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
@@ -307,7 +315,7 @@ class TestLabelFamilyFormIsAdvisory:
 class TestFaviconSSOTIsAdvisory:
     """Leaf-local favicons are drift to migrate, never a failure."""
 
-    def test_leaf_favicon_file_is_an_advisory(self, tmp_path):
+    def test_leaf_favicon_file_is_not_an_error(self, tmp_path):
         # Arrange
         data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
         data["label"] = "SciTeX Test"
@@ -315,9 +323,18 @@ class TestFaviconSSOTIsAdvisory:
         (tmp_path / "favicon-32x32.png").touch()
         # Act
         errors = validate_manifest(tmp_path)
-        warnings = validate_manifest_advisory(tmp_path)
         # Assert
         assert errors == []
+
+    def test_leaf_favicon_file_is_an_advisory(self, tmp_path):
+        # Arrange
+        data = {k: "value" for k in MANIFEST_REQUIRED_KEYS}
+        data["label"] = "SciTeX Test"
+        write_manifest(tmp_path, data)
+        (tmp_path / "favicon-32x32.png").touch()
+        # Act
+        warnings = validate_manifest_advisory(tmp_path)
+        # Assert
         assert any("favicon drift" in w for w in warnings)
 
     def test_no_leaf_favicon_raises_no_advisory(self, tmp_path):

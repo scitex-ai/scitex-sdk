@@ -31,29 +31,46 @@ def generated_app(tmp_path):
 
 
 @pytest.fixture
-def generated_plugin_client(tmp_path, monkeypatch):
+def generated_plugin_client(tmp_path):
+    # Arrange — real sys.path / sys.modules entries with try/finally
+    # restore via try/finally: the generated plugin imports for real.
     name = f"sdk_synthetic_app_{uuid4().hex}"
     init_app(tmp_path, name, label="SDK Synthetic")
-    monkeypatch.syspath_prepend(str(tmp_path))
-    metadata = (tmp_path / "pyproject.toml").read_text()
-    value = re.search(rf'(?m)^{name} = "([^"]+)"$', metadata).group(1)
-    plugin = discover_plugin_apps([
-        EntryPoint(name=name, value=value, group="scitex.apps")
-    ])[0]
-    urlconf = types.ModuleType(f"sdk_owned_synthetic_urls_{uuid4().hex}")
-    urlconf.urlpatterns = [
-        path("", include(f"{name}.urls")),
-        path("mounted/", include(f"{name}.urls")),
-    ]
-    monkeypatch.setitem(sys.modules, urlconf.__name__, urlconf)
-    with override_settings(
-        ROOT_URLCONF=urlconf.__name__,
-        INSTALLED_APPS=[
-            "django.contrib.staticfiles", "scitex_sdk.app", "scitex_sdk.ui",
-            plugin.app_config,
-        ],
-    ):
-        yield Client()
+    sys.path.insert(0, str(tmp_path))
+    urlconf = None
+    previous_urlconf = None
+    try:
+        metadata = (tmp_path / "pyproject.toml").read_text()
+        value = re.search(rf'(?m)^{name} = "([^"]+)"$', metadata).group(1)
+        plugin = discover_plugin_apps([
+            EntryPoint(name=name, value=value, group="scitex.apps")
+        ])[0]
+        urlconf = types.ModuleType(f"sdk_owned_synthetic_urls_{uuid4().hex}")
+        urlconf.urlpatterns = [
+            path("", include(f"{name}.urls")),
+            path("mounted/", include(f"{name}.urls")),
+        ]
+        previous_urlconf = sys.modules.get(urlconf.__name__)
+        sys.modules[urlconf.__name__] = urlconf
+        with override_settings(
+            ROOT_URLCONF=urlconf.__name__,
+            INSTALLED_APPS=[
+                "django.contrib.staticfiles", "scitex_sdk.app", "scitex_sdk.ui",
+                plugin.app_config,
+            ],
+        ):
+            yield Client()
+    finally:
+        # Teardown restores the interpreter state the arrange borrowed.
+        if urlconf is not None:
+            if previous_urlconf is not None:
+                sys.modules[urlconf.__name__] = previous_urlconf
+            else:
+                sys.modules.pop(urlconf.__name__, None)
+        try:
+            sys.path.remove(str(tmp_path))
+        except ValueError:
+            pass
 
 
 def test_runtime_imports_do_not_require_retired_top_level_packages():
@@ -81,9 +98,10 @@ def test_component_registration_uses_its_sdk_python_name(component):
     assert config.name == expected
 
 
-@pytest.mark.parametrize("component", ["app", "ui"])
-def test_component_registration_preserves_its_existing_database_label(component):
-    # Arrange — lead call 2026-10-09 option (a): the persisted model identity
+@pytest.mark.parametrize("component,expected", [("app", "scitex_sdk_app"), ("ui", "scitex_sdk_ui")])
+def test_component_registration_preserves_its_existing_database_label(component, expected):
+    # Arrange
+    # lead call 2026-10-09 option (a): the persisted model identity
     # lives under scitex_sdk.app._chat with label scitex_app (same tables,
     # same 0001_initial), so the model-less app contract takes the namespaced
     # scitex_sdk_app label and both install together without a duplicate-label
@@ -95,10 +113,7 @@ def test_component_registration_preserves_its_existing_database_label(component)
     # Act
     config = AppConfig.create(f"scitex_sdk.{component}")
     # Assert
-    if component == "app":
-        assert config.label == "scitex_sdk_app"
-    else:
-        assert config.label == "scitex_sdk_ui"
+    assert config.label == expected
 
 
 def test_chat_migration_foreign_key_retains_its_identity():
@@ -219,13 +234,17 @@ def test_generated_plugin_view_reports_its_actual_mount(generated_plugin_client,
     assert marker in response.content
 
 
-def test_static_directory_and_frontend_owner_agree_through_a_symlink(tmp_path, monkeypatch):
+def test_static_directory_and_frontend_owner_agree_through_a_symlink(tmp_path):
     # Arrange
     root = get_frontend_package_dir()
     alias = tmp_path / "sdk-alias"
     alias.symlink_to(root, target_is_directory=True)
-    monkeypatch.setattr(ui, "__file__", str(alias / "ui/__init__.py"))
-    # Act
-    directory = ui.get_static_dir()
+    original_file = ui.__file__
+    ui.__file__ = str(alias / "ui/__init__.py")
+    try:
+        # Act
+        directory = ui.get_static_dir()
+    finally:
+        ui.__file__ = original_file
     # Assert
     assert directory == root / "ui/static/scitex_sdk/ui"
