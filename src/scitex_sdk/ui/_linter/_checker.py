@@ -473,9 +473,9 @@ def _scan_tsx_html(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolat
 
     # UI-108 — a literal `<header>` element: the shared AppHeader primitive
     # owns that row. Same join trick as UI-101. Skipped: line comments,
-    # and any match inside a Django {% comment %}...{% endcomment %}
-    # block — several leaves document the no-local-header rule inline,
-    # and flagging their own explanation would punish the fix.
+    # Django {% comment %} blocks, and {# ... #} inline comments — several
+    # leaves document the no-local-header rule inline, and flagging their
+    # own explanation would punish the fix.
     comment_spans: list[tuple[int, int]] = []
     _pos = 0
     while True:
@@ -484,6 +484,15 @@ def _scan_tsx_html(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolat
             break
         _close = joined.find("{% endcomment %}", _open)
         _end = len(joined) if _close < 0 else _close + len("{% endcomment %}")
+        comment_spans.append((_open, _end))
+        _pos = _end
+    _pos = 0
+    while True:
+        _open = joined.find("{#", _pos)
+        if _open < 0:
+            break
+        _close = joined.find("#}", _open)
+        _end = len(joined) if _close < 0 else _close + 2
         comment_spans.append((_open, _end))
         _pos = _end
     for match in _HEADER_RE.finditer(joined):

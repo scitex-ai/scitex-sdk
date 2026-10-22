@@ -801,3 +801,14 @@ def test_ui113_ignores_commented_out_overrides(tmp_path: Path) -> None:
 
     # Assert
     assert all(v.rule.id != "STX-UI113" for v in violations)
+
+
+def test_ui108_skips_django_hash_comment_mention(tmp_path: Path) -> None:
+    # Arrange — a {# ... #} explanation of the no-local-header rule.
+    (tmp_path / "page.html").write_text("{# it is a div, never a <header>. #}\n<div>x</div>\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI108" for v in violations)
