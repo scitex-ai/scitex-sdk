@@ -16,18 +16,40 @@ from scitex_sdk import project as facade  # noqa: E402
 
 
 def test_project_names_are_identical():
-    for name in facade.__all__:
-        assert getattr(facade, name) is getattr(scitex_dev_project, name), (
-            f"scitex_sdk.project.{name!r} is not identical to "
-            f"scitex_dev.project.{name!r}"
-        )
+    # Arrange
+    names = facade.__all__
+    # Act
+    mismatched = [
+        name
+        for name in names
+        if getattr(facade, name) is not getattr(scitex_dev_project, name)
+    ]
+    # Assert
+    assert mismatched == []
 
 
-def test_resolve_through_facade():
-    assert (
-        facade.resolve_project(explicit="scitex-04/dotfiles")
-        == "scitex-04/dotfiles"
-    )
-    assert facade.resolve_project(explicit="all") == "all"
+def test_resolve_through_facade_explicit():
+    # Arrange
+    explicit = "scitex-04/dotfiles"
+    # Act
+    resolved = facade.resolve_project(explicit=explicit)
+    # Assert
+    assert resolved == "scitex-04/dotfiles"
+
+
+def test_resolve_through_facade_all():
+    # Arrange
+    explicit = "all"
+    # Act
+    resolved = facade.resolve_project(explicit=explicit)
+    # Assert
+    assert resolved == "all"
+
+
+def test_resolve_through_facade_rejects_bare():
+    # Arrange
+    explicit = "bare"
+    # Act
+    # Assert
     with pytest.raises(ValueError):
-        facade.resolve_project(explicit="bare")
+        facade.resolve_project(explicit=explicit)
