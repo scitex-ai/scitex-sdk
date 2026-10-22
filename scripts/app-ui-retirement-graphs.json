@@ -9,8 +9,8 @@
       "extras": [
         "all"
       ],
-      "minimum_canonical_version": "0.3.4",
-      "canonical_source_commit": "6aed9e6ec08cd08be9df65bc7ab3563246bf8f4e",
+      "minimum_canonical_version": "0.3.11",
+      "canonical_source_commit": "533f6cb9a33ee98882cd940d4c921c99dd60cb1b",
       "sdk_requirement": "owner",
       "registration": "Reviewed candidate association only; register genuine published canonical version and final release commit before retirement",
       "reviewed_candidate_source_commit": "5a860c3e837519dcb1409607412110587e132e3f"

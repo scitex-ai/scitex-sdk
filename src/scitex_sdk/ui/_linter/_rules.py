@@ -412,15 +412,33 @@ def build_rules() -> Mapping[str, Rule]:
         severity="warning",
         category=CATEGORY,
         message=(
-            "consumer CSS overrides shared AppHeader selectors "
+            "consumer CSS overrides the shared AppHeader row "
             "(`.stx-app-header*`, `[data-stx-app-header]`) — row height, "
-            "placement and font size must come from the SDK alone so the "
+            "placement and font size come from the SDK alone so the "
             "row renders identically in every app"
         ),
         suggestion=(
             "Delete the override; if a token is missing, file it against "
             "scitex-sdk ui. Never restyle the header row per-leaf. Run "
             "`scitex-sdk ui lint` to list AppHeader forks."
+        ),
+        requires="scitex-sdk",
+    )
+
+    UI114 = Rule(
+        id="STX-UI114",
+        severity="warning",
+        category=CATEGORY,
+        message=(
+            "leaf-local button base style (`.btn { ... }` or bare "
+            "`button { ... }`) instead of the shared `.stx-button` / "
+            "`.stx-button--primary` primitive — one button look everywhere"
+        ),
+        suggestion=(
+            "Adopt scitex_sdk.ui's `.stx-button` (36px standard height, "
+            "themed via tokens) and delete the parallel base. Keep only "
+            "app-specific size tweaks where a toolbar genuinely needs "
+            "them. Run `scitex-sdk ui lint` to list parallel button bases."
         ),
         requires="scitex-sdk",
     )
@@ -439,6 +457,7 @@ def build_rules() -> Mapping[str, Rule]:
         UI111.id: UI111,
         UI112.id: UI112,
         UI113.id: UI113,
+        UI114.id: UI114,
     }
 
 
