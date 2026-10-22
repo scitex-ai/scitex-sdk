@@ -4,6 +4,13 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Tab chrome SSOT, short titles + official mark (operator 2026-10-23):
+  `shell_title` strips a `SciTeX ` prefix (tab carries no brand text —
+  the favicon IS the brand; project name lives in the app page), new
+  linter STX-UI116 (warning) flags hardcoded `SciTeX `-prefixed
+  `data-app-title` / `<title>` in templates, and the canonical favicon is
+  the official white-on-navy mark (same snake geometry, no dev-vs-prod
+  conditional; PNG set regenerated).
 - Leaf-declared launcher `group` (operator 2026-10-23): optional manifest
   field `foundation` | `work` | `publication` (closed enum, typo is a
   validator ERROR; omitted = host keeps existing grouping), readable at

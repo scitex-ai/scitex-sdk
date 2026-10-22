@@ -443,6 +443,28 @@ def build_rules() -> Mapping[str, Rule]:
         requires="scitex-sdk",
     )
 
+    # Short-tab-title rule (operator 2026-10-23): tab and in-app header
+    # titles use the SHORT tile form — the favicon carries the brand, a
+    # "SciTeX " prefix is truncated noise at 16px, and the project name
+    # lives in the app page itself. UI115 is reserved for the scrollbar
+    # surface rule landing separately; this one is UI116 by design.
+    UI116 = Rule(
+        id="STX-UI116",
+        severity="warning",
+        category=CATEGORY,
+        message=(
+            "hardcoded `SciTeX `-prefixed app title (`data-app-title=` or "
+            "`<title>`) — tab and header titles use the short tile form "
+            "(operator 2026-10-23); the favicon carries the brand"
+        ),
+        suggestion=(
+            "Use the short name (the manifest tile label). For computed "
+            "titles, `scitex_sdk.ui.branding.shell_title` strips the "
+            "prefix. Run `scitex-sdk ui lint` to list branded titles."
+        ),
+        requires="scitex-sdk",
+    )
+
     return {
         UI101.id: UI101,
         UI102.id: UI102,
@@ -458,6 +480,7 @@ def build_rules() -> Mapping[str, Rule]:
         UI112.id: UI112,
         UI113.id: UI113,
         UI114.id: UI114,
+        UI116.id: UI116,
     }
 
 

@@ -4,8 +4,9 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <!-- Title convention: "SciTeX <Tool>" (SciTeX Writer, SciTeX Scholar, ...).
-             scitex_sdk.ui.branding.shell_context() builds app_label in that form. -->
+        <!-- Title convention: the SHORT app name (Writer, Scholar, ...).
+             scitex_sdk.ui.branding.shell_context() builds app_label in that
+             form (shell_title strips any "SciTeX " prefix). -->
         <title>{{ app_label|default:"SciTeX App" }}</title>
         <!-- Tab branding. Shared with GUIs that do NOT extend this shell, so the
              favicon markup lives in one partial rather than only here. -->

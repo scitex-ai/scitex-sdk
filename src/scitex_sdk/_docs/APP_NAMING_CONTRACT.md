@@ -38,8 +38,13 @@ entries are App-lane execution; this contract only gates the mechanics.
    `Cards`, `Agent Container`, `Storage`, `Scholar`, `Stats`, `FigRecipe`,
    `Writer`. The launcher page carries the family brand, so a `SciTeX `
    prefix on a tile is drift: validator ADVISORY (warning, never a
-   failure). Tile label and in-app header title are INDEPENDENT strings —
-   headers keep the `SciTeX <Tool>` form (`ui/branding.py shell_title`).
+   failure). Tile label, tab title, and in-app header title are ALL the
+   same short string (operator 2026-10-23: the favicon carries the brand;
+   a brand prefix truncates to noise at 16px, and the project name lives
+   in the app page itself). `ui/branding.py shell_title` strips a
+   `SciTeX ` prefix, so views may pass either form; hardcoded
+   `SciTeX `-prefixed titles in templates are linter STX-UI116
+   (ADVISORY).
 3. `name`: advisory `_app`/`-app` suffix (existing advisory, unchanged).
    Django `AppConfig.label` stays fully namespaced and unique
    (`scitex_storage_django` pattern) — the hub collision bug is the
@@ -55,10 +60,16 @@ entries are App-lane execution; this contract only gates the mechanics.
    (Operator 2026-10-20: all applications, leaf owns icons. Hub's
    `launcher_links/*.json` hardcodes — chat, create-app, settings — are
    App-lane debt to align with the leaf manifests.)
-7. Favicon (operator 2026-10-20: drift intolerable). Single canonical
-   mark: `scitex_sdk/ui/img/scitex-favicon.svg` (the SciTeX snake),
-   served via the shared `_branding_head.html` partial (or the shell,
-   which includes it) — never a leaf-local `<link rel="icon">`.
+7. Favicon (operator 2026-10-20: drift intolerable; operator 2026-10-23:
+   the official mark, no dev-vs-prod conditional). Single canonical
+   mark: white snake on navy disc — `scitex_sdk/ui/img/scitex-favicon.svg`
+   (same snake geometry as the retired green mark, official product
+   colours; bytes match hub's generated
+   `scitex-icon-white-bg-navy.svg`), served via the shared
+   `_branding_head.html` partial (or the shell,
+   which includes it) — never a leaf-local `<link rel="icon">`, and no
+   per-environment variant: the SAME file renders in dev, staging and
+   prod.
    Per-platform PNG set (generated from the SVG, same pixels):
    16 + 32 (classic tab), 180 (apple-touch-icon), 192 + 512 (PWA
    manifest), at `scitex_sdk/ui/img/favicon-{16,32,180,192,512}.png`.
