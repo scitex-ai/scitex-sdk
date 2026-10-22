@@ -95,12 +95,30 @@ def test_index_mounts_shared_app_header_without_leaf_title(client):
     assert "<h1>Create a SciTeX app</h1>" not in html
 
 
-def test_project_picker_helper_detects_the_host_tag_library():
-    # Arrange
+def test_project_picker_helper_requires_library_and_provider():
+    # Arrange — the tag fails loudly without a provider, so the view
+    # flag requires both keys; this env has the library but no provider.
     from scitex_sdk.creator.views import _project_picker_available
 
     # Act
     available = _project_picker_available()
+    # Assert
+    assert available is False
+
+
+def test_project_picker_helper_detects_registered_provider():
+    # Arrange — stub at the source module: the view imports
+    # host_project_provider_url fresh on every call.
+    from scitex_sdk.creator import views as creator_views
+    from scitex_sdk.ui import project_scope
+
+    prior = project_scope.host_project_provider_url
+    project_scope.host_project_provider_url = lambda: "/host/projects/"
+    try:
+        # Act
+        available = creator_views._project_picker_available()
+    finally:
+        project_scope.host_project_provider_url = prior
     # Assert
     assert available is True
 

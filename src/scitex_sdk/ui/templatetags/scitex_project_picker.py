@@ -5,7 +5,13 @@
     {% scitex_project_picker scope="project" current=current_project %}
 
 Renders nothing unless the app is project-scoped or explicitly opts into
-``allow_user_scope=True``. The client additionally requires a provider with
+``allow_user_scope=True``. A project-scoped, signed-in render with NO
+provider FAILS LOUDLY (``ImproperlyConfigured``) instead of emitting an
+empty slot — an empty picker is undebuggable, a raised error names the
+missing host wiring. User-scoped or signed-out renders stay empty by
+design (no picker applies there).
+
+The client additionally requires a provider with
 ``rememberScope``; the legacy HTTP provider never persists nullable user scope.
 ``current_scope="user"`` is explicit; an empty current project never means user.
 ``scope`` defaults to the
@@ -23,6 +29,7 @@ advertises the provider to client-side pickers (``hostProjectProvider()``).
 from __future__ import annotations
 
 from django import template
+from django.core.exceptions import ImproperlyConfigured
 from django.template.loader import render_to_string
 from django.utils.html import format_html
 
@@ -77,7 +84,17 @@ def scitex_project_picker(
             raise ValueError("current scope must be explicit 'user' or 'project'")
     provider_url = provider_url or host_project_provider_url()
     if not provider_url:
-        return ""
+        # No silent fallback: a project-scoped, signed-in render without a
+        # provider would emit an empty slot that looks like a working page
+        # with a missing control — undebuggable. Fail fast so the missing
+        # host wiring surfaces at render time instead of as a mystery.
+        raise ImproperlyConfigured(
+            "scitex_project_picker: project-scoped render with no provider. "
+            "The host must register a project provider "
+            "(scitex_sdk.ui.project_scope.host_project_provider, e.g. "
+            "settings.SCITEX_PROJECT_PROVIDER_URL) or pass provider_url= "
+            "explicitly. See the scitex-ui skill (project picker)."
+        )
     values = {
         "provider_url": provider_url,
         "current": project_id_for(current),

@@ -70,18 +70,28 @@ def _sdk_version() -> str | None:
 
 
 def _project_picker_available() -> bool:
-    """True when the host registered the `scitex_project_picker` tag library.
+    """True when the picker tag can render: library AND host provider.
 
     Writer's precedent: `{% load %}` of a missing library is a hard
     TemplateSyntaxError, so the guard lives here, not in the template.
-    Standalone (no provider) renders unchanged markup.
+    Since the tag now FAILS LOUDLY without a provider (no silent empty
+    slot), the guard also requires one: standalone (no provider) skips
+    the include and renders unchanged markup. One flag, so the two
+    conditions cannot drift apart in the template.
     """
     try:
         from django.template import engines
     except Exception:
         return False
     try:
-        return "scitex_project_picker" in engines["django"].engine.template_libraries
+        if "scitex_project_picker" not in engines["django"].engine.template_libraries:
+            return False
+    except Exception:
+        return False
+    try:
+        from scitex_sdk.ui.project_scope import host_project_provider_url
+
+        return bool(host_project_provider_url())
     except Exception:
         return False
 
