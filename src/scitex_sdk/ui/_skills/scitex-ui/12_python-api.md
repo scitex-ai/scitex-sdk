@@ -126,6 +126,21 @@ A project-scope app places the picker itself; the host only provides the
 project list (`scitex_sdk.ui.project_scope.ProjectProvider`: `list_projects`,
 `last_visited`, `remember`, optional `project_id(project)`).
 
+Evaluation order — check THESE in order when the slot is empty (measured
+2026-10-22: Cards debugged provider-first for a scope problem):
+
+1. **Scope gate fires first.** Without `allow_user_scope=True`, a
+   user-scoped (or undeclared-scope) app renders `""` before any provider
+   is consulted — even with a registered provider. A USER-scoped leaf that
+   wants the canonical picker must pass `allow_user_scope=True`
+   (Cards `e6e5ee06`); a project-scoped leaf needs nothing extra.
+2. **Signed-in gate.** Anonymous renders `""` by design.
+3. **Provider gate (loud).** Past scope + signed-in, a missing provider
+   RAISES `ImproperlyConfigured` naming the missing host wiring — never an
+   empty slot. Hosts that want optionality must guard the include (the
+   two-key precedent: library AND provider) rather than relying on an
+   empty tag.
+
 ```python
 # host settings.py
 SCITEX_PROJECT_PROVIDER = "myhost.projects.HostProjectProvider"
