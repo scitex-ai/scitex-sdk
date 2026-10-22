@@ -69,6 +69,18 @@ def test_index_mounts_shared_app_header(client):
     assert "<h1>Create a SciTeX app</h1>" not in html
 
 
+def test_project_picker_helper_detects_the_host_tag_library():
+    from scitex_sdk.creator.views import _project_picker_available
+
+    assert _project_picker_available() is True
+
+
+def test_anonymous_index_renders_no_picker_markup(client):
+    """Fail-soft: unsigned requests get plain wizard markup, no picker."""
+    html = client.get("/").content.decode()
+    assert '<div class="stx-app-project-selector"' not in html
+
+
 def test_healthz_reports_ok(client):
     assert json.loads(client.get("/healthz").content) == {
         "ok": True,

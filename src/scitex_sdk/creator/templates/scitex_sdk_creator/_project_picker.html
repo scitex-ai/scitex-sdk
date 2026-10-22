@@ -1,0 +1,13 @@
+{% load scitex_project_picker %}{% comment %}
+SDK App project picker — Writer-shaped placement (see scitex-storage's
+_project_picker.html precedent).
+
+Project-scoped ONLY (`scope="project"`, no `allow_user_scope`): the SDK
+wizard scaffolds/validates concrete app directories, so an All-Projects
+user scope does not fit — "not selected" is the right default, and
+picking a project resumes it by prefilling the target below.
+The tag renders NOTHING unless the request is signed in AND the host
+registered a project provider, so standalone serves unchanged markup.
+Included only when `project_picker_available` (view probes the template
+engines: `{% load %}` of a missing library is a hard TemplateSyntaxError).
+{% endcomment %}{% scitex_project_picker scope="project" %}

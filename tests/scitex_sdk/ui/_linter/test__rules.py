@@ -1,4 +1,4 @@
-"""Tests for the UI-101..107 Rule corpus."""
+"""Tests for the UI-101..111 Rule corpus."""
 
 from __future__ import annotations
 
@@ -31,6 +31,12 @@ def test_build_rules_returns_the_declared_corpus():
         "STX-UI105",
         "STX-UI106",
         "STX-UI107",
+        "STX-UI108",
+        "STX-UI109",
+        "STX-UI110",
+        "STX-UI111",
+        "STX-UI112",
+        "STX-UI113",
     }
 
 
@@ -65,6 +71,17 @@ _EXPECTED_SEVERITIES = [
     # would have been the wrong call at, say, the 50 literals scitex-cloud
     # carries (which are not violations anyway — the hub IS the mount root).
     ("STX-UI107", "error"),
+    # UI-108..111 are the drift pack (operator CCT4948-4950): all warnings,
+    # per UI-107's measured lesson — a rule whose first run is red gets
+    # disabled rather than obeyed, and hub's first run will be red.
+    ("STX-UI108", "warning"),
+    ("STX-UI109", "warning"),
+    ("STX-UI110", "warning"),
+    ("STX-UI111", "warning"),
+    # UI-112/113 are the identical-row pack (operator 2026-10-20): same
+    # warning tier — hub's first run will be red.
+    ("STX-UI112", "warning"),
+    ("STX-UI113", "warning"),
 ]
 
 
