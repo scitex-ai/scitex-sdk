@@ -20,7 +20,10 @@ except Exception:
     pass
 
 # audit-cli §1a — packages with _skills/ MUST expose
-# `<cli> skills {list,get,install}`.
+# `<cli> skills {list,get,install}`. Canonical home is `dev skills` (§13);
+# top level stays as a Phase W warn-forward alias.
+from ._dev_group import install_dev_aliases, register_dev_group
 from ._skills import skills_group as _skills_group
 
-main.add_command(_skills_group, name="skills")
+_dev = register_dev_group(main, _skills_group)
+install_dev_aliases(main, _skills_group)
