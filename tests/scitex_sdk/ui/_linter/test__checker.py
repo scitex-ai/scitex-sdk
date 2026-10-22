@@ -776,3 +776,28 @@ def test_ui113_suppressed_when_running_inside_scitex_ui_itself(tmp_path: Path) -
 
     # Assert
     assert all(v.rule.id != "STX-UI113" for v in violations)
+
+
+def test_ui108_skips_sdk_pane_headers(tmp_path: Path) -> None:
+    # Arrange — stats-pattern pane headers follow the SDK panes contract.
+    (tmp_path / "page.html").write_text(
+        '{% scitex_panes "stats" %}<header class="stats-pane__header" data-stx-pane-header>\n<h2>X</h2>\n</header>\n'
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI108" for v in violations)
+
+
+def test_ui113_ignores_commented_out_overrides(tmp_path: Path) -> None:
+    # Arrange — commented code is not a restyle.
+    css = tmp_path / "app.css"
+    css.write_text("/* .stx-app-header { height: 64px; }\n   override parked. */\n.app { color: red; }\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI113" for v in violations)

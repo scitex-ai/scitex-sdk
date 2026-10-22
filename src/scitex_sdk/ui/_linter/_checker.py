@@ -191,6 +191,9 @@ _DEFAULT_SKIP_DIRS = (
     "build",
     "vendor",
     "_sphinx_html",
+    "tests",
+    "test",
+    "__tests__",
     ".tox",
     ".mypy_cache",
     ".pytest_cache",
@@ -259,7 +262,34 @@ def _hex_or_rgb_positions(line: str) -> list[int]:
     return cols
 
 
+def _block_comment_spans(text: str) -> list[tuple[int, int]]:
+    """Char spans of /* ... */ blocks, so rules never flag commented code."""
+    spans: list[tuple[int, int]] = []
+    pos = 0
+    while True:
+        open_idx = text.find("/*", pos)
+        if open_idx < 0:
+            break
+        close_idx = text.find("*/", open_idx + 2)
+        end = len(text) if close_idx < 0 else close_idx + 2
+        spans.append((open_idx, end))
+        pos = end
+    return spans
+
+
 def _scan_css(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
+    text = "\n".join(lines)
+    in_comment = _block_comment_spans(text)
+    line_starts = [0]
+    for line in lines:
+        line_starts.append(line_starts[-1] + len(line) + 1)
+
+    def _offset(lineno: int, col: int) -> int:
+        return line_starts[lineno - 1] + col if 1 <= lineno <= len(lines) else -1
+
+    def _in_comment(lineno: int, col: int) -> bool:
+        off = _offset(lineno, col)
+        return any(s <= off < e for s, e in in_comment)
     # UI-103 — shell fingerprint match in a consumer-side CSS file.
     for lineno, line in enumerate(lines, start=1):
         for fp in _SHELL_FINGERPRINTS:
@@ -326,12 +356,13 @@ def _scan_css(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
             )
 
     # UI-113 — consumer restyle of the shared AppHeader row. Row height,
-    # placement and font size come from the SDK alone.
+    # placement and font size come from the SDK alone; any leaf restyle
+    # is a fork. Commented-out code is not a restyle.
     for lineno, line in enumerate(lines, start=1):
         if _is_comment_line(line):
             continue
         m = _APPHEADER_SELECTOR_RE.search(line)
-        if m:
+        if m and not _in_comment(lineno, m.start()):
             yield UIViolation(
                 rule=rules["STX-UI113"],
                 path=str(path),
@@ -441,9 +472,29 @@ def _scan_tsx_html(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolat
             )
 
     # UI-108 — a literal `<header>` element: the shared AppHeader primitive
-    # owns that row. Same join trick as UI-101; comment lines skipped so a
-    # doc that MENTIONS the tag is not flagged for discussing it.
+    # owns that row. Same join trick as UI-101. Skipped: line comments,
+    # and any match inside a Django {% comment %}...{% endcomment %}
+    # block — several leaves document the no-local-header rule inline,
+    # and flagging their own explanation would punish the fix.
+    comment_spans: list[tuple[int, int]] = []
+    _pos = 0
+    while True:
+        _open = joined.find("{% comment %}", _pos)
+        if _open < 0:
+            break
+        _close = joined.find("{% endcomment %}", _open)
+        _end = len(joined) if _close < 0 else _close + len("{% endcomment %}")
+        comment_spans.append((_open, _end))
+        _pos = _end
     for match in _HEADER_RE.finditer(joined):
+        if any(s <= match.start() < e for s, e in comment_spans):
+            continue
+        # SDK pane headers (`data-stx-pane-header`, styled by panes.css and
+        # documented in skill 42_mobile-panes) are the shared panes
+        # contract, not leaf-local app rows — stats is the reference.
+        tag_text = match.group(0)
+        if "data-stx-pane-header" in tag_text:
+            continue
         pre = joined[: match.start()]
         lineno = pre.count("\n") + 1
         if 1 <= lineno <= len(lines) and _is_comment_line(lines[lineno - 1]):
