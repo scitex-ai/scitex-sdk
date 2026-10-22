@@ -38,6 +38,7 @@ def test_build_rules_returns_the_declared_corpus():
         "STX-UI112",
         "STX-UI113",
         "STX-UI114",
+        "STX-UI115",
         "STX-UI116",
     }
 
@@ -86,9 +87,12 @@ _EXPECTED_SEVERITIES = [
     ("STX-UI113", "warning"),
     # UI-114 joins the identical-element pack: same tier, same rationale.
     ("STX-UI114", "warning"),
+    # UI-115 joins the scrollbar-theme pack: warning tier — the first
+    # consumer run will be red (per-leaf scrollbar colours exist), and a
+    # red-first rule gets disabled rather than obeyed.
+    ("STX-UI115", "warning"),
     # UI-116 is the short-tab-title rule (operator 2026-10-23): same tier —
-    # a branded title is taste drift, never a failure. (UI115 is reserved
-    # for the scrollbar surface rule landing separately.)
+    # a branded title is taste drift, never a failure.
     ("STX-UI116", "warning"),
 ]
 

@@ -1,0 +1,75 @@
+/**
+ * SciTeX SDK — Global scrollbar tokens + base styling.
+ * =============================================================================
+ * Canonical home for scrollbar colours in the SciTeX design system.
+ *
+ * WHY THIS EXISTS. Scrollbars were the one chrome surface with NO shared
+ * home: UI-105 told consumers to define their OWN `--scrollbar-*` vars
+ * locally (chrome quirks vary by browser/OS), while theme.css defined
+ * every other UI token. The result was measured drift — the FigRecipe
+ * canvas shipped a light-grey native scrollbar on a dark theme because
+ * nothing in the shared layer painted one (operator report 2026-10-22).
+ * Local vars remain legal for app-specific cases, but the DEFAULT — the
+ * scrollbar a page gets with zero extra CSS — now comes from here and
+ * tracks the active theme (light/dark) via the same token pairs the rest
+ * of the shell uses.
+ *
+ * SCOPE. This file paints the DEFAULT scrollbar for every scroll
+ * container inside the SDK shell (both `scrollbar-color` for Firefox and
+ * `::-webkit-scrollbar-*` for Chromium/WebKit). Apps that need a
+ * different scrollbar (terminal palettes, hidden tab strips, overlay
+ * editors) keep their own rules — per-component overrides win by
+ * specificity, exactly as before.
+ *
+ * THEME CONTRACT. Both declarations consume workspace tokens that exist
+ * in BOTH `primitives/colors/_light.css` and `_dark.css`, so a theme
+ * switch repaints scrollbars with zero extra code:
+ *   --workspace-border-default — thumb (visible grip)
+ *   --workspace-bg-secondary   — track (gutter)
+ *   --workspace-border-hover   — thumb hover state
+ *
+ * Requires: shell/theme.css (or the shell.css / all.css bundle, which
+ * includes it) must load BEFORE this file so the workspace tokens exist.
+ * Imported from `shell.css` and `all.css` directly after theme.css.
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  scrollbar-color: var(--workspace-border-default) var(--workspace-bg-secondary);
+  scrollbar-width: thin;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  scrollbar-color: var(--workspace-border-default) var(--workspace-bg-secondary);
+  scrollbar-width: thin;
+}
+
+/* Chromium / WebKit / Blink: the track + thumb primitives. Widths stay
+   component-owned (a 2px tab strip and a 12px modal gutter are different
+   controls); only COLOURS are shared here. */
+::-webkit-scrollbar-track {
+  background: var(--workspace-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--workspace-border-default);
+  border-radius: 6px;
+  border: 2px solid var(--workspace-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--workspace-border-hover);
+}
+
+/* Thin variant for dense tab strips — opt in with the class, colours
+   still come from the shared tokens above. */
+.stx-scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.stx-scrollbar-thin {
+  scrollbar-width: thin;
+}

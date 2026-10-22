@@ -1078,3 +1078,104 @@ def test_ui112_ignores_single_line_hash_comment(tmp_path: Path) -> None:
 
     # Assert
     assert all(v.rule.id != "STX-UI112" for v in violations)
+
+
+# --------------------------------------------------------------------------- #
+# UI-115 — leaf-local scrollbar colouring without the shared shell surface   #
+# --------------------------------------------------------------------------- #
+
+
+def test_ui115_flags_scrollbar_color_literal(tmp_path: Path) -> None:
+    # Arrange — consumer colours its own scrollbar, no shared surface.
+    css = tmp_path / "editor.css"
+    css.write_text(
+        ".pane {\n  scrollbar-color: #888 transparent;\n}\n"
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert any(v.rule.id == "STX-UI115" for v in violations)
+
+
+def test_ui115_flags_webkit_thumb_literal(tmp_path: Path) -> None:
+    # Arrange
+    css = tmp_path / "editor.css"
+    css.write_text(
+        ".pane::-webkit-scrollbar-thumb {\n  background: #555;\n}\n"
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert any(v.rule.id == "STX-UI115" for v in violations)
+
+
+def test_ui115_skips_file_importing_shared_surface(tmp_path: Path) -> None:
+    # Arrange — importing shell/scrollbars.css IS the fix, so its
+    # presence exempts the file even when colour rules follow.
+    css = tmp_path / "editor.css"
+    css.write_text(
+        '@import "./shell/scrollbars.css";\n'
+        ".pane {\n  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);\n}\n"
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI115" for v in violations)
+
+
+def test_ui115_skips_width_only_rules(tmp_path: Path) -> None:
+    # Arrange — widths/shapes are component-owned; only colours fork.
+    css = tmp_path / "tabs.css"
+    css.write_text(
+        ".tabs::-webkit-scrollbar {\n  height: 2px;\n}\n"
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI115" for v in violations)
+
+
+def test_ui115_skips_shared_surface_itself(tmp_path: Path) -> None:
+    # Arrange — the shell file defines colours BY DESIGN; flagging it
+    # would be the rule eating its own surface. Same gate as UI-104:
+    # inside scitex-ui itself (treat_as_consumer=False) the rule
+    # does not fire.
+    shell = tmp_path / "scrollbars.css"
+    shell.write_text(
+        "::-webkit-scrollbar-thumb {\n  background: var(--workspace-border-default);\n}\n"
+    )
+
+    # Act
+    violations = scan_path(tmp_path, treat_as_consumer=False)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI115" for v in violations)
+
+
+def test_ui115_fires_on_raw_colour_when_consumer(tmp_path: Path) -> None:
+    # Arrange — the gate is the direction, not the content: a raw-colour
+    # scrollbar rule scanned as a consumer repo fires even when the
+    # token-backed shell file beside it does not.
+    (tmp_path / "clean.css").write_text(
+        "::-webkit-scrollbar-thumb {\n  background: var(--workspace-border-default);\n}\n"
+    )
+    (tmp_path / "dirty.css").write_text(
+        "::-webkit-scrollbar-thumb {\n  background: #555;\n}\n"
+    )
+
+    # Act
+    by_file: dict[str, list] = {}
+    for v in scan_path(tmp_path):
+        by_file.setdefault(Path(v.path).name, []).append(v.rule.id)
+
+    # Assert
+    assert "STX-UI115" not in by_file.get("clean.css", [])
+    assert "STX-UI115" in by_file.get("dirty.css", [])

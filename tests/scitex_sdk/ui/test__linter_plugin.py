@@ -53,6 +53,7 @@ def test_get_plugin_ships_the_declared_corpus():
         "STX-UI112",
         "STX-UI113",
         "STX-UI114",
+        "STX-UI115",
         "STX-UI116",
     }
 
@@ -241,14 +242,13 @@ def test_installed_replacement_tables_are_order_independent():
     assert forward["provider_replacements"] == reverse["provider_replacements"]
 
 
-def test_installed_ui_rule_set_covers_ui101_to_ui116_with_ui115_reserved():
+def test_installed_ui_rule_set_covers_ui101_to_ui116():
     # Arrange
     forward, _reverse = _load_forward_and_reverse_rule_tables()
     # Act
     ui_rules = _ui_rules_of(forward)
-    # Assert — UI115 is reserved for the scrollbar surface rule landing
-    # separately; the corpus jumps from UI114 to UI116 by design.
-    assert set(ui_rules) == {f"STX-UI{number}" for number in list(range(101, 115)) + [116]}
+    # Assert — full UI101..UI116 corpus, no gaps.
+    assert set(ui_rules) == {f"STX-UI{number}" for number in range(101, 117)}
 
 
 def test_installed_ui_rules_require_the_sdk():

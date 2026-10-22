@@ -443,11 +443,37 @@ def build_rules() -> Mapping[str, Rule]:
         requires="scitex-sdk",
     )
 
+    # UI-115 — leaf-local scrollbar colouring: RAW colours
+    # (hex/rgb outside var()) in scrollbar rules without the shared
+    # shell surface. Token-backed declarations are the fixed state.
+    # Never ship per-leaf colours that fork by theme, and never ship
+    # an unstyled scroll container that renders OS-default colours.
+    UI115 = Rule(
+        id="STX-UI115",
+        severity="warning",
+        category=CATEGORY,
+        message=(
+            "leaf-local scrollbar colouring (raw `scrollbar-color` / "
+            "`::-webkit-scrollbar-*` colour declarations, or no scrollbar "
+            "styling at all in a scroll container) instead of the shared "
+            "`shell/scrollbars.css` — scrollbars must track light/dark "
+            "via the SDK's workspace tokens, not per-leaf literals"
+        ),
+        suggestion=(
+            "Import the shared shell scrollbar surface "
+            "(`shell/scrollbars.css`, in the shell.css / all.css bundles) "
+            "and delete per-leaf scrollbar colour rules; keep only "
+            "width/shape tweaks where a control genuinely needs them. "
+            "Run `scitex-sdk ui lint` to list scrollbar forks."
+        ),
+        requires="scitex-sdk",
+    )
+
     # Short-tab-title rule (operator 2026-10-23): tab and in-app header
     # titles use the SHORT tile form — the favicon carries the brand, a
     # "SciTeX " prefix is truncated noise at 16px, and the project name
-    # lives in the app page itself. UI115 is reserved for the scrollbar
-    # surface rule landing separately; this one is UI116 by design.
+    # lives in the app page itself. UI115 is the scrollbar surface rule;
+    # this one is UI116 by design.
     UI116 = Rule(
         id="STX-UI116",
         severity="warning",
@@ -480,6 +506,7 @@ def build_rules() -> Mapping[str, Rule]:
         UI112.id: UI112,
         UI113.id: UI113,
         UI114.id: UI114,
+        UI115.id: UI115,
         UI116.id: UI116,
     }
 
