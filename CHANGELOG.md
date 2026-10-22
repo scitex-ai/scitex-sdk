@@ -4,6 +4,14 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.12] - 2026-10-22
+
+Identical-row pack (PR #73): STX-UI112 hardcoded tab titles, UI-113
+AppHeader selector overrides, UI-114 parallel button bases; scoping
+fixes (Django comments, block comments, vendor/_sphinx/test dirs, hub
+_native hatch, directional-only UI-111). SDK inspector skips the global
+header subtree (PR #69). Layout doctrine: main content vs Details pane.
+
 ## [0.3.11] - 2026-10-22
 
 Project picker on the SDK App (PR #66): Writer-shaped project-scoped
