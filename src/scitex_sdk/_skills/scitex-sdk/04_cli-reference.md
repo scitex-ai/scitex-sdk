@@ -1,3 +1,8 @@
+---
+description: [top-level command tree and config resolution] See SKILL.md workflow; component detail in scitex-app / scitex-ui skills.
+tags: [scitex-sdk]
+---
+
 # SDK CLI reference (top level)
 
 `scitex-sdk [--json] [--help-recursive] [COMMAND]` — every command also

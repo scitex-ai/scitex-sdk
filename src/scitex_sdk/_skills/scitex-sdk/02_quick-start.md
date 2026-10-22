@@ -1,3 +1,8 @@
+---
+description: [app init, wizard, validate smoke path] See SKILL.md workflow; component detail in scitex-app / scitex-ui skills.
+tags: [scitex-sdk]
+---
+
 # Scaffold and validate a SciTeX app in five minutes
 
 1. Scaffold: `scitex-sdk app init my-app` writes a complete app tree

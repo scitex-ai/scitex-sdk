@@ -1,3 +1,8 @@
+---
+description: [extras, verification commands for the SDK install] See SKILL.md workflow; component detail in scitex-app / scitex-ui skills.
+tags: [scitex-sdk]
+---
+
 # Install the SciTeX SDK
 
 The implementation belongs to `scitex-sdk`, imported through

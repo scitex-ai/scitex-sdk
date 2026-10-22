@@ -1,3 +1,8 @@
+---
+description: [the three lazy facades and import rules] See SKILL.md workflow; component detail in scitex-app / scitex-ui skills.
+tags: [scitex-sdk]
+---
+
 # SDK Python API map
 
 Three lazy facades (identity re-exports, never copies):
