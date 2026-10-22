@@ -776,3 +776,118 @@ def test_ui113_suppressed_when_running_inside_scitex_ui_itself(tmp_path: Path) -
 
     # Assert
     assert all(v.rule.id != "STX-UI113" for v in violations)
+
+
+def test_ui108_skips_sdk_pane_headers(tmp_path: Path) -> None:
+    # Arrange — stats-pattern pane headers follow the SDK panes contract.
+    (tmp_path / "page.html").write_text(
+        '{% scitex_panes "stats" %}<header class="stats-pane__header" data-stx-pane-header>\n<h2>X</h2>\n</header>\n'
+    )
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI108" for v in violations)
+
+
+def test_ui113_ignores_commented_out_overrides(tmp_path: Path) -> None:
+    # Arrange — commented code is not a restyle.
+    css = tmp_path / "app.css"
+    css.write_text("/* .stx-app-header { height: 64px; }\n   override parked. */\n.app { color: red; }\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI113" for v in violations)
+
+
+def test_ui108_skips_django_hash_comment_mention(tmp_path: Path) -> None:
+    # Arrange — a {# ... #} explanation of the no-local-header rule.
+    (tmp_path / "page.html").write_text("{# it is a div, never a <header>. #}\n<div>x</div>\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI108" for v in violations)
+
+
+# --------------------------------------------------------------------------- #
+# UI-114 — leaf-local button base instead of shared .stx-button               #
+# --------------------------------------------------------------------------- #
+
+
+def test_ui114_flags_parallel_btn_base(tmp_path: Path) -> None:
+    # Arrange — the writer fork: a full parallel button system.
+    css = tmp_path / "app.css"
+    css.write_text(".btn {\n  display: inline-flex;\n  padding: 4px 12px;\n}\n.btn-primary { background: blue; }\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert — the base fires once; variants keyed off it do not multiply it.
+    hits = [v for v in violations if v.rule.id == "STX-UI114"]
+    assert len(hits) == 1
+    assert hits[0].line == 1
+
+
+def test_ui114_flags_bare_button_element_rule(tmp_path: Path) -> None:
+    # Arrange
+    css = tmp_path / "app.css"
+    css.write_text("button {\n  font-size: 13px;\n}\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert any(v.rule.id == "STX-UI114" for v in violations)
+
+
+def test_ui114_ignores_stx_button_usage(tmp_path: Path) -> None:
+    # Arrange — adopting the primitive is the fix, never the violation.
+    css = tmp_path / "app.css"
+    css.write_text(".my-pane .stx-button { margin-left: 8px; }\n.stx-button--primary { font-weight: 600; }\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI114" for v in violations)
+
+
+def test_ui114_suppressed_when_running_inside_scitex_ui_itself(tmp_path: Path) -> None:
+    # Arrange — the SDK defines the primitive; the rule fires on consumers.
+    css = tmp_path / "app.css"
+    css.write_text(".btn {\n  display: inline-flex;\n}\n")
+
+    # Act
+    violations = scan_path(tmp_path, treat_as_consumer=False)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI114" for v in violations)
+
+
+def test_ui102_skips_content_color_files(tmp_path: Path) -> None:
+    # Arrange — annotation palettes are content, not UI chrome.
+    css = tmp_path / "annotations.css"
+    css.write_text(".ann-red { color: #ef4444; }\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI102" for v in violations)
+
+
+def test_ui102_still_flags_ui_chrome_hex(tmp_path: Path) -> None:
+    # Arrange — the exemption is path-based, not a free pass.
+    css = tmp_path / "editor.css"
+    css.write_text(".pane { background: #1b1b29; }\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert any(v.rule.id == "STX-UI102" for v in violations)

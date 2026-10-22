@@ -37,6 +37,7 @@ def test_build_rules_returns_the_declared_corpus():
         "STX-UI111",
         "STX-UI112",
         "STX-UI113",
+        "STX-UI114",
     }
 
 
@@ -82,6 +83,8 @@ _EXPECTED_SEVERITIES = [
     # warning tier — hub's first run will be red.
     ("STX-UI112", "warning"),
     ("STX-UI113", "warning"),
+    # UI-114 joins the identical-element pack: same tier, same rationale.
+    ("STX-UI114", "warning"),
 ]
 
 

@@ -67,4 +67,16 @@ dependencies for the capability being used (`gui`, `chat`, `mcp`, `cli`).
 The `project` and `all` extras require a genuine published Dev>=0.62 API;
 the consolidation release is held until that upstream requirement resolves.
 
+## Layout doctrine: main content vs Details pane
+
+Reduced cognitive load is a layout rule, not a suggestion. The main
+pane carries the critical path and nothing else. Everything uncritical
+— metadata, diagnostics, secondary actions, audit trails — lives in
+the Details pane (right-edge strip / drawer / collapsible panel from
+`scitex_sdk.ui`), keeping strict separation from main contents.
+Scholar's right-edge Details strip is the reference; writer's details
+patterns follow it. This is review-enforced: criticality cannot be
+measured statically, so no linter rule covers it — reviewers check
+placement, the SDK supplies the primitives.
+
 iOS and Android native delivery is a future target, not a shipped feature.
