@@ -37,11 +37,14 @@ def test_the_guard_error_is_a_runtime_error_not_django_improperly_configured():
 
 
 def test_the_guard_message_names_the_cause_and_the_fix():
-    # Arrange — the contract: an operator chasing the old
+    # Arrange
+    # the contract: an operator chasing the old
     # TemplateDoesNotExist must be told what is actually missing.
     msg = _SCITEX_UI_REQUIRED
-    # Act — nothing to call; the message IS the assertion surface.
-    # Assert — it names the missing package, the install fix, and the old
+    # Act
+    # nothing to call; the message IS the assertion surface.
+    # Assert
+    # it names the missing package, the install fix, and the old
     # failure mode it replaces (so a reader can connect it to what they saw).
     assert all(
         needle in msg
@@ -53,11 +56,13 @@ def test_presence_check_agrees_with_find_spec_in_both_directions():
     """`_scitex_ui_present` is a pure re-read of `find_spec`. Whatever the
     environment, the two must agree — this pins the check to the real import
     so it cannot drift to a version string or a hardcoded answer."""
-    # Arrange — the ground truth the check is a proxy for.
+    # Arrange
+    # the ground truth the check is a proxy for.
     truth = importlib.util.find_spec("scitex_sdk.ui") is not None
     # Act
     check = _scitex_ui_present()
-    # Assert — one direction is enough to pin the proxy to the source; the
+    # Assert
+    # one direction is enough to pin the proxy to the source; the
     # other direction would be asserting the same boolean equals itself.
     assert check is truth
 
@@ -86,11 +91,22 @@ def test_guard_fires_before_any_django_configuration():
     )
 
 
-def test_run_standalone_raises_the_named_error_when_the_shell_is_absent(monkeypatch):
+def test_run_standalone_raises_the_named_error_when_the_shell_is_absent():
     """An incomplete SDK refuses launch before configuration or file writes."""
-    monkeypatch.setattr("scitex_sdk.app._standalone._scitex_ui_present", lambda: False)
-    with pytest.raises(ScitexUiRequiredError):
-        run_standalone(app_module="some_app._django")
+    # Arrange
+    # the shell is absent: point the real presence probe at an empty answer
+    # with try/finally restore of the real probe.
+    from scitex_sdk.app import _standalone as standalone
+
+    original_present = standalone._scitex_ui_present
+    standalone._scitex_ui_present = lambda: False
+    try:
+        # Act
+        # Assert
+        with pytest.raises(ScitexUiRequiredError):
+            standalone.run_standalone(app_module="some_app._django")
+    finally:
+        standalone._scitex_ui_present = original_present
 
 
 @pytest.fixture

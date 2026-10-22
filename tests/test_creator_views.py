@@ -33,7 +33,7 @@ if not settings.configured:
         INSTALLED_APPS=_apps,
         TEMPLATES=[
             {
-                "BACKEND": "django.template.backends.django.DjangoTemplates",
+                "BACKEND": "django.template.backends.DjangoTemplates",
                 "APP_DIRS": True,
             }
         ],
@@ -47,15 +47,24 @@ from django.test import Client  # noqa: E402
 
 @pytest.fixture
 def client():
+    # Arrange
     return Client()
 
 
 def test_index_renders_wizard(client):
-    assert client.get("/").status_code == 200
+    # Arrange
+    # Act
+    response = client.get("/")
+    # Assert
+    assert response.status_code == 200
 
 
 def test_index_lists_starter_cards(client):
-    assert "Data entry form" in client.get("/").content.decode()
+    # Arrange
+    # Act
+    html = client.get("/").content.decode()
+    # Assert
+    assert "Data entry form" in html
 
 
 def test_index_mounts_shared_app_header(client):
@@ -63,63 +72,106 @@ def test_index_mounts_shared_app_header(client):
 
     No leaf-local <h1>: title/version flow through data-stx-app-header.
     """
+    # Arrange
+    # Act
     html = client.get("/").content.decode()
+    # Assert
     assert "data-stx-app-header" in html
+
+
+def test_index_mounts_shared_app_header_script(client):
+    # Arrange
+    # Act
+    html = client.get("/").content.decode()
+    # Assert
     assert "scitex_sdk/ui/js/app/app-header.js" in html
+
+
+def test_index_mounts_shared_app_header_without_leaf_title(client):
+    # Arrange
+    # Act
+    html = client.get("/").content.decode()
+    # Assert
     assert "<h1>Create a SciTeX app</h1>" not in html
 
 
 def test_project_picker_helper_detects_the_host_tag_library():
+    # Arrange
     from scitex_sdk.creator.views import _project_picker_available
 
-    assert _project_picker_available() is True
+    # Act
+    available = _project_picker_available()
+    # Assert
+    assert available is True
 
 
 def test_anonymous_index_renders_no_picker_markup(client):
     """Fail-soft: unsigned requests get plain wizard markup, no picker."""
+    # Arrange
+    # Act
     html = client.get("/").content.decode()
+    # Assert
     assert '<div class="stx-app-project-selector"' not in html
 
 
 def test_healthz_reports_ok(client):
-    assert json.loads(client.get("/healthz").content) == {
+    # Arrange
+    # Act
+    payload = json.loads(client.get("/healthz").content)
+    # Assert
+    assert payload == {
         "ok": True,
         "app": "scitex-sdk-creator",
     }
 
 
 def test_starters_lists_four_cards(client):
-    assert len(json.loads(client.get("/api/starters").content)["starters"]) == 4
+    # Arrange
+    # Act
+    payload = json.loads(client.get("/api/starters").content)
+    # Assert
+    assert len(payload["starters"]) == 4
 
 
 def test_validate_input_accepts_good_input(client):
+    # Arrange
+    # Act
     resp = client.post(
         "/api/validate-input",
         {"label": "My App", "description": "x", "starter": "blank"},
         content_type="application/json",
     )
+    # Assert
     assert json.loads(resp.content)["ok"] is True
 
 
 def test_validate_input_rejects_empty_label(client):
+    # Arrange
+    # Act
     resp = client.post(
         "/api/validate-input",
         {"label": "  ", "description": "x", "starter": "blank"},
         content_type="application/json",
     )
+    # Assert
     assert resp.status_code == 400
 
 
 def test_validate_input_rejects_unknown_starter(client):
+    # Arrange
+    # Act
     resp = client.post(
         "/api/validate-input",
         {"label": "My App", "description": "x", "starter": "nope"},
         content_type="application/json",
     )
+    # Assert
     assert json.loads(resp.content)["errors"] != []
 
 
 def test_create_scaffolds_app(client, tmp_path):
+    # Arrange
+    # Act
     resp = client.post(
         "/api/create",
         {
@@ -130,11 +182,14 @@ def test_create_scaffolds_app(client, tmp_path):
         },
         content_type="application/json",
     )
+    # Assert
     assert json.loads(resp.content)["success"] is True
 
 
 def test_create_writes_manifest(client, tmp_path):
+    # Arrange
     target = tmp_path / "wizard-manifest-check"
+    # Act
     client.post(
         "/api/create",
         {
@@ -145,11 +200,14 @@ def test_create_writes_manifest(client, tmp_path):
         },
         content_type="application/json",
     )
+    # Assert
     assert (target / "wizard_manifest_app" / "manifest.json").is_file()
 
 
 def test_create_reports_nested_app_dir(client, tmp_path):
+    # Arrange
     target = tmp_path / "app-dir-check"
+    # Act
     resp = client.post(
         "/api/create",
         {
@@ -160,11 +218,14 @@ def test_create_reports_nested_app_dir(client, tmp_path):
         },
         content_type="application/json",
     )
+    # Assert
     assert json.loads(resp.content)["app_dir"].endswith("app_dir_check_app")
 
 
 def test_create_refuses_nonempty_dir(client, tmp_path):
+    # Arrange
     (tmp_path / "occupied.txt").write_text("mine")
+    # Act
     resp = client.post(
         "/api/create",
         {
@@ -175,31 +236,41 @@ def test_create_refuses_nonempty_dir(client, tmp_path):
         },
         content_type="application/json",
     )
+    # Assert
     assert resp.status_code == 400
 
 
 def test_validate_app_reports_scaffold_errors(client, tmp_path):
+    # Arrange
+    # Act
     resp = client.post(
         "/api/validate-app",
         {"app_dir": str(tmp_path)},
         content_type="application/json",
     )
+    # Assert
     assert json.loads(resp.content)["errors"] != []
 
 
 def test_validate_app_requires_app_dir(client):
+    # Arrange
+    # Act
     resp = client.post(
         "/api/validate-app", {}, content_type="application/json"
     )
+    # Assert
     assert resp.status_code == 400
 
 
 def test_publish_requires_server_token_fields(client, tmp_path):
+    # Arrange
+    # Act
     resp = client.post(
         "/api/publish",
         {"app_dir": str(tmp_path)},
         content_type="application/json",
     )
+    # Assert
     assert resp.status_code == 400
 
 # EOF
