@@ -155,6 +155,18 @@ _MANIFEST_COMPARE_KEYS = ("label", "icon")
 # are never scanned (see _DEFAULT_SKIP_DIRS).
 _TITLE_LITERAL_RE = re.compile(r"<title>(?P<text>[^<>{}]+)</title>", re.IGNORECASE)
 
+# UI-112b — a MULTI-LINE `{# ... #}` "comment". Django only strips
+# single-line {# #}; a multi-line one is emitted VERBATIM into the page
+# (measured twice 2026-10-22: journal app.html, scholar workspace_assets).
+# Use {% comment %}...{% endcomment %} for multi-line commentary.
+_MULTILINE_HASH_COMMENT_RE = re.compile(r"\{#.*?#}", re.DOTALL)
+
+
+def _is_multiline_hash_comment(text: str, start: int, end: int) -> bool:
+    """True when a `{# ... #}` match spans a newline (and is thus emitted
+    verbatim by Django instead of stripped)."""
+    return "\n" in text[start:end]
+
 # UI-113 — consumer CSS overriding the shared AppHeader row. Row height,
 # placement and font size come from the SDK alone; any leaf restyle is
 # a fork. Matched on the primitive's selectors, not on property names,
@@ -563,6 +575,29 @@ def _scan_tsx_html(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolat
     # dynamic by construction and never flagged.
     if str(path).lower().endswith((".html", ".htm")):
         for match in _TITLE_LITERAL_RE.finditer(joined):
+            pre = joined[: match.start()]
+            lineno = pre.count("\n") + 1
+            last_nl = pre.rfind("\n")
+            col = match.start() - (last_nl + 1)
+            yield UIViolation(
+                rule=rules["STX-UI112"],
+                path=str(path),
+                line=lineno,
+                col=col,
+                source_line=(
+                    lines[lineno - 1].rstrip("\n") if 1 <= lineno <= len(lines) else ""
+                ),
+            )
+
+
+    # UI-112b — a MULTI-LINE `{# ... #}` "comment" is not a comment:
+    # Django only strips the single-line form, so the block is emitted
+    # VERBATIM into the page (measured twice 2026-10-22). Use
+    # {% comment %}...{% endcomment %} for multi-line commentary.
+    if str(path).lower().endswith((".html", ".htm")):
+        for match in _MULTILINE_HASH_COMMENT_RE.finditer(joined):
+            if not _is_multiline_hash_comment(joined, match.start(), match.end()):
+                continue
             pre = joined[: match.start()]
             lineno = pre.count("\n") + 1
             last_nl = pre.rfind("\n")

@@ -891,3 +891,27 @@ def test_ui102_still_flags_ui_chrome_hex(tmp_path: Path) -> None:
 
     # Assert
     assert any(v.rule.id == "STX-UI102" for v in violations)
+
+
+def test_ui112_flags_multiline_hash_comment(tmp_path: Path) -> None:
+    # Arrange — Django strips only single-line {# #}; a multi-line block
+    # is emitted VERBATIM (measured twice 2026-10-22: journal app.html,
+    # scholar workspace_assets).
+    (tmp_path / "page.html").write_text("{# Shared header.\nSpans two lines. #}\n<p>x</p>\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert any(v.rule.id == "STX-UI112" for v in violations)
+
+
+def test_ui112_ignores_single_line_hash_comment(tmp_path: Path) -> None:
+    # Arrange
+    (tmp_path / "page.html").write_text("{# one-liner #}\n<p>x</p>\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI112" for v in violations)
