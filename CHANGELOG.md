@@ -4,6 +4,17 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.11] - 2026-10-22
+
+Project picker on the SDK App (PR #66): Writer-shaped project-scoped
+picker in the AppHeader slot, "not selected" default, resume-on-change
+prefills the scaffold target. Drift enforcement pack (PR #70):
+STX-UI108..113 — leaf-local header, hub duplicate manifests (label/icon
+only), hardcoded launcher icons (hub_native hatch for chat/settings),
+directional !important (display toggles out of scope), hardcoded tab
+titles, AppHeader selector overrides; vendor/_sphinx trees unscanned;
+doctrine + 135 linter tests.
+
 ## [0.3.10] - 2026-10-20
 
 Naming contract draft + SDK App GUI parity (PR #59): `APP_NAMING_CONTRACT.md`
