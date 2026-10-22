@@ -1,6 +1,10 @@
 ---
 name: scitex-sdk
-description: Build or migrate a SciTeX leaf GUI using the shared SDK, with standalone and Hub plugin validation.
+description: |
+  [WHAT] Orchestrator skill for the SciTeX SDK — routes App scaffolding/validation, UI shell primitives, and SDK release gates to the scitex-app / scitex-ui component skills.
+  [WHEN] Use when the user asks to "scaffold a SciTeX app", "validate my app manifest", "mount the shared AppHeader", "lint UI drift", "cut an SDK release", or mentions the top-level `scitex-sdk` CLI/API.
+  [HOW] `pip install 'scitex-sdk[gui,cli]'`, verify with `scitex-sdk --help` and `import scitex_sdk.app`; then follow 01..04 below, delegating component detail to the scitex-app / scitex-ui skills.
+tags: [scitex-sdk]
 ---
 
 # SciTeX SDK workflow
