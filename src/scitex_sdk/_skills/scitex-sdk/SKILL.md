@@ -9,6 +9,11 @@ tags: [scitex-sdk]
 
 # SciTeX SDK workflow
 
+- [Install](01_installation.md) — extras, verification commands.
+- [Quick start](02_quick-start.md) — scaffold, wizard, validate in 5 min.
+- [Python API map](03_python-api.md) — the three lazy facades.
+- [CLI reference](04_cli-reference.md) — top-level command tree.
+
 1. Read `../../_docs/APP_DEVELOPER_GUIDE.md` and the relevant App/UI component
    skill under `../../app/_skills/scitex-app/` or `../../ui/_skills/scitex-ui/`.
 2. Pin the actual source revisions and inspect runtime behavior. Documentation
