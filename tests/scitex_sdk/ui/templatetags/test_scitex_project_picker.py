@@ -96,13 +96,16 @@ def test_picker_defaults_to_the_host_registered_provider():
     assert 'data-provider-url="/host/projects/"' in html
 
 
-def test_picker_without_any_provider_renders_nothing():
-    # Arrange
+def test_picker_without_any_provider_fails_loud():
+    # Arrange — project scope, signed in (no request), no provider
+    # anywhere: the tag must raise, never an undebuggable empty slot.
+    from django.core.exceptions import ImproperlyConfigured
+
     source = '{% load scitex_project_picker %}{% scitex_project_picker scope="project" %}'
     # Act
-    html = _render_source(source, {})
     # Assert
-    assert html == ""
+    with pytest.raises(ImproperlyConfigured, match="no provider"):
+        _render_source(source, {})
 
 
 def test_picker_maps_a_project_object_through_the_host_provider():
@@ -219,13 +222,16 @@ def test_enabled_picker_still_requires_signed_in_user():
     assert html == ""
 
 
-def test_enabled_picker_still_requires_host_provider():
-    # Arrange
+def test_enabled_picker_without_provider_fails_loud():
+    # Arrange — user scope opted in, signed in, still no provider:
+    # opting in does not opt out of the provider requirement.
+    from django.core.exceptions import ImproperlyConfigured
+
     source = "{% load scitex_project_picker %}{% scitex_project_picker allow_user_scope=True %}"
     # Act
-    html = _render_source(source, {"app_scope": "user"})
     # Assert
-    assert html == ""
+    with pytest.raises(ImproperlyConfigured, match="no provider"):
+        _render_source(source, {"app_scope": "user"})
 
 
 @pytest.mark.parametrize(
