@@ -91,6 +91,11 @@
   font-weight: 600;
 }
 
+.stx-required {
+  color: #f85149;
+  font-weight: 700;
+}
+
 .stx-field .stx-control {
   min-width: 0;
 }

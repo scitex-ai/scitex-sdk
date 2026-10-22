@@ -13,7 +13,7 @@
   <script type="module" src="{% static 'scitex_sdk/ui/js/app/app-header.js' %}"></script>
   {% if project_picker_available %}{% include "scitex_sdk_creator/_project_picker.html" %}{% endif %}
   <p>Pick a starter, name the app, and scaffold it. Then validate it here
-    before dev-installing or publishing it to SciTeX Cloud.</p>
+    before dev&#8209;installing or publishing it to SciTeX&nbsp;Cloud.</p>
 
   <section aria-label="New app from starter">
     <h2>1. New app from starter</h2>
@@ -27,13 +27,13 @@
       {% endfor %}
     </div>
     <div class="stx-field">
-      <label for="stx-label">App name</label>
+      <label for="stx-label">App name <span class="stx-required" aria-hidden="true">*</span></label>
       <div class="stx-control">
-        <input id="stx-label" name="label" type="text" maxlength="90" placeholder="My analysis app">
+        <input id="stx-label" name="label" type="text" maxlength="90" placeholder="e.g. My analysis app" required aria-required="true">
       </div>
     </div>
     <div class="stx-field">
-      <label for="stx-description">Description</label>
+      <label for="stx-description">Description <span class="stx-required" aria-hidden="true">*</span></label>
       <div class="stx-control">
         <textarea id="stx-description" name="description" rows="5" placeholder="What should the app do?"></textarea>
       </div>
@@ -46,8 +46,8 @@
       <p class="stx-help">Optional. Defaults to ./&lt;name-slug&gt;.</p>
     </div>
     <div class="stx-actions">
-      <button id="stx-create" type="button" class="stx-primary">Scaffold app</button>
-      <button id="stx-check-input" type="button">Check inputs</button>
+      <button id="stx-create" type="button" class="stx-primary" title="Scaffold the app into the target directory">Scaffold app</button>
+      <button id="stx-check-input" type="button" title="Validate the name, description, and starter without writing files">Check inputs</button>
     </div>
     <div class="stx-result" id="stx-create-result" role="status" aria-live="polite"></div>
   </section>
@@ -55,12 +55,12 @@
   <section aria-label="Validate an app">
     <h2>2. Validate a built app</h2>
     <p>Point at the package directory — the one containing
-      <code>manifest.json</code> (for a fresh scaffold that is
-      <code>&lt;project&gt;/&lt;module&gt;_app/</code>).</p>
+      <code>manifest.json</code>. For a fresh scaffold that is
+      <code>&lt;project&gt;/&lt;module&gt;_app/</code>.</p>
     <div class="stx-field">
       <label for="stx-appdir">App directory</label>
       <div class="stx-control">
-        <input id="stx-appdir" name="app_dir" type="text" placeholder="/path/to/my_app/my_app_app">
+        <input id="stx-appdir" name="app_dir" type="text" placeholder="/path/to/my_app">
       </div>
     </div>
     <div class="stx-actions">

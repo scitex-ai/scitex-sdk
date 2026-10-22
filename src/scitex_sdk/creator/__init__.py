@@ -66,7 +66,7 @@ STARTERS: tuple[Starter, ...] = (
     Starter(
         "dashboard",
         "Analysis dashboard",
-        "Summarise and plot result files from the project.",
+        "Summarize and plot result files from the project.",
         "fas fa-chart-line",
         "Build an analysis dashboard. List CSV result files in the project, "
         "let the user pick one, and show summary statistics and a simple plot.",
