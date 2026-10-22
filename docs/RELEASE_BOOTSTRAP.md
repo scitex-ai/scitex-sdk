@@ -15,17 +15,18 @@ env names and local configuration/storage contracts remain unchanged.
 
 ## Sequential publication proposal
 
-1. Close Dev's genuine project API and native release gates, then make a genuine
-   Dev release at least 0.62 available publicly. Diagnostic SCM wheels below
-   0.62 do not meet SDK's project/all floor. Dev's existing normal all/dev graph
+1. (Done — Dev 0.62.4 is public.) Closed Dev's genuine project API and
+   native release gates, then made the genuine Dev release 0.62
+   publicly. Diagnostic SCM wheels below 0.62 do not meet SDK's
+   project/all floor. Dev's existing normal all/dev graph
    can resolve published dependencies; it does not require SDK 0.3 directly.
-2. Publish SDK's genuine 0.3 including the reviewed optional project-selector
-   normalization needed by migrated Writer/Hub, after its source/full suite, strict access,
-   frontend, normal base/GUI, artifact/direct-ownership, and **normal built-wheel
-   [all] install plus pip check** gates pass against published dependencies.
-   During this bootstrap, report every transitive retired dist/import as
-   `DEPENDENCY_RETIREMENT_NOT_READY`. A normal resolvable legacy graph is not a
-   clean migration. Direct SDK ownership errors still block publication.
+2. (Done — SDK 0.3.x shipped through 0.3.12, verified live on PyPI after
+   the normal built-wheel [all] + pip check gates passed.)
+   The 0.3.3 declaration raised optional CLI/project and contributor tooling to
+   Dev>=0.62 (Dev 0.62.4 public) for the declared UI provider replacement SPI.
+   It shipped with the reviewed optional project-selector normalization needed
+   by migrated Writer/Hub; transitive retired dists/imports were reported as
+   `DEPENDENCY_RETIREMENT_NOT_READY` during bootstrap.
 3. With SDK 0.3 publicly installable, release each accepted canonical consumer
    only after its native tests and normal install gates pass. Keep each actual
    active SDK>=0.3 declaration, including optional runtime groups. Register the
@@ -51,10 +52,10 @@ No release, dispatch, merge, tag, version override or archive runs here.
 At the observed published versions, Dev 0.61 requires Scholar>=1.4.3; Scholar
 1.13 requires Session>=0.1.5; Session 0.3.1 requires plt>=0.24; plt 0.24.6 requires
 FigRecipe>=0.24. Published FigRecipe 0.35 directly requires App>=0.25. Its extra
-runtime groups also require UI>=0.23. SDK's all-extra still requires genuine
-Dev>=0.62, which is currently unavailable and causes normal resolution refusal.
-After Dev is published, that normal graph can remain legacy until canonical
-FigRecipe, Scholar and the other owning consumers are genuinely published.
+runtime groups also require UI>=0.23. SDK's all-extra required genuine
+Dev>=0.62; Dev 0.62.4 is now public so normal resolution succeeds, and
+that graph can remain legacy until canonical FigRecipe, Scholar and the
+other owning consumers are genuinely published.
 
 FigRecipe canonical PR432 descends from the published v0.35.0 commit
 `3b015a368761a1bf11c51d769774bc3f93c92edf`; the tag is an ancestor of develop
@@ -66,15 +67,6 @@ ancestry. PR432 now has a reviewed, unpublished 0.36.0 candidate at
 canonical parent. Its version correction is not a public release. A genuine
 canonical release newer than published 0.35 must still register its source and
 artifact association before dependency retirement can pass.
-
-The 0.3.3 candidate raises optional CLI/project and contributor tooling to
-Dev>=0.62.4.dev0 for the declared UI provider replacement SPI. The project
-primitive itself existed in Dev 0.62, but an older engine would also discover
-the incompatible SDK linter provider. `all` includes both tooling extras.
-The paired Dev candidate is private, so a compatible public Dev release remains
-a genuine prerequisite for normal SDK `[all]` publication. See
-[the provider transition](UI_LINTER_PROVIDER_TRANSITION.md). No floor is lowered
-to resolve the bootstrap.
 
 ## Checker scope and remaining proof
 

@@ -24,9 +24,11 @@ dependencies = [
 gui = ["django>=4.2"]
 chat = ["anthropic>=0.25.0", "litellm>=1.0.0", "requests>=2.28.0"]
 mcp = ["fastmcp>=2.0.0"]
-cli = ["scitex-dev>=0.62.4.dev0"]
+# Optional runtime capabilities. extras install their runtime deps
+# (Dev>=0.62 carries the project API + linter provider SPI, public).
+cli = ["scitex-dev>=0.62"]
 # SDK tooling requires the project API and declared linter provider SPI.
-project = ["scitex-dev>=0.62.4.dev0"]
+project = ["scitex-dev>=0.62"]
 all = ["scitex-sdk[gui,chat,mcp,cli,project]"]
 
 # Contributor tooling is not a public runtime capability. pip >=25.1 supports
@@ -46,7 +48,7 @@ dev = [
     "pytest>=7.0.0",
     "requests>=2.28.0",
     # The real access core used by strict contributor conformance ships here.
-    "scitex-dev>=0.62.4.dev0",
+    "scitex-dev>=0.62",
 ]
 docs = [
     "sphinx>=7.0",

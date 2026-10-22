@@ -39,7 +39,7 @@ def get_plugin() -> dict:
         from scitex_dev.linter.spi import ProviderReplacement
     except ImportError as exc:
         raise ImportError(
-            "The scitex-sdk UI linter provider requires scitex-dev>=0.62.4.dev0 "
+            "The scitex-sdk UI linter provider requires scitex-dev>=0.62 "
             "with the declared provider replacement SPI. Install compatible "
             "scitex-sdk[cli] and scitex-dev builds together; standalone SDK UI "
             "use does not require this optional tooling."
