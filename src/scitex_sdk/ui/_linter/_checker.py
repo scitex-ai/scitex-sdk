@@ -59,6 +59,18 @@ _COMBOBOX_OPT_OUT_RE = re.compile(
     r"data-(stx-combobox|no-combobox)\s*=", re.IGNORECASE
 )
 
+# UI-102 colors are monochrome + theme tokens for UI chrome — EXCEPT
+# content-color files. Annotations, syntax highlighting, charts, figures
+# and data-viz legitimately carry content colors (writer annotations,
+# figrecipe figures, code highlighters); flagging them would push content
+# palettes into monochrome where they do not belong. Matched on the file
+# stem so `annotations.css` and `my-charts.css` are exempt but
+# `editor.css` is not.
+_CONTENT_COLOR_PATH_RE = re.compile(
+    r"(annotat|highlight|syntax|pygments|chart|palette|graph|figure|viz|plot|diagram|mermaid|legend|heatmap)",
+    re.IGNORECASE,
+)
+
 # UI-102 — raw hex / rgb() / rgba() literal anywhere in a CSS file
 # (outside an `--scrollbar-*` declaration that itself references var()).
 # We treat any literal that's not inside a `var(...)` argument list as raw.
@@ -165,6 +177,12 @@ _LAYOUT_IMPORTANT_RE = re.compile(
     r"(?:^|[{;])\s*(flex-direction|flex-wrap)\s*:[^;{}]*!important",
     re.IGNORECASE,
 )
+
+# UI-114 — leaf-local button base (`.btn {` or bare `button {`): a parallel
+# button system next to the shared `.stx-button` / `.stx-button--primary`
+# primitive. Variants (`.btn-primary`, `.btn:hover`) are not flagged on
+# their own — they follow the base; fix the base and they collapse.
+_LEAF_BUTTON_RE = re.compile(r"^(?:\.btn|button)\s*\{", re.IGNORECASE)
 
 
 # --------------------------------------------------------------------------- #
@@ -345,6 +363,9 @@ def _scan_css(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
     for lineno, line in enumerate(lines, start=1):
         if lineno in scrollbar_lines:
             continue
+        # Content-color files carry content palettes, not UI chrome.
+        if _CONTENT_COLOR_PATH_RE.search(str(path)):
+            continue
         cols = _hex_or_rgb_positions(line)
         for col in cols:
             yield UIViolation(
@@ -365,6 +386,22 @@ def _scan_css(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
         if m and not _in_comment(lineno, m.start()):
             yield UIViolation(
                 rule=rules["STX-UI113"],
+                path=str(path),
+                line=lineno,
+                col=m.start(),
+                source_line=line.rstrip("\n"),
+            )
+
+    # UI-114 — leaf-local button base: a parallel button system next to
+    # the shared `.stx-button` primitive. Variants keyed off the base
+    # (`.btn-primary`, `.btn:hover`) are not flagged on their own.
+    for lineno, line in enumerate(lines, start=1):
+        if _is_comment_line(line):
+            continue
+        m = _LEAF_BUTTON_RE.search(line)
+        if m and not _in_comment(lineno, m.start()):
+            yield UIViolation(
+                rule=rules["STX-UI114"],
                 path=str(path),
                 line=lineno,
                 col=m.start(),
@@ -642,11 +679,11 @@ def scan_path(
     treat_as_consumer
         If True (default), this is a consumer repo lint — UI-104
         (shell/primitives edits), UI-111 (unconditional `!important`
-        layout overrides, which the shell itself uses legitimately)
-        and UI-113 (AppHeader restyles; the SDK defines that row)
+        directional overrides) and UI-113 (AppHeader restyles) and
+        UI-114 (parallel button bases; the SDK defines `.stx-button`)
         fire. Pass False to run inside scitex-ui itself, where editing
-        shell/primitives, using `!important` and defining the header
-        row are the point.
+        shell/primitives, using `!important`, defining the header
+        row, and defining the button primitive are the point.
     skip_dirs
         Directory NAMES to skip while walking. Defaults skip
         ``node_modules``, ``.venv``, ``.git`` etc.
@@ -669,7 +706,7 @@ def scan_path(
         lines = text.splitlines()
         if kind == "css":
             for v in _scan_css(path, lines, rules):
-                if v.rule.id in ("STX-UI104", "STX-UI111", "STX-UI113") and not treat_as_consumer:
+                if v.rule.id in ("STX-UI104", "STX-UI111", "STX-UI113", "STX-UI114") and not treat_as_consumer:
                     continue
                 violations.append(v)
         elif kind in {"tsx", "html"}:
