@@ -137,6 +137,20 @@ _HUB_BUILTIN_MANIFEST_RE = re.compile(
 )
 _MANIFEST_COMPARE_KEYS = ("label", "icon")
 
+# UI-112 — hardcoded `<title>` text in a Django template. The tab must
+# read the same name as the tile: `<title>{{ app_label }}</title>` via
+# the shared shell or _branding_head.html partial. Generated docs trees
+# are never scanned (see _DEFAULT_SKIP_DIRS).
+_TITLE_LITERAL_RE = re.compile(r"<title>(?P<text>[^<>{}]+)</title>", re.IGNORECASE)
+
+# UI-113 — consumer CSS overriding the shared AppHeader row. Row height,
+# placement and font size come from the SDK alone; any leaf restyle is
+# a fork. Matched on the primitive's selectors, not on property names,
+# so the fix (delete the override) cannot trip it.
+_APPHEADER_SELECTOR_RE = re.compile(
+    r"(?:\.stx-app-header(?![a-zA-Z0-9-])|\[data-stx-app-header\])"
+)
+
 # UI-111 — unconditional `!important` DIRECTIONAL override
 # (flex-direction / flex-wrap) in a file that also carries @media.
 # `display` toggles are deliberately NOT matched: tab-visibility state
@@ -176,6 +190,7 @@ _DEFAULT_SKIP_DIRS = (
     "dist",
     "build",
     "vendor",
+    "_sphinx_html",
     ".tox",
     ".mypy_cache",
     ".pytest_cache",
@@ -310,7 +325,22 @@ def _scan_css(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
                 source_line=line.rstrip("\n"),
             )
 
-    # UI-111 — unconditional `!important` layout override in a file that
+    # UI-113 — consumer restyle of the shared AppHeader row. Row height,
+    # placement and font size come from the SDK alone.
+    for lineno, line in enumerate(lines, start=1):
+        if _is_comment_line(line):
+            continue
+        m = _APPHEADER_SELECTOR_RE.search(line)
+        if m:
+            yield UIViolation(
+                rule=rules["STX-UI113"],
+                path=str(path),
+                line=lineno,
+                col=m.start(),
+                source_line=line.rstrip("\n"),
+            )
+
+    # UI-111 — unconditional `!important` directional override in a file that
     # also carries @media. Overrides already inside a media query are
     # legitimate scoping (the shell's own mobile.css does exactly that),
     # so media-depth is tracked and only top-level overrides are flagged.
@@ -430,6 +460,26 @@ def _scan_tsx_html(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolat
             ),
         )
 
+    # UI-112 — hardcoded `<title>` text: the tab must read the tile name
+    # via `{{ app_label }}`. Django templates only (.html/.htm — TSX never
+    # carries a document title). A title containing template syntax is
+    # dynamic by construction and never flagged.
+    if str(path).lower().endswith((".html", ".htm")):
+        for match in _TITLE_LITERAL_RE.finditer(joined):
+            pre = joined[: match.start()]
+            lineno = pre.count("\n") + 1
+            last_nl = pre.rfind("\n")
+            col = match.start() - (last_nl + 1)
+            yield UIViolation(
+                rule=rules["STX-UI112"],
+                path=str(path),
+                line=lineno,
+                col=col,
+                source_line=(
+                    lines[lineno - 1].rstrip("\n") if 1 <= lineno <= len(lines) else ""
+                ),
+            )
+
 
 def _leaf_manifest_from_dist(pip_package: str) -> dict | None:
     """Load the leaf's own manifest.json from its installed distribution.
@@ -531,10 +581,12 @@ def scan_path(
         Path to a single file or to a directory tree.
     treat_as_consumer
         If True (default), this is a consumer repo lint — UI-104
-        (shell/primitives edits) and UI-111 (unconditional `!important`
+        (shell/primitives edits), UI-111 (unconditional `!important`
         layout overrides, which the shell itself uses legitimately)
+        and UI-113 (AppHeader restyles; the SDK defines that row)
         fire. Pass False to run inside scitex-ui itself, where editing
-        shell/primitives and using `!important` there is allowed.
+        shell/primitives, using `!important` and defining the header
+        row are the point.
     skip_dirs
         Directory NAMES to skip while walking. Defaults skip
         ``node_modules``, ``.venv``, ``.git`` etc.
@@ -557,7 +609,7 @@ def scan_path(
         lines = text.splitlines()
         if kind == "css":
             for v in _scan_css(path, lines, rules):
-                if v.rule.id in ("STX-UI104", "STX-UI111") and not treat_as_consumer:
+                if v.rule.id in ("STX-UI104", "STX-UI111", "STX-UI113") and not treat_as_consumer:
                     continue
                 violations.append(v)
         elif kind in {"tsx", "html"}:

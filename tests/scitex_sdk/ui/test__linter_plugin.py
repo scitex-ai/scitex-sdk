@@ -49,6 +49,8 @@ def test_get_plugin_ships_the_declared_corpus():
         "STX-UI109",
         "STX-UI110",
         "STX-UI111",
+        "STX-UI112",
+        "STX-UI113",
     }
 
 
@@ -180,7 +182,7 @@ def test_installed_sdk_and_legacy_ui_keep_one_declared_rule_owner():
         code: rule for code, rule in forward["rules"].items()
         if code.startswith("STX-UI")
     }
-    assert set(ui_rules) == {f"STX-UI{number}" for number in range(101, 112)}
+    assert set(ui_rules) == {f"STX-UI{number}" for number in range(101, 114)}
     assert all(rule.requires == "scitex-sdk" for rule in ui_rules.values())
     assert len(forward["provider_replacements"]) == 1
     receipt = forward["provider_replacements"][0]

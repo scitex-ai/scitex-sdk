@@ -35,6 +35,8 @@ def test_build_rules_returns_the_declared_corpus():
         "STX-UI109",
         "STX-UI110",
         "STX-UI111",
+        "STX-UI112",
+        "STX-UI113",
     }
 
 
@@ -76,6 +78,10 @@ _EXPECTED_SEVERITIES = [
     ("STX-UI109", "warning"),
     ("STX-UI110", "warning"),
     ("STX-UI111", "warning"),
+    # UI-112/113 are the identical-row pack (operator 2026-10-20): same
+    # warning tier — hub's first run will be red.
+    ("STX-UI112", "warning"),
+    ("STX-UI113", "warning"),
 ]
 
 

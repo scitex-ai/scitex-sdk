@@ -384,6 +384,47 @@ def build_rules() -> Mapping[str, Rule]:
         requires="scitex-sdk",
     )
 
+    # Identical-row pack (operator 2026-10-20): title, version and project
+    # picker must be the IDENTICAL element across applications — same
+    # component, same row height, placement and font size, all from the
+    # SDK. All warnings: hub's first run will be red.
+    UI112 = Rule(
+        id="STX-UI112",
+        severity="warning",
+        category=CATEGORY,
+        message=(
+            "hardcoded `<title>` text in a Django template instead of the "
+            "shared `{{ app_label }}` title — the tab must read the same "
+            "name as the tile (operator: cards showed Card Board for a "
+            "Cards tile)"
+        ),
+        suggestion=(
+            "Render `<title>{{ app_label }}</title>` via the shared shell "
+            "or `_branding_head.html` partial; pass the manifest label as "
+            "app_label from the view. Run `scitex-sdk ui lint` to list "
+            "hardcoded tab titles."
+        ),
+        requires="scitex-sdk",
+    )
+
+    UI113 = Rule(
+        id="STX-UI113",
+        severity="warning",
+        category=CATEGORY,
+        message=(
+            "consumer CSS overrides shared AppHeader selectors "
+            "(`.stx-app-header*`, `[data-stx-app-header]`) — row height, "
+            "placement and font size must come from the SDK alone so the "
+            "row renders identically in every app"
+        ),
+        suggestion=(
+            "Delete the override; if a token is missing, file it against "
+            "scitex-sdk ui. Never restyle the header row per-leaf. Run "
+            "`scitex-sdk ui lint` to list AppHeader forks."
+        ),
+        requires="scitex-sdk",
+    )
+
     return {
         UI101.id: UI101,
         UI102.id: UI102,
@@ -396,6 +437,8 @@ def build_rules() -> Mapping[str, Rule]:
         UI109.id: UI109,
         UI110.id: UI110,
         UI111.id: UI111,
+        UI112.id: UI112,
+        UI113.id: UI113,
     }
 
 

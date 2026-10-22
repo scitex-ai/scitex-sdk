@@ -200,6 +200,22 @@ direction. Overrides already inside a media query are legitimate scoping
 and are never flagged; the SDK's own shell is exempt via
 `treat_as_consumer=False`. Third-party `vendor/` trees are never scanned.
 
+### UI-112 — `hardcoded-tab-title` (WARN)
+
+A literal `<title>…</title>` in a Django template. The tab must read the
+same name as the tile: `<title>{{ app_label }}</title>` via the shared
+shell or `_branding_head.html` partial, with the manifest label passed
+as `app_label` (operator: cards showed "Card Board" for a "Cards"
+tile). Generated `_sphinx_html` trees are never scanned.
+
+### UI-113 — `appheader-row-override` (WARN)
+
+Consumer CSS touching `.stx-app-header*` / `[data-stx-app-header]`
+selectors. Row height, placement and font size come from the SDK alone
+so the title + version + project-picker row renders identically in
+every app. The SDK's own defining stylesheet is exempt via
+`treat_as_consumer=False` (same gate as UI-104/111).
+
 ---
 
 ## How the linter is wired

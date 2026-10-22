@@ -706,3 +706,73 @@ def test_ui111_suppressed_when_running_inside_scitex_ui_itself(tmp_path: Path) -
 
     # Assert
     assert all(v.rule.id != "STX-UI111" for v in violations)
+
+# --------------------------------------------------------------------------- #
+# UI-112 — hardcoded <title> instead of shared {{ app_label }}                #
+# --------------------------------------------------------------------------- #
+
+
+def test_ui112_flags_hardcoded_title(tmp_path: Path) -> None:
+    # Arrange — the cards drift: a literal tab title instead of the tile name.
+    (tmp_path / "page.html").write_text("<html><head><title>SciTeX Card Board</title></head></html>\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    hits = [v for v in violations if v.rule.id == "STX-UI112"]
+    assert len(hits) == 1
+    assert hits[0].line == 1
+
+
+def test_ui112_skips_template_variable_title(tmp_path: Path) -> None:
+    # Arrange — dynamic by construction: the shared shell pattern.
+    (tmp_path / "page.html").write_text("<title>{{ app_label }}</title>\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI112" for v in violations)
+
+
+# --------------------------------------------------------------------------- #
+# UI-113 — consumer restyle of the shared AppHeader row                       #
+# --------------------------------------------------------------------------- #
+
+
+def test_ui113_flags_leaf_app_header_override(tmp_path: Path) -> None:
+    # Arrange — row height/placement/font-size must come from the SDK alone.
+    css = tmp_path / "app.css"
+    css.write_text(".stx-app-header { height: 64px; }\n.stx-app-header__title { font-size: 20px; }\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    hits = [v for v in violations if v.rule.id == "STX-UI113"]
+    assert len(hits) == 2
+
+
+def test_ui113_skips_unrelated_selectors(tmp_path: Path) -> None:
+    # Arrange
+    css = tmp_path / "app.css"
+    css.write_text(".stx-app-body { padding: 8px; }\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI113" for v in violations)
+
+
+def test_ui113_suppressed_when_running_inside_scitex_ui_itself(tmp_path: Path) -> None:
+    # Arrange — the SDK defines that row; the rule fires on consumers.
+    css = tmp_path / "app.css"
+    css.write_text(".stx-app-header { height: 64px; }\n")
+
+    # Act
+    violations = scan_path(tmp_path, treat_as_consumer=False)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI113" for v in violations)
