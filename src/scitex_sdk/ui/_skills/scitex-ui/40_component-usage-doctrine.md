@@ -200,13 +200,14 @@ direction. Overrides already inside a media query are legitimate scoping
 and are never flagged; the SDK's own shell is exempt via
 `treat_as_consumer=False`. Third-party `vendor/` trees are never scanned.
 
-### UI-112 — `hardcoded-tab-title` (WARN)
+### UI-112 — `hardcoded-tab-title` + unrenderable multi-line `{# #}` (WARN)
 
-A literal `<title>…</title>` in a Django template. The tab must read the
-same name as the tile: `<title>{{ app_label }}</title>` via the shared
-shell or `_branding_head.html` partial, with the manifest label passed
-as `app_label` (operator: cards showed "Card Board" for a "Cards"
-tile). Generated `_sphinx_html` trees are never scanned.
+A literal `<title>…</title>` in a Django template: the tab must read the
+same name as the tile. Plus: a MULTI-LINE `{# ... #}` block is not a
+comment — Django only strips the single-line form, so the block is
+emitted verbatim into the page (measured twice 2026-10-22: journal
+app.html, scholar workspace_assets). Use
+`{% comment %}...{% endcomment %}` for multi-line commentary.
 
 ### UI-113 — `appheader-row-override` (WARN)
 
