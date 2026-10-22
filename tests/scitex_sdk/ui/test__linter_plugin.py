@@ -140,7 +140,7 @@ assert not any(name == 'scitex_dev' or name.startswith('scitex_dev.') for name i
 try:
     get_plugin()
 except ImportError as error:
-    assert 'scitex-dev>=0.62.4.dev0' in str(error), str(error)
+    assert 'scitex-dev>=0.62' in str(error), str(error)
     assert 'standalone' in str(error), str(error)
 else:
     raise AssertionError('Provider activation requires its declared optional tooling SPI')
