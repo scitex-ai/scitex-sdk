@@ -11,6 +11,7 @@
        data-app-title="SDK"
        {% if sdk_version %}data-app-version="{{ sdk_version }}"{% endif %}></div>
   <script type="module" src="{% static 'scitex_sdk/ui/js/app/app-header.js' %}"></script>
+  {% if project_picker_available %}{% include "scitex_sdk_creator/_project_picker.html" %}{% endif %}
   <p>Pick a starter, name the app, and scaffold it. Then validate it here
     before dev-installing or publishing it to SciTeX Cloud.</p>
 
@@ -157,6 +158,30 @@
       {app_dir: val("stx-appdir"), server_url: val("stx-server"), token: val("stx-token")},
       "stx-cloud-result");
   });
+  /* Project picker: move into the AppHeader slot, resume on change.
+   * Fail-soft: no picker (anon/standalone) means plain wizard behavior. */
+  function placePicker() {
+    var picker = document.querySelector("[data-stx-project-picker]");
+    if (!picker) return;
+    var api = window.stxAppHeader;
+    var header = api && typeof api.get === "function" ? api.get() : null;
+    if (header && header.projectSlot) header.projectSlot.appendChild(picker);
+    picker.addEventListener("stx-project-selector:change", function (ev) {
+      var d = (ev && ev.detail) || {};
+      if (d.id && d.name) {
+        var target = document.getElementById("stx-target");
+        if (target) {
+          if (!target.value) target.value = d.name;
+          target.placeholder = "Resuming: " + d.name + " (edit as needed)";
+        }
+      }
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", placePicker);
+  } else {
+    placePicker();
+  }
 })();
 </script>
 {% endblock %}

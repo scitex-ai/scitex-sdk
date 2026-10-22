@@ -69,6 +69,23 @@ def _sdk_version() -> str | None:
         return None
 
 
+def _project_picker_available() -> bool:
+    """True when the host registered the `scitex_project_picker` tag library.
+
+    Writer's precedent: `{% load %}` of a missing library is a hard
+    TemplateSyntaxError, so the guard lives here, not in the template.
+    Standalone (no provider) renders unchanged markup.
+    """
+    try:
+        from django.template import engines
+    except Exception:
+        return False
+    try:
+        return "scitex_project_picker" in engines["django"].engine.template_libraries
+    except Exception:
+        return False
+
+
 def index(request):
     """The wizard page: starter cards, create form, validate/publish tools."""
     return render(
@@ -78,8 +95,9 @@ def index(request):
             "starters": _starter_payload(),
             "default_starter": DEFAULT_STARTER,
             "sdk_version": _sdk_version(),
-            # Standalone shell <title>: "SciTeX SDK", like the leaf tiles.
+            # Standalone shell <title>: "SDK", like the leaf tiles.
             "app_label": "SDK",
+            "project_picker_available": _project_picker_available(),
         },
     )
 
