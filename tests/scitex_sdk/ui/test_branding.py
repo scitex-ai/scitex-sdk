@@ -136,7 +136,8 @@ def test_shell_context_exposes_the_branded_title_as_app_label():
 
 
 def test_shell_context_omits_favicon_href_when_not_overridden():
-    # Arrange — absent (not None), so it cannot shadow a value merged in
+    # Arrange
+    # absent (not None), so it cannot shadow a value merged in
     # earlier and the shell falls through to the shared brand mark.
     tool = "Storage"
     # Act
@@ -175,7 +176,8 @@ def test_shell_uses_favicon_href_when_the_app_overrides_it():
 
 
 def test_shared_favicon_asset_is_shipped_in_the_package():
-    # Arrange — get_static_dir() is the staticfiles root's scitex_sdk/ui/ dir, so
+    # Arrange
+    # get_static_dir() is the staticfiles root's scitex_sdk/ui/ dir, so
     # the namespaced FAVICON_STATIC_PATH is relative to its parent.
     from scitex_sdk.ui import get_static_dir
 
@@ -188,7 +190,8 @@ def test_shared_favicon_asset_is_shipped_in_the_package():
 # --- shell-free branding partial --------------------------------------------
 
 def test_branding_partial_renders_the_brand_favicon_without_the_shell():
-    # Arrange — scholar and hub own their own layout and never render the shell,
+    # Arrange
+    # scholar and hub own their own layout and never render the shell,
     # so branding must be reachable without adopting the workspace.
     context = {}
     # Act
@@ -207,7 +210,8 @@ def test_branding_partial_honours_an_explicit_favicon_override():
 
 
 def test_branding_partial_emits_no_layout_markup():
-    # Arrange — a consumer pastes this into its OWN <head>; anything structural
+    # Arrange
+    # a consumer pastes this into its OWN <head>; anything structural
     # would fight the layout it already has.
     context = {}
     # Act
@@ -217,7 +221,8 @@ def test_branding_partial_emits_no_layout_markup():
 
 
 def test_shell_reuses_the_branding_partial_rather_than_duplicating_it():
-    # Arrange — one source for what SciTeX tab branding is.
+    # Arrange
+    # one source for what SciTeX tab branding is.
     shell = (
         _templates_dir() / "standalone_shell.html"
     ).read_text()
@@ -230,7 +235,8 @@ def test_shell_reuses_the_branding_partial_rather_than_duplicating_it():
 # --- theme ------------------------------------------------------------------
 
 def test_shell_does_not_hardcode_a_resolved_theme():
-    # Arrange — regression: <html data-theme="dark"> overrode a stored light
+    # Arrange
+    # regression: <html data-theme="dark"> overrode a stored light
     # preference on every standalone GUI.
     context = {}
     # Act
@@ -258,7 +264,8 @@ def test_shell_honours_an_explicit_light_theme_default():
 
 
 def test_shell_inlines_the_theme_boot_rather_than_fetching_it():
-    # Arrange — an external or deferred script paints the wrong theme first, and
+    # Arrange
+    # an external or deferred script paints the wrong theme first, and
     # costs a render-blocking request on every page (scitex-cards, 2026-07-18).
     context = {}
     # Act
@@ -277,7 +284,8 @@ def test_shell_head_makes_no_blocking_request_for_the_theme_boot():
 
 
 def test_shell_head_makes_no_blocking_request_for_typography_tokens():
-    # Arrange — the font tokens moved into theme.css, which the shell already
+    # Arrange
+    # the font tokens moved into theme.css, which the shell already
     # loads, so this stylesheet is no longer fetched separately.
     context = {}
     # Act
@@ -289,7 +297,8 @@ def test_shell_head_makes_no_blocking_request_for_typography_tokens():
 # --- typography -------------------------------------------------------------
 
 def test_shell_theme_css_defines_the_base_font_family():
-    # Arrange — without this token the UA default wins and body text renders in
+    # Arrange
+    # without this token the UA default wins and body text renders in
     # Times New Roman on every standalone GUI.
     theme = _css("css/shell/theme.css")
     # Act
@@ -299,7 +308,8 @@ def test_shell_theme_css_defines_the_base_font_family():
 
 
 def test_shell_font_tokens_match_the_primitives_layer():
-    # Arrange — theme.css duplicates the primitives font tokens to avoid a second
+    # Arrange
+    # theme.css duplicates the primitives font tokens to avoid a second
     # blocking stylesheet. That copy must not drift, so compare the values.
     shell = _font_tokens(_css("css/shell/theme.css"))
     # Act
@@ -322,8 +332,9 @@ def _bg_primary_alias(css):
     return [" ".join(value.split()) for value in found]
 
 
-def test_shell_theme_css_defines_the_bg_primary_alias_in_both_themes():
-    # Arrange — body.workspace-page paints the page background from
+def test_shell_theme_css_defines_the_bg_primary_alias_in_the_light_theme():
+    # Arrange
+    # body.workspace-page paints the page background from
     # --bg-primary, but a page linking only shell/*.css never sees
     # primitives/colors.css. Without the alias in theme.css the var is
     # undefined there and the #0d1117 fallback paints a dark body in light
@@ -331,14 +342,27 @@ def test_shell_theme_css_defines_the_bg_primary_alias_in_both_themes():
     light, dark = _theme_blocks()
     # Act
     light_alias = _bg_primary_alias(light)
-    dark_alias = _bg_primary_alias(dark)
     # Assert
     assert light_alias == ["var(--bg-page)"]
+
+
+def test_shell_theme_css_defines_the_bg_primary_alias_in_the_dark_theme():
+    # Arrange
+    # body.workspace-page paints the page background from
+    # --bg-primary, but a page linking only shell/*.css never sees
+    # primitives/colors.css. Without the alias in theme.css the var is
+    # undefined there and the #0d1117 fallback paints a dark body in light
+    # mode (sdk-shell-light-mode-body-bg-undefined-20261019).
+    light, dark = _theme_blocks()
+    # Act
+    dark_alias = _bg_primary_alias(dark)
+    # Assert
     assert dark_alias == ["var(--workspace-bg-primary)"]
 
 
 def test_shell_bg_primary_alias_matches_the_primitives_layer():
-    # Arrange — theme.css mirrors the primitives alias under the same no-drift
+    # Arrange
+    # theme.css mirrors the primitives alias under the same no-drift
     # contract as the font tokens. That copy must not drift, so compare the
     # values.
     light, dark = _theme_blocks()
@@ -358,7 +382,8 @@ def test_shell_bg_primary_alias_matches_the_primitives_layer():
 # --- mobile layout ----------------------------------------------------------
 
 def test_shell_links_the_mobile_stylesheet():
-    # Arrange — regression: the shell linked every desktop layout stylesheet
+    # Arrange
+    # regression: the shell linked every desktop layout stylesheet
     # but never mobile.css, whose @media (max-width: 768px) rules are the only
     # thing that collapses the fixed-width side panes. Without it the
     # overflow-hidden flex row pushed .ws-module-pane off-screen, so every
@@ -372,7 +397,8 @@ def test_shell_links_the_mobile_stylesheet():
 
 
 def test_mobile_stylesheet_is_shipped_in_the_package():
-    # Arrange — a linked-but-unshipped stylesheet would 404 and reproduce the
+    # Arrange
+    # a linked-but-unshipped stylesheet would 404 and reproduce the
     # same blank page; the favicon shipped exactly that way in 0.7.0.
     from scitex_sdk.ui import get_static_dir
 
@@ -383,7 +409,8 @@ def test_mobile_stylesheet_is_shipped_in_the_package():
 
 
 def test_mobile_stylesheet_scopes_its_rules_to_small_viewports():
-    # Arrange — the shell now loads mobile.css unconditionally, so its rules
+    # Arrange
+    # the shell now loads mobile.css unconditionally, so its rules
     # must stay inside a small-viewport media query or they would restyle
     # desktop layouts too.
     css = _css("css/shell/mobile.css")
@@ -414,7 +441,8 @@ def test_shell_omits_the_app_accent_attribute_when_none_is_given():
 
 
 def test_every_accent_token_is_referenced_by_a_mapping_row():
-    # Arrange — a token no row references is dead: apps set the attribute and
+    # Arrange
+    # a token no row references is dead: apps set the attribute and
     # nothing lights up. `notebook` sat in that state until 0.7.0.
     declared = _declared_accents()
     # Act
@@ -424,7 +452,8 @@ def test_every_accent_token_is_referenced_by_a_mapping_row():
 
 
 def test_every_referenced_accent_token_is_declared():
-    # Arrange — the mirror failure: a row pointing at a var that was never
+    # Arrange
+    # the mirror failure: a row pointing at a var that was never
     # declared resolves to nothing, so the accent line silently disappears.
     referenced = _referenced_accents()
     # Act
@@ -445,7 +474,8 @@ def test_shell_hides_a_pane_declared_unused():
 
 
 def test_shell_keeps_a_pane_declared_client_populated():
-    # Arrange — THE regression this design exists for. scitex-writer's file tree
+    # Arrange
+    # THE regression this design exists for. scitex-writer's file tree
     # has zero server-rendered children (they do not override worktree_preseed)
     # and fills from data-working-dir after mount, so an emptiness check would
     # have collapsed their primary working surface on every page load.
@@ -457,7 +487,8 @@ def test_shell_keeps_a_pane_declared_client_populated():
 
 
 def test_shell_keeps_every_pane_when_nothing_is_declared():
-    # Arrange — opt-in: forgetting to declare leaves the page as it is today,
+    # Arrange
+    # opt-in: forgetting to declare leaves the page as it is today,
     # which is the whole reason this is not opt-out.
     context = shell_context("Writer")
     # Act
@@ -476,7 +507,8 @@ def test_shell_hides_only_the_panes_declared_unused():
 
 
 def test_shell_context_rejects_an_unknown_pane_name():
-    # Arrange — a typo must fail loudly; silently leaving the pane visible is
+    # Arrange
+    # a typo must fail loudly; silently leaving the pane visible is
     # indistinguishable from never having declared it.
     panes = {"files_tree": "unused"}
     # Act
@@ -498,7 +530,8 @@ def test_shell_context_rejects_an_unknown_pane_state():
 
 @pytest.mark.parametrize("pane", PANE_NAMES)
 def test_every_declared_pane_name_actually_collapses(pane):
-    # Arrange — PANE_NAMES is the contract's vocabulary and the validator
+    # Arrange
+    # PANE_NAMES is the contract's vocabulary and the validator
     # accepts every member of it, but nothing yet made the SHELL honour one.
     # A name added to the tuple would validate, render no change, and leave the
     # app's declaration silently ignored — which is the exact failure the
@@ -515,13 +548,15 @@ def test_every_declared_pane_name_actually_collapses(pane):
 
 
 def test_the_shell_honours_exactly_the_declared_pane_names():
-    # Arrange — the other direction: a template condition on a pane no app can
+    # Arrange
+    # the other direction: a template condition on a pane no app can
     # declare is dead code, and a rename of the constant that missed the
     # template would leave the old name honoured and the new one inert.
     template = (_templates_dir() / "standalone_shell.html").read_text()
     # Act
     honoured = set(re.findall(r"panes\.(\w+)\s*==\s*'unused'", template))
-    # Assert — no separate positive control is needed here, and adding one
+    # Assert
+    # no separate positive control is needed here, and adding one
     # would be cargo cult. This guard cannot pass vacuously: the right-hand
     # side is a non-empty literal constant, so a regex that goes stale (a
     # template reformat, a switch to double quotes) yields the empty set and
@@ -532,7 +567,8 @@ def test_the_shell_honours_exactly_the_declared_pane_names():
 
 @pytest.mark.parametrize("state", PANE_STATES)
 def test_only_the_unused_pane_state_changes_the_layout(state):
-    # Arrange — PANE_STATES documents that "client-populated" and "used" are
+    # Arrange
+    # PANE_STATES documents that "client-populated" and "used" are
     # equivalent today and both mean leave it alone. That is prose in a
     # docstring until something asserts it, and the two non-collapsing states
     # are the ones a consumer relies on to NOT lose their pane.
@@ -553,7 +589,8 @@ def test_shell_context_omits_panes_when_none_are_declared():
 
 
 def test_shell_context_omits_launcher_when_none_is_declared():
-    # Arrange — a STANDALONE app supplies no destination, and must get no link.
+    # Arrange
+    # a STANDALONE app supplies no destination, and must get no link.
     # Per the dual-mode contract it is itself mounted at "/", so an invented
     # link would point at the page it is on.
     tool = "Storage"
@@ -573,7 +610,8 @@ def test_shell_context_carries_a_declared_launcher():
 
 
 def test_shell_context_rejects_a_launcher_missing_a_key():
-    # Arrange — a half-specified launcher renders a link with no label or no
+    # Arrange
+    # a half-specified launcher renders a link with no label or no
     # destination, which looks the same as the defect this feature fixes.
     launcher = {"url": "/apps/store/"}
     # Act
@@ -584,7 +622,8 @@ def test_shell_context_rejects_a_launcher_missing_a_key():
 
 
 def test_shell_context_rejects_an_unknown_launcher_key():
-    # Arrange — `href` is the natural wrong guess, and silently ignoring it
+    # Arrange
+    # `href` is the natural wrong guess, and silently ignoring it
     # would render nothing while the caller believes they supplied a link.
     launcher = {"href": "/apps/store/", "label": "Apps"}
     # Act
@@ -595,7 +634,8 @@ def test_shell_context_rejects_an_unknown_launcher_key():
 
 
 def test_shell_context_rejects_an_empty_launcher_value():
-    # Arrange — a blank url is worse than no launcher: it renders a link that
+    # Arrange
+    # a blank url is worse than no launcher: it renders a link that
     # goes nowhere, so the page LOOKS escapable and is not.
     launcher = {"url": "   ", "label": "Apps"}
     # Act
@@ -606,7 +646,8 @@ def test_shell_context_rejects_an_empty_launcher_value():
 
 
 def test_launcher_context_returns_a_template_ready_dict():
-    # Arrange — the shape a context processor returns directly.
+    # Arrange
+    # the shape a context processor returns directly.
     launcher = {"url": "/apps/store/", "label": "Apps"}
     # Act
     context = launcher_context(launcher)
@@ -615,7 +656,8 @@ def test_launcher_context_returns_a_template_ready_dict():
 
 
 def test_launcher_context_rejects_the_same_shapes_shell_context_does():
-    # Arrange — ONE implementation backs both entry points, so a caller cannot
+    # Arrange
+    # ONE implementation backs both entry points, so a caller cannot
     # get a laxer check by coming through the other door. This asserts they
     # agree rather than trusting that they do.
     bad = {"href": "/apps/store/", "label": "Apps"}

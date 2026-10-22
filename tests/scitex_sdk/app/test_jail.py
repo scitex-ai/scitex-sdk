@@ -56,21 +56,25 @@ def test_true_shorthand_means_default_user_scope():
 
 def test_typo_scope_fails_loud():
     # Arrange
-    # Act / Assert
+    # Act
+    # Assert
     with pytest.raises(LeafContractError, match="fig.*scope"):
         normalize_jail_policy({"scope": "users"}, plugin="fig")
 
 
 def test_string_path_params_refused():
-    # Arrange — a bare string is iterable but never a key list
-    # Act / Assert
+    # Arrange
+    # a bare string is iterable but never a key list
+    # Act
+    # Assert
     with pytest.raises(LeafContractError, match="fig.*path_params"):
         normalize_jail_policy({"scope": "user", "path_params": "path"}, plugin="fig")
 
 
 def test_empty_param_entry_refused():
     # Arrange
-    # Act / Assert
+    # Act
+    # Assert
     with pytest.raises(LeafContractError, match="fig.*path_params"):
         normalize_jail_policy(
             {"scope": "user", "path_params": ["path", " "]}, plugin="fig"
@@ -79,7 +83,8 @@ def test_empty_param_entry_refused():
 
 def test_non_object_jail_refused():
     # Arrange
-    # Act / Assert
+    # Act
+    # Assert
     with pytest.raises(LeafContractError, match="fig.*jail"):
         normalize_jail_policy(["user"], plugin="fig")
 
@@ -99,15 +104,18 @@ def test_absent_policy_passes_open():
 def test_file_touching_without_jail_fails_loud():
     # Arrange
     manifest = {"mount_policy": {"login_required": True, "touches_files": True}}
-    # Act / Assert
+    # Act
+    # Assert
     with pytest.raises(LeafContractError, match="fig.*no.*jail"):
         validate_mount_policy(manifest, plugin="fig")
 
 
 def test_jail_without_login_required_fails_loud():
-    # Arrange — a jailed mount needs an authenticated user to jail TO
+    # Arrange
+    # a jailed mount needs an authenticated user to jail TO
     manifest = {"mount_policy": {"touches_files": True, "jail": {"scope": "user"}}}
-    # Act / Assert
+    # Act
+    # Assert
     with pytest.raises(LeafContractError, match="fig.*login_required"):
         validate_mount_policy(manifest, plugin="fig")
 
@@ -115,7 +123,8 @@ def test_jail_without_login_required_fails_loud():
 def test_non_bool_touches_files_fails_loud():
     # Arrange
     manifest = {"mount_policy": {"touches_files": "yes"}}
-    # Act / Assert
+    # Act
+    # Assert
     with pytest.raises(LeafContractError, match="fig.*touches_files"):
         validate_mount_policy(manifest, plugin="fig")
 
@@ -154,7 +163,8 @@ def test_jail_policy_of_true_shorthand():
 # ---------------------------------------------------------------------------
 
 def test_sibling_prefix_is_not_containment(tmp_path):
-    # Arrange — "proj" is a string prefix of "proj-secret"
+    # Arrange
+    # "proj" is a string prefix of "proj-secret"
     proj = tmp_path / "proj"
     proj.mkdir()
     sibling = tmp_path / "proj-secret" / "x"
@@ -184,7 +194,8 @@ def test_inside_passes(tmp_path):
 
 
 def test_absolute_value_discards_base():
-    # Arrange — pathlib's "/" drops the left operand: the attack shape
+    # Arrange
+    # pathlib's "/" drops the left operand: the attack shape
     # Act
     candidate = resolve_against("/srv/jail/alice/proj", "/etc/passwd")
     # Assert
@@ -253,7 +264,8 @@ def test_relative_inside_passes(tmp_path):
 
 
 def test_undeclared_key_is_not_a_channel(tmp_path):
-    # Arrange — keys outside path_params are invisible BY DESIGN; the
+    # Arrange
+    # keys outside path_params are invisible BY DESIGN; the
     # leaf must declare every key its handlers resolve
     jail_root = tmp_path / "alice"
     working = jail_root / "proj"
@@ -338,6 +350,17 @@ def test_absolute_path_param_is_403(tmp_path):
     response = view(request, "api/switch")
     # Assert
     assert response.status_code == 403
+
+
+def test_absolute_path_param_body_carries_forbidden_message(tmp_path):
+    # Arrange
+    view, seen, _root, _proj = _harness(
+        tmp_path, jail={"scope": "user", "path_params": ["path"]}
+    )
+    request = RF.get("/api/switch", {"path": "/etc/passwd"})
+    # Act
+    response = view(request, "api/switch")
+    # Assert
     assert FORBIDDEN_MESSAGE in response.content.decode()
 
 
@@ -426,6 +449,33 @@ def test_extra_guard_sees_body_and_endpoint(tmp_path):
     response = view(request, "api/gallery/add")
     # Assert
     assert response.status_code == 403
+
+
+def test_extra_guard_receives_body_and_endpoint(tmp_path):
+    # Arrange
+    calls = []
+
+    def extra_guard(request, body, *args, **kwargs):
+        calls.append((args, body.get("template")))
+        if body.get("template") == "../evil":
+            from django.http import JsonResponse
+
+            return JsonResponse({"error": FORBIDDEN_MESSAGE}, status=403)
+        return None
+
+    view, seen, _root, _proj = _harness(
+        tmp_path, jail={"scope": "user", "path_params": []}, extra_guard=extra_guard
+    )
+    import json
+
+    request = RF.post(
+        "/api/gallery/add",
+        data=json.dumps({"template": "../evil"}),
+        content_type="application/json",
+    )
+    # Act
+    response = view(request, "api/gallery/add")
+    # Assert
     assert calls == [(("api/gallery/add",), "../evil")]
 
 
@@ -433,7 +483,8 @@ def test_malformed_jail_fails_at_construction(tmp_path):
     # Arrange
     _view, _seen, _root, _proj = _harness(tmp_path)
     downstream = lambda request, *a, **k: HttpResponse("x")  # noqa: E731
-    # Act / Assert
+    # Act
+    # Assert
     with pytest.raises(LeafContractError, match="fig.*scope"):
         JailScopedView(
             downstream,
