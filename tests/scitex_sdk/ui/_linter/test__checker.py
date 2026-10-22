@@ -516,11 +516,34 @@ def test_ui108_skips_data_stx_app_header_mount(tmp_path: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_ui109_flags_label_drift_between_hub_copy_and_leaf(tmp_path: Path, monkeypatch) -> None:
+@pytest.fixture
+def _leaf_manifest():
+    # Arrange — point the dist lookup at the canned writer leaf manifest
+    # without the monkeypatch fixture: explicit save/restore.
+    import scitex_sdk.ui._linter._checker as checker
+
+    prior = checker._leaf_manifest_from_dist
+    leaf = {
+        "name": "writer_app",
+        "label": "SciTeX Writer",
+        "icon": "fas fa-file-alt",
+        "pip_package": "scitex-writer",
+    }
+
+    def fake(pip):
+        return leaf if pip == "scitex-writer" else None
+
+    checker._leaf_manifest_from_dist = fake
+    try:
+        yield leaf
+    finally:
+        checker._leaf_manifest_from_dist = prior
+
+
+def test_ui109_flags_label_drift_between_hub_copy_and_leaf(tmp_path: Path, _leaf_manifest) -> None:
     # Arrange
     # hub copy says "Writer", the installed dist's leaf says
-    # "SciTeX Writer": the writer fork, reproduced in miniature. The dist
-    # lookup is pointed at a fake install root via the metadata path.
+    # "SciTeX Writer": the writer fork, reproduced in miniature.
     import json
 
     hub = {
@@ -529,21 +552,9 @@ def test_ui109_flags_label_drift_between_hub_copy_and_leaf(tmp_path: Path, monke
         "icon": "fas fa-pen",
         "pip_package": "scitex-writer",
     }
-    leaf = {
-        "name": "writer_app",
-        "label": "SciTeX Writer",
-        "icon": "fas fa-file-alt",
-        "pip_package": "scitex-writer",
-    }
     target = tmp_path / "apps" / "workspace" / "writer_app"
     target.mkdir(parents=True)
     (target / "manifest.json").write_text(json.dumps(hub))
-
-    import scitex_sdk.ui._linter._checker as checker
-
-    monkeypatch.setattr(
-        checker, "_leaf_manifest_from_dist", lambda pip: leaf if pip == "scitex-writer" else None
-    )
 
     # Act
     violations = scan_path(tmp_path)
@@ -551,6 +562,29 @@ def test_ui109_flags_label_drift_between_hub_copy_and_leaf(tmp_path: Path, monke
     # Assert
     hits = [v for v in violations if v.rule.id == "STX-UI109"]
     assert len(hits) == 1
+
+
+def test_ui109_drift_hit_names_the_label(tmp_path: Path, _leaf_manifest) -> None:
+    # Arrange
+    # same fork miniature as the drift test: the source line must name
+    # the drifted field.
+    import json
+
+    hub = {
+        "name": "writer_app",
+        "label": "Writer",
+        "icon": "fas fa-pen",
+        "pip_package": "scitex-writer",
+    }
+    target = tmp_path / "apps" / "workspace" / "writer_app"
+    target.mkdir(parents=True)
+    (target / "manifest.json").write_text(json.dumps(hub))
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    hits = [v for v in violations if v.rule.id == "STX-UI109"]
     assert "label" in hits[0].source_line
 
 
@@ -572,7 +606,7 @@ def test_ui109_stays_silent_when_leaf_dist_is_not_installed(tmp_path: Path) -> N
     assert all(v.rule.id != "STX-UI109" for v in violations)
 
 
-def test_ui109_ignores_name_only_difference(tmp_path: Path, monkeypatch) -> None:
+def test_ui109_ignores_name_only_difference(tmp_path: Path, _leaf_manifest) -> None:
     # Arrange
     # hub `name` is module identity, leaf `name` package identity:
     # they differ by design (writer module vs writer_app leaf), so a
@@ -583,13 +617,6 @@ def test_ui109_ignores_name_only_difference(tmp_path: Path, monkeypatch) -> None
     target.mkdir(parents=True)
     (target / "manifest.json").write_text(
         json.dumps({"name": "writer", "label": "SciTeX Writer", "icon": "fas fa-file-alt", "pip_package": "scitex-writer"})
-    )
-
-    import scitex_sdk.ui._linter._checker as checker
-
-    leaf = {"name": "writer_app", "label": "SciTeX Writer", "icon": "fas fa-file-alt", "pip_package": "scitex-writer"}
-    monkeypatch.setattr(
-        checker, "_leaf_manifest_from_dist", lambda pip: leaf if pip == "scitex-writer" else None
     )
 
     # Act

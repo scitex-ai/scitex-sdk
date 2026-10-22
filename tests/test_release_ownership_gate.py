@@ -465,18 +465,40 @@ def test_missing_sdk_reports_not_installed(_observe, tmp_path, mode, graph, requ
     assert "scitex-sdk is not installed" in report["direct_sdk_ownership_errors"]
 
 
-@pytest.mark.parametrize("defect", ["retired-requirement", "retired-entrypoint", "missing-inventory"])
-def test_optional_sdk_if_present_is_still_inspected(_observe, defect):
-    # Arrange
+def _defective_distribution(defect):
+    # Arrange helper — one defective SDK metadata per defect kind.
     distribution = FixtureDistribution()
     if defect == "retired-requirement":
         distribution.requires = ['scitex-ui>=0.23; extra == "unused"']
-    elif defect == "retired-entrypoint":
+    if defect == "retired-entrypoint":
         distribution.entry_points = [importlib.metadata.EntryPoint(
             name="arbitrary", value="scitex_app:main", group="console_scripts")]
-    else:
+    if defect == "missing-inventory":
         distribution.files = None
-    observation = _observe(distribution)
+    return distribution
+
+
+def test_optional_sdk_retired_requirement_is_inspected(_observe):
+    # Arrange
+    observation = _observe(_defective_distribution("retired-requirement"))
+    # Act
+    report, code = gate.evaluate(observation, "retirement", "config-core", sdk_requirement="none")
+    # Assert
+    assert code == 1 and report["direct_sdk_ownership_errors"]
+
+
+def test_optional_sdk_retired_entrypoint_is_inspected(_observe):
+    # Arrange
+    observation = _observe(_defective_distribution("retired-entrypoint"))
+    # Act
+    report, code = gate.evaluate(observation, "retirement", "config-core", sdk_requirement="none")
+    # Assert
+    assert code == 1 and report["direct_sdk_ownership_errors"]
+
+
+def test_optional_sdk_missing_inventory_is_inspected(_observe):
+    # Arrange
+    observation = _observe(_defective_distribution("missing-inventory"))
     # Act
     report, code = gate.evaluate(observation, "retirement", "config-core", sdk_requirement="none")
     # Assert

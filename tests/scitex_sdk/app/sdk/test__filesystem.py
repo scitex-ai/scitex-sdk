@@ -4,9 +4,21 @@
 
 """Tests for FileSystemBackend."""
 
+import os
+
 import pytest
 
 from scitex_sdk.app.sdk._filesystem import FileSystemBackend
+
+
+def _symlink_or_skip(target, link):
+    # Arrange helper — symlinks need privileges on some platforms.
+    # Kept out of test bodies: the auditor counts pytest.skip as an
+    # assertion (STX-TQ007).
+    try:
+        os.symlink(target, link)
+    except OSError:
+        pytest.skip("symlinks unavailable")
 
 
 @pytest.fixture
@@ -343,23 +355,28 @@ class TestSiblingRootContainment:
         # Assert
         assert fs.list("sub") == ["sub/ok.txt"]
 
-    def test_valid_root_list_root_covers_entry(self, siblings):
+    def test_valid_root_list_root_lists_files_only(self, siblings):
+        # Arrange — list() returns file paths, never subdirectories.
+        fs = FileSystemBackend(siblings / "project")
+        # Act
+        fs.write("sub/ok.txt", "fine")
+        # Assert
+        assert fs.list("") == []
+
+
+    def test_valid_root_list_sub_covers_file(self, siblings):
         # Arrange
         fs = FileSystemBackend(siblings / "project")
         # Act
         fs.write("sub/ok.txt", "fine")
         # Assert
-        assert fs.list("") == ["sub"] or "sub/ok.txt" in fs.list("sub")
+        assert "sub/ok.txt" in fs.list("sub")
 
     def test_symlink_pointing_outside_stays_refused(self, siblings):
         # Arrange
-        import os
         target = siblings / "project-other" / "sentinel.txt"
         link = siblings / "project" / "link.txt"
-        try:
-            os.symlink(target, link)
-        except OSError:
-            pytest.skip("symlinks unavailable")
+        _symlink_or_skip(target, link)
         fs = FileSystemBackend(siblings / "project")
         # Act
         # Assert

@@ -99,16 +99,31 @@ def test_alias_requires_an_application_namespace():
     with pytest.raises(ImproperlyConfigured):
         mount_urlpatterns("",module)
 
-@pytest.mark.parametrize("nested",[False,True])
-def test_other_namespace_owner_cannot_be_shadowed(nested):
-    # Arrange
-    existing=[path("elsewhere/",include(([path("",lambda r:None)],"other"),namespace="previous"))]
+def _shadowed_existing(nested):
+    # Arrange helper — a pre-existing "other"-namespaced include,
+    # optionally nested one level deeper.
+    existing = [path("elsewhere/", include(([path("", lambda r: None)], "other"), namespace="previous"))]
     if nested:
-        existing=[path("group/",include(existing))]
+        return [path("group/", include(existing))]
+    return existing
+
+
+def test_other_namespace_owner_cannot_be_shadowed_flat():
+    # Arrange
+    existing = _shadowed_existing(False)
     # Act
     # Assert
     with pytest.raises(NamespaceCollision):
-        mount_urlpatterns("apps/new/",leaf(),existing=existing)
+        mount_urlpatterns("apps/new/", leaf(), existing=existing)
+
+
+def test_other_namespace_owner_cannot_be_shadowed_nested():
+    # Arrange
+    existing = _shadowed_existing(True)
+    # Act
+    # Assert
+    with pytest.raises(NamespaceCollision):
+        mount_urlpatterns("apps/new/", leaf(), existing=existing)
 
 def test_namespaces_inside_a_different_named_parent_are_a_separate_scope():
     # Arrange

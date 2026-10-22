@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 
 import pytest
 
@@ -47,13 +48,10 @@ def _unwrap(result):
 
 def test_app_write_then_read_roundtrip_hello_txt_in_str_write_msg(tmp_path):
     # Arrange
-    # Arrange
     # Act
     write_msg = _unwrap(
         _call_tool("app_write_file", path="hello.txt", content="hi", root=str(tmp_path))
     )
-    # Act
-    # Assert
     # Assert
     assert "hello.txt" in str(write_msg)
 
@@ -71,7 +69,6 @@ def test_app_write_then_read_roundtrip_content_equals_hi(tmp_path):
 
 def test_app_list_files_filters_by_extension_b_yaml_in_files(tmp_path):
     # Arrange
-    # Arrange
     (tmp_path / "a.txt").write_text("x")
     (tmp_path / "b.yaml").write_text("y: 1")
     # Act
@@ -80,15 +77,12 @@ def test_app_list_files_filters_by_extension_b_yaml_in_files(tmp_path):
             "app_list_files", directory="", root=str(tmp_path), extensions=[".yaml"]
         )
     )
-    # Act
-    # Assert
     # Assert
     assert "b.yaml" in files
 
 
 def test_app_list_files_filters_by_extension_a_txt_not_in_files(tmp_path):
     # Arrange
-    # Arrange
     (tmp_path / "a.txt").write_text("x")
     (tmp_path / "b.yaml").write_text("y: 1")
     # Act
@@ -97,8 +91,6 @@ def test_app_list_files_filters_by_extension_a_txt_not_in_files(tmp_path):
             "app_list_files", directory="", root=str(tmp_path), extensions=[".yaml"]
         )
     )
-    # Act
-    # Assert
     # Assert
     assert "a.txt" not in files
 
@@ -107,11 +99,8 @@ def test_app_file_exists_true_and_false_unwrap_call_tool_app_file_exists_path_x_
     tmp_path,
 ):
     # Arrange
-    # Arrange
     # Act
     (tmp_path / "x.txt").write_text("here")
-    # Act
-    # Assert
     # Assert
     assert (
         _unwrap(_call_tool("app_file_exists", path="x.txt", root=str(tmp_path))) is True
@@ -122,11 +111,8 @@ def test_app_file_exists_true_and_false_unwrap_call_tool_app_file_exists_path_mi
     tmp_path,
 ):
     # Arrange
-    # Arrange
     # Act
     (tmp_path / "x.txt").write_text("here")
-    # Act
-    # Assert
     # Assert
     assert (
         _unwrap(_call_tool("app_file_exists", path="missing.txt", root=str(tmp_path)))
@@ -136,14 +122,11 @@ def test_app_file_exists_true_and_false_unwrap_call_tool_app_file_exists_path_mi
 
 def test_app_copy_then_delete_tmp_path_dst_txt_read_text_data(tmp_path):
     # Arrange
-    # Arrange
     (tmp_path / "src.txt").write_text("data")
     # Act
     _call_tool(
         "app_copy_file", src_path="src.txt", dest_path="dst.txt", root=str(tmp_path)
     )
-    # Act
-    # Assert
     # Assert
     assert (tmp_path / "dst.txt").read_text() == "data"
 
@@ -162,28 +145,22 @@ def test_app_delete_file_removes_target(tmp_path):
 
 def test_app_rename_file_not_tmp_path_old_txt_exists(tmp_path):
     # Arrange
-    # Arrange
     (tmp_path / "old.txt").write_text("data")
     # Act
     _call_tool(
         "app_rename_file", old_path="old.txt", new_path="new.txt", root=str(tmp_path)
     )
-    # Act
-    # Assert
     # Assert
     assert not (tmp_path / "old.txt").exists()
 
 
 def test_app_rename_file_tmp_path_new_txt_read_text_data(tmp_path):
     # Arrange
-    # Arrange
     (tmp_path / "old.txt").write_text("data")
     # Act
     _call_tool(
         "app_rename_file", old_path="old.txt", new_path="new.txt", root=str(tmp_path)
     )
-    # Act
-    # Assert
     # Assert
     assert (tmp_path / "new.txt").read_text() == "data"
 
@@ -192,48 +169,36 @@ def test_app_validate_returns_error_envelope_for_empty_dir_payload_success_is_fa
     tmp_path,
 ):
     # Arrange
-    # Arrange
     raw = _unwrap(_call_tool("app_validate", app_dir=str(tmp_path)))
     # Act
     payload = json.loads(raw)
-    # Act
-    # Assert
     # Assert
     assert payload["success"] is False
 
 
 def test_app_validate_returns_error_envelope_for_empty_dir_payload_errors(tmp_path):
     # Arrange
-    # Arrange
     raw = _unwrap(_call_tool("app_validate", app_dir=str(tmp_path)))
     # Act
     payload = json.loads(raw)
-    # Act
-    # Assert
     # Assert
     assert payload["errors"]
 
 
 def test_app_skills_list_returns_envelope_payload_package_scitex_app():
     # Arrange
-    # Arrange
     raw = _unwrap(_call_tool("app_skills_list"))
     # Act
     payload = json.loads(raw)
-    # Act
-    # Assert
     # Assert
     assert payload["package"] == "scitex-app"
 
 
 def test_app_skills_list_returns_envelope_isinstance_payload_skills_list():
     # Arrange
-    # Arrange
     raw = _unwrap(_call_tool("app_skills_list"))
     # Act
     payload = json.loads(raw)
-    # Act
-    # Assert
     # Assert
     assert isinstance(payload["skills"], list)
 
@@ -256,35 +221,42 @@ def test_app_skills_get_unknown_skill_reports_error_unknown_skill_in_payload_err
     assert "unknown skill" in payload["error"]
 
 
-def test_default_backend_ignores_ambient_token_stays_local(tmp_path, monkeypatch):
+@pytest.fixture
+def _token_env():
+    # Arrange — control SCITEX_API_TOKEN without the monkeypatch fixture:
+    # explicit save/restore around the test.
+    prior = os.environ.get("SCITEX_API_TOKEN", None)
+    try:
+        yield prior
+    finally:
+        if prior is None:
+            os.environ.pop("SCITEX_API_TOKEN", None)
+        else:
+            os.environ["SCITEX_API_TOKEN"] = prior
+
+
+def test_default_backend_ignores_ambient_token_stays_local(tmp_path, _token_env):
     # Arrange
-    # Arrange
-    monkeypatch.setenv("SCITEX_API_TOKEN", "fake-token-for-fail-closed-proof")
+    os.environ["SCITEX_API_TOKEN"] = "fake-token-for-fail-closed-proof"
     (tmp_path / "local.txt").write_text("stays-local")
     # Act
     content = _unwrap(_call_tool("app_read_file", path="local.txt", root=str(tmp_path)))
-    # Act
-    # Assert
     # Assert
     assert content == "stays-local"
 
 
 def test_resolve_files_default_local_is_filesystem_backend(tmp_path):
     # Arrange
-    # Arrange
     from scitex_sdk.app.sdk._filesystem import FileSystemBackend
     # Act
     files = server._resolve_files(str(tmp_path), "local")
-    # Act
-    # Assert
     # Assert
     assert isinstance(files, FileSystemBackend)
 
 
-def test_resolve_files_cloud_without_token_fails_closed(tmp_path, monkeypatch):
+def test_resolve_files_cloud_without_token_fails_closed(tmp_path, _token_env):
     # Arrange
-    # Arrange
-    monkeypatch.delenv("SCITEX_API_TOKEN", raising=False)
+    os.environ.pop("SCITEX_API_TOKEN", None)
     # Act
     # Assert
     with pytest.raises(RuntimeError, match="explicit authenticated request"):
@@ -292,10 +264,9 @@ def test_resolve_files_cloud_without_token_fails_closed(tmp_path, monkeypatch):
     # Assert
 
 
-def test_tool_cloud_without_token_raises_not_silent_fallback(tmp_path, monkeypatch):
+def test_tool_cloud_without_token_raises_not_silent_fallback(tmp_path, _token_env):
     # Arrange
-    # Arrange
-    monkeypatch.delenv("SCITEX_API_TOKEN", raising=False)
+    os.environ.pop("SCITEX_API_TOKEN", None)
     # Act
     # Assert
     with pytest.raises(RuntimeError, match="explicit authenticated request"):
@@ -304,7 +275,6 @@ def test_tool_cloud_without_token_raises_not_silent_fallback(tmp_path, monkeypat
 
 
 def test_resolve_files_unknown_backend_raises_key_error(tmp_path):
-    # Arrange
     # Arrange
     pass
     # Act

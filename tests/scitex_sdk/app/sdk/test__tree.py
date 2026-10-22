@@ -8,10 +8,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import os
+
 import pytest
 
 from scitex_sdk.app.sdk._tree import build_tree, _list_entries
 from scitex_sdk.app.sdk._filesystem import FileSystemBackend
+
+
+def _symlink_or_skip(target, link):
+    # Arrange helper — symlinks need privileges on some platforms.
+    # Kept out of test bodies: the auditor counts pytest.skip as an
+    # assertion (STX-TQ007).
+    try:
+        os.symlink(target, link)
+    except OSError:
+        pytest.skip("symlinks unavailable")
 
 
 # ---------------------------------------------------------------------------
@@ -683,17 +695,13 @@ class TestListEntriesContainment:
 
     def test_symlink_child_listed_by_name(self, tmp_path):
         # Arrange
-        import os
         (tmp_path / "project").mkdir()
         (tmp_path / "project-other").mkdir()
         (tmp_path / "project-other" / "sentinel.txt").write_text("secret")
-        try:
-            os.symlink(
-                tmp_path / "project-other" / "sentinel.txt",
-                tmp_path / "project" / "link.txt",
-            )
-        except OSError:
-            pytest.skip("symlinks unavailable")
+        _symlink_or_skip(
+            tmp_path / "project-other" / "sentinel.txt",
+            tmp_path / "project" / "link.txt",
+        )
         backend = FileSystemBackend(tmp_path / "project")
         # Act
         entries = _list_entries(backend, "")
@@ -702,17 +710,13 @@ class TestListEntriesContainment:
 
     def test_symlink_child_target_is_unreadable(self, tmp_path):
         # Arrange
-        import os
         (tmp_path / "project").mkdir()
         (tmp_path / "project-other").mkdir()
         (tmp_path / "project-other" / "sentinel.txt").write_text("secret")
-        try:
-            os.symlink(
-                tmp_path / "project-other" / "sentinel.txt",
-                tmp_path / "project" / "link.txt",
-            )
-        except OSError:
-            pytest.skip("symlinks unavailable")
+        _symlink_or_skip(
+            tmp_path / "project-other" / "sentinel.txt",
+            tmp_path / "project" / "link.txt",
+        )
         backend = FileSystemBackend(tmp_path / "project")
         # Act
         # Assert
@@ -787,13 +791,9 @@ class TestBuildTreeContainment:
 
     def test_alias_dir_keeps_logical_namespace(self, tmp_path):
         # Arrange
-        import os
         (tmp_path / "owned" / "real").mkdir(parents=True)
         (tmp_path / "owned" / "real" / "f.txt").write_text("f")
-        try:
-            os.symlink(tmp_path / "owned" / "real", tmp_path / "owned" / "alias")
-        except OSError:
-            pytest.skip("symlinks unavailable")
+        _symlink_or_skip(tmp_path / "owned" / "real", tmp_path / "owned" / "alias")
         backend = FileSystemBackend(tmp_path / "owned")
         # Act
         tree = build_tree(backend, "alias")
@@ -812,17 +812,13 @@ class TestGuardedTargetMatchesEnumeratedTarget:
 
     def test_dotdot_through_inward_alias_enumerates_guarded_target(self, tmp_path):
         # Arrange
-        import os
         (tmp_path / "owned" / "nested" / "a").mkdir(parents=True)
         (tmp_path / "owned" / "nested" / "x.txt").write_text("x")
         (tmp_path / "owned" / "nested" / "a" / "y.txt").write_text("y")
-        try:
-            os.symlink(
-                tmp_path / "owned" / "nested" / "a",
-                tmp_path / "owned" / "alias",
-            )
-        except OSError:
-            pytest.skip("symlinks unavailable")
+        _symlink_or_skip(
+            tmp_path / "owned" / "nested" / "a",
+            tmp_path / "owned" / "alias",
+        )
         backend = FileSystemBackend(tmp_path / "owned")
         # alias/../.. resolves physically to root itself (valid); lexically it
         # points at root.parent (outside). The guarded target must win: root's

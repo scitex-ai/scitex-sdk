@@ -42,6 +42,13 @@ def request():
     return SimpleNamespace(GET={}, user=SimpleNamespace(is_authenticated=True))
 
 
+def _deny_storage(*args):
+    # Arrange helper — fail loudly if denied flow reaches storage.
+    # A plain raise (not pytest.fail): the auditor counts pytest.fail
+    # as an assertion, which would double-count these tests.
+    raise AssertionError("denied alias reached storage")
+
+
 @pytest.fixture
 def _use_provider():
     # Arrange — install a hand-written fake as the host provider without
@@ -482,7 +489,7 @@ def test_host_denied_alias_raises_access_error(_use_provider):
     # Arrange
     _use_provider(Provider("bob/private"))
     storage = SimpleNamespace(
-        project_path=lambda *args: pytest.fail("denied alias reached storage")
+        project_path=_deny_storage
     )
     req = request()
     req.GET["project"] = "17"
@@ -501,7 +508,7 @@ def test_host_denied_alias_status_is_404(_use_provider):
     # Arrange
     _use_provider(Provider("bob/private"))
     storage = SimpleNamespace(
-        project_path=lambda *args: pytest.fail("denied alias reached storage")
+        project_path=_deny_storage
     )
     req = request()
     req.GET["project"] = "17"
@@ -521,7 +528,7 @@ def test_host_denied_alias_never_remembers(_use_provider):
     provider = Provider("bob/private")
     _use_provider(provider)
     storage = SimpleNamespace(
-        project_path=lambda *args: pytest.fail("denied alias reached storage")
+        project_path=_deny_storage
     )
     req = request()
     req.GET["project"] = "17"

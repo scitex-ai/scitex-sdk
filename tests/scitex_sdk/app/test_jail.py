@@ -184,7 +184,7 @@ def test_dotdot_climb_rejected(tmp_path):
     assert not inside
 
 
-def test_inside_passes(tmp_path):
+def test_inside_nested_path_passes_jail_check(tmp_path):
     # Arrange
     target = tmp_path / "proj" / "a" / "b.yaml"
     # Act
