@@ -270,10 +270,10 @@ def _app_tripping_only_advisories(tmp_path):
     make_full_standalone_app(tmp_path, app_name="myapp")
     (tmp_path / "style.css").write_text("a { color: var(--color-primary); }")
     # The label advisory is not under test here: keep the fixture tile in
-    # family form so only the name + CSS advisories trip.
+    # short form so only the name + CSS advisories trip.
     manifest_path = tmp_path / "manifest.json"
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
-    data["label"] = "SciTeX My App"
+    data["label"] = "My App"
     manifest_path.write_text(json.dumps(data), encoding="utf-8")
     return tmp_path
 

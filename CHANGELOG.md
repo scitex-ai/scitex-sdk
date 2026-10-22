@@ -4,6 +4,16 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Leaf-declared launcher `group` (operator 2026-10-23): optional manifest
+  field `foundation` | `work` | `publication` (closed enum, typo is a
+  validator ERROR; omitted = host keeps existing grouping), readable at
+  runtime via `ScitexAppConfig.app_group`. Tile labels go short
+  (`Cards`, `Agent Container`, `Storage`, `Scholar`, `Stats`, `FigRecipe`,
+  `Writer`): the `SciTeX ` prefix is now a validator ADVISORY, and tile
+  label vs in-app header title are independent strings. Leaf value edits +
+  hub launcher dedup (agent-container WORK duplicate dropped) are App-lane
+  execution.
+
 ## [0.3.12] - 2026-10-22
 
 Identical-row pack (PR #73): STX-UI112 hardcoded tab titles, UI-113

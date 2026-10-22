@@ -51,7 +51,12 @@ from ._frame import (
 )
 from ._js import DANGEROUS_JS_PATTERNS, JS_SKIP_DIRS, validate_js
 from ._manifest import (
+    GROUP_FOUNDATION,
+    GROUP_PUBLICATION,
+    GROUP_WORK,
     MANIFEST_REQUIRED_KEYS,
+    VALID_GROUPS,
+    normalize_group,
     validate_manifest,
     validate_manifest_advisory,
 )
@@ -86,6 +91,9 @@ __all__ = [
     "DEFAULT_MAX_BUNDLE_SIZE",
     "FORBIDDEN_BLOCK_OVERRIDES",
     "FORBIDDEN_PATTERNS",
+    "GROUP_FOUNDATION",
+    "GROUP_PUBLICATION",
+    "GROUP_WORK",
     "JS_SKIP_DIRS",
     "MANIFEST_REQUIRED_KEYS",
     "MOUNT_IDENTIFIERS",
@@ -104,9 +112,11 @@ __all__ = [
     "SHELL_TOKEN_PREFIXES",
     "VALID_API_SCOPES",
     "VALID_FILESYSTEM_SCOPES",
+    "VALID_GROUPS",
     "VALID_NETWORK_SCOPES",
     "VALID_PRIVILEGE_TYPES",
     "css_files",
+    "normalize_group",
     "validate",
     "validate_bundle_size",
     "validate_css",
