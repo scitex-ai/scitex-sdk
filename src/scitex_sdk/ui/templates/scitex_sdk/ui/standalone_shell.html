@@ -27,6 +27,13 @@
         <!-- scitex-ui workspace shell CSS (canonical source).
              theme.css carries the font tokens the base body typography needs. -->
         <link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/shell/theme.css' %}" />
+        <!-- Shared scrollbar surface: must load right after theme.css so the
+             workspace tokens exist. Pages include shell files individually
+             (never shell.css/all.css bundles), so bundle-only wiring would
+             reach zero pages — scholar shipped a native light scrollbar on
+             dark for exactly this reason (operator 2026-10-23). -->
+        <link rel="stylesheet"
+              href="{% static 'scitex_sdk/ui/css/shell/scrollbars.css' %}" />
         <link rel="stylesheet"
               href="{% static 'scitex_sdk/ui/css/shell/app-shell.css' %}" />
         <link rel="stylesheet"
