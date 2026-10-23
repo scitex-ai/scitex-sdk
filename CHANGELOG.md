@@ -6,6 +6,18 @@ All notable changes to `scitex-sdk`.
 
 (none yet)
 
+## [0.3.14] - 2026-10-23
+
+Shared scrollbar surface + shell-head wiring (operator 2026-10-23):
+`shell/scrollbars.css` paints the default scrollbar for every scroll
+container from workspace tokens (thumb/border-default, track/bg-secondary,
+hover/border-hover), `color-scheme: light/dark` per theme, wired into
+shell.css/all.css bundles AND loaded in `standalone_shell.html` right
+after theme.css (leaf pages include shell files individually, never the
+bundles — bundle-only wiring reached zero pages). New linter STX-UI115
+(warning) flags leaf-local scrollbar colouring; STX-UI116 covers
+short tab titles.
+
 ## [0.3.13] - 2026-10-23
 
 Tab chrome SSOT, short titles + official mark (operator 2026-10-23):
