@@ -217,23 +217,27 @@
 }
 
 /* ===========================================================================
-   MODULE ACCENT BORDER
-   Continuous accent line across the top of the module content area.
-   Framework-controlled via #main-content[data-app-accent].
-   Uses ::before pseudo-element with high z-index to prevent app overrides.
-
+   MODULE ACCENT BORDER — RETIRED (operator 2026-10-23, card
+   apps-crossapp-header-consistency-20261023).
+   The continuous accent line across the top of the module content area is
+   dropped in every app: it sits between the global header and the app
+   header without carrying meaning. The data-app-accent attribute and the
+   --app-accent-color plumbing stay intact for sidebar/module-tab tinting;
+   only the ::before bar is neutralized. Kept as `background: transparent`
+   (rather than deleting the rule) so any per-module tint JS keeps a valid
+   target and no layout shifts.
    Usage: Add data-app-accent="writer" on the module container.
    =========================================================================== */
 
-/* Accent line: single continuous bar across the top of module content */
+/* Accent line: retired — transparent bar, zero visual footprint. */
 #main-content[data-app-accent]::before {
   content: "" !important;
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  height: 2px !important;
-  background: var(--app-accent-color, transparent) !important;
+  height: 0 !important;
+  background: transparent !important;
   z-index: 100 !important;
   pointer-events: none !important;
 }
