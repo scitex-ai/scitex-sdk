@@ -97,24 +97,24 @@ def _referenced_accents():
     return stripped - _RESERVED_ACCENTS
 
 
-# --- title convention -------------------------------------------------------
+# --- title convention: short names, the favicon carries the brand -----------
 
-def test_shell_title_adds_the_brand_prefix():
+def test_shell_title_returns_the_short_name_unchanged():
     # Arrange
     tool = "Writer"
     # Act
     title = shell_title(tool)
     # Assert
-    assert title == "SciTeX Writer"
+    assert title == "Writer"
 
 
-def test_shell_title_is_idempotent_for_an_already_branded_name():
+def test_shell_title_strips_the_brand_prefix():
     # Arrange
     tool = "SciTeX Writer"
     # Act
     title = shell_title(tool)
     # Assert
-    assert title == "SciTeX Writer"
+    assert title == "Writer"
 
 
 def test_shell_title_degrades_to_the_bare_brand_for_a_blank_name():
@@ -126,13 +126,13 @@ def test_shell_title_degrades_to_the_bare_brand_for_a_blank_name():
     assert title == "SciTeX"
 
 
-def test_shell_context_exposes_the_branded_title_as_app_label():
+def test_shell_context_exposes_the_short_title_as_app_label():
     # Arrange
     tool = "Storage"
     # Act
     context = shell_context(tool)
     # Assert
-    assert context["app_label"] == "SciTeX Storage"
+    assert context["app_label"] == "Storage"
 
 
 def test_shell_context_omits_favicon_href_when_not_overridden():

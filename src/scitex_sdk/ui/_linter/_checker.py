@@ -154,6 +154,22 @@ _MANIFEST_COMPARE_KEYS = ("label", "icon")
 # the shared shell or _branding_head.html partial. Generated docs trees
 # are never scanned (see _DEFAULT_SKIP_DIRS).
 _TITLE_LITERAL_RE = re.compile(r"<title>(?P<text>[^<>{}]+)</title>", re.IGNORECASE)
+# UI-116 — hardcoded `SciTeX `-prefixed app title (operator 2026-10-23):
+# tab and in-app header titles use the SHORT tile form. Two shapes: the
+# `data-app-title` mount attribute (plain, single- or double-quoted, or a
+# {% translate %} tag in either quoting) and a literal `<title>` element.
+# Values carrying template syntax elsewhere are still flagged when the
+# brand prefix is literal — the prefix is never dynamic, only the name
+# around it could be, and a dynamic name comes from the tile label via
+# shell_title(), which strips it.
+_BRANDED_DATA_TITLE_RE = re.compile(
+    r"""data-app-title\s*=\s*(?:"SciTeX\s|'SciTeX\s|"\{%[^}]*?["']SciTeX\s|'\{%[^}]*?["']SciTeX\s)""",
+    re.IGNORECASE,
+)
+_BRANDED_TITLE_TAG_RE = re.compile(
+    r"""<title>[^<>{}]*SciTeX\s""",
+    re.IGNORECASE,
+)
 
 # UI-112b — a MULTI-LINE `{# ... #}` "comment". Django only strips
 # single-line {# #}; a multi-line one is emitted VERBATIM into the page
@@ -581,6 +597,41 @@ def _scan_tsx_html(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolat
             col = match.start() - (last_nl + 1)
             yield UIViolation(
                 rule=rules["STX-UI112"],
+                path=str(path),
+                line=lineno,
+                col=col,
+                source_line=(
+                    lines[lineno - 1].rstrip("\n") if 1 <= lineno <= len(lines) else ""
+                ),
+            )
+
+
+    # UI-116 — hardcoded `SciTeX `-prefixed app title: the tab and the
+    # in-app header use the SHORT tile form (operator 2026-10-23); Django
+    # templates only (.html/.htm). Template syntax elsewhere in the value
+    # does not exempt the literal prefix.
+    if str(path).lower().endswith((".html", ".htm")):
+        for match in _BRANDED_DATA_TITLE_RE.finditer(joined):
+            pre = joined[: match.start()]
+            lineno = pre.count("\n") + 1
+            last_nl = pre.rfind("\n")
+            col = match.start() - (last_nl + 1)
+            yield UIViolation(
+                rule=rules["STX-UI116"],
+                path=str(path),
+                line=lineno,
+                col=col,
+                source_line=(
+                    lines[lineno - 1].rstrip("\n") if 1 <= lineno <= len(lines) else ""
+                ),
+            )
+        for match in _BRANDED_TITLE_TAG_RE.finditer(joined):
+            pre = joined[: match.start()]
+            lineno = pre.count("\n") + 1
+            last_nl = pre.rfind("\n")
+            col = match.start() - (last_nl + 1)
+            yield UIViolation(
+                rule=rules["STX-UI116"],
                 path=str(path),
                 line=lineno,
                 col=col,

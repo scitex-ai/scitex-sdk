@@ -217,11 +217,23 @@ so the title + version + project-picker row renders identically in
 every app. The SDK's own defining stylesheet is exempt via
 `treat_as_consumer=False` (same gate as UI-104/111).
 
+### UI-116 — `branded-app-title` (WARN)
+
+A hardcoded `SciTeX `-prefixed app title: `data-app-title="SciTeX …"`
+or a literal `<title>SciTeX …</title>` in a Django template. Tab and
+in-app header titles use the SHORT tile form (operator 2026-10-23) —
+the favicon carries the brand, a brand prefix is truncated noise at
+16px, and the project name lives in the app page itself. (UI115 is
+reserved for the scrollbar surface rule landing separately.) For
+computed titles, `scitex_sdk.ui.branding.shell_title` strips the
+prefix, so view code passing the full product name and view code
+passing the tile label render identically.
+
 ---
 
 ## How the linter is wired
 
-`scitex-ui` registers the 11 rules above with scitex-dev's linter via
+`scitex-ui` registers the 15 rules above with scitex-dev's linter via
 the canonical entry-point:
 
 ```toml

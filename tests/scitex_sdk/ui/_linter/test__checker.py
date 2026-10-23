@@ -981,6 +981,54 @@ def test_ui114_suppressed_when_running_inside_scitex_ui_itself(tmp_path: Path) -
     assert all(v.rule.id != "STX-UI114" for v in violations)
 
 
+def test_ui116_flags_prefixed_data_app_title(tmp_path: Path) -> None:
+    # Arrange
+    html = tmp_path / "page.html"
+    html.write_text('<div data-stx-app-header data-app-title="SciTeX Scholar"></div>\n')
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert any(v.rule.id == "STX-UI116" for v in violations)
+
+
+def test_ui116_flags_prefixed_title_tag(tmp_path: Path) -> None:
+    # Arrange
+    html = tmp_path / "page.html"
+    html.write_text("<html><head><title>SciTeX Writer</title></head></html>\n")
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert any(v.rule.id == "STX-UI116" for v in violations)
+
+
+def test_ui116_flags_prefixed_title_inside_translate_tag(tmp_path: Path) -> None:
+    # Arrange — the prefix is literal even when the value carries template syntax.
+    html = tmp_path / "page.html"
+    html.write_text('{% load i18n %}\n<div data-app-title="{% translate "SciTeX Storage" %}"></div>\n')
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert any(v.rule.id == "STX-UI116" for v in violations)
+
+
+def test_ui116_ignores_short_titles(tmp_path: Path) -> None:
+    # Arrange
+    html = tmp_path / "page.html"
+    html.write_text('<div data-stx-app-header data-app-title="Scholar"></div>\n<title>Scholar</title>\n')
+
+    # Act
+    violations = scan_path(tmp_path)
+
+    # Assert
+    assert all(v.rule.id != "STX-UI116" for v in violations)
+
+
 def test_ui102_skips_content_color_files(tmp_path: Path) -> None:
     # Arrange
     # annotation palettes are content, not UI chrome.
