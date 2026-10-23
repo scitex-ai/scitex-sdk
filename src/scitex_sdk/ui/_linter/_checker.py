@@ -212,6 +212,22 @@ _LAYOUT_IMPORTANT_RE = re.compile(
 # their own — they follow the base; fix the base and they collapse.
 _LEAF_BUTTON_RE = re.compile(r"^(?:\.btn|button)\s*\{", re.IGNORECASE)
 
+# UI-115 — leaf-local scrollbar COLOURING outside the shared shell
+# scrollbar surface. Colour declarations (`scrollbar-color:` /
+# `::-webkit-scrollbar-{thumb,track}` with a colour) in a consumer CSS
+# file that does NOT import `shell/scrollbars.css` fork the theme: the
+# FigRecipe canvas shipped a light native scrollbar on dark for exactly
+# this reason. Width/shape-only rules (no colour) are out of scope —
+# keep them; only colour forks are flagged. The shared shell file
+# itself and the file-tabs strip (width-only, token-backed thumb) are
+# exempt: the former IS the surface, the latter carries no colour fork.
+_SCROLLBAR_COLOUR_RE = re.compile(
+    r"(scrollbar-color\s*:|::-webkit-scrollbar-(thumb|track)\s*\{?)",
+    re.IGNORECASE,
+)
+_SCROLLBAR_SURFACE_RE = re.compile(r"shell/scrollbars\.css")
+_FILE_TABS_STRIP_RE = re.compile(r"stx-app-file-tabs")
+
 
 # --------------------------------------------------------------------------- #
 # Walker                                                                      #
@@ -435,6 +451,36 @@ def _scan_css(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
                 col=m.start(),
                 source_line=line.rstrip("\n"),
             )
+
+    # UI-115 — leaf-local scrollbar COLOURING without the shared shell
+    # surface. Same 6-line window as UI-105: a scrollbar selector /
+    # declaration whose RULE BODY carries a RAW colour (hex/rgb outside
+    # var()) in a file that never imports `shell/scrollbars.css`.
+    # Token-backed declarations are the fixed state, not a fork.
+    # Width/shape-only rules, the shared surface itself, and the
+    # width-only file-tabs strip are out of scope.
+    if "STX-UI115" in rules and not _SCROLLBAR_SURFACE_RE.search(text):
+        for lineno, line in enumerate(lines, start=1):
+            if _is_comment_line(line):
+                continue
+            if _FILE_TABS_STRIP_RE.search(line):
+                continue
+            if not _SCROLLBAR_COLOUR_RE.search(line):
+                continue
+            window = lines[lineno - 1 : min(len(lines), lineno + 6)]
+            for offset, w_line in enumerate(window):
+                if _is_comment_line(w_line):
+                    continue
+                cols = _hex_or_rgb_positions(w_line)
+                if cols:
+                    yield UIViolation(
+                        rule=rules["STX-UI115"],
+                        path=str(path),
+                        line=lineno + offset,
+                        col=cols[0],
+                        source_line=w_line.rstrip("\n"),
+                    )
+                    break
 
     # UI-111 — unconditional `!important` directional override in a file that
     # also carries @media. Overrides already inside a media query are
@@ -767,9 +813,12 @@ def scan_path(
         (shell/primitives edits), UI-111 (unconditional `!important`
         directional overrides) and UI-113 (AppHeader restyles) and
         UI-114 (parallel button bases; the SDK defines `.stx-button`)
+        and UI-115 (scrollbar colouring without the shared surface;
+        the SDK defines `shell/scrollbars.css`)
         fire. Pass False to run inside scitex-ui itself, where editing
         shell/primitives, using `!important`, defining the header
-        row, and defining the button primitive are the point.
+        row, defining the button primitive, and defining the scrollbar
+        surface are the point.
     skip_dirs
         Directory NAMES to skip while walking. Defaults skip
         ``node_modules``, ``.venv``, ``.git`` etc.
@@ -792,7 +841,7 @@ def scan_path(
         lines = text.splitlines()
         if kind == "css":
             for v in _scan_css(path, lines, rules):
-                if v.rule.id in ("STX-UI104", "STX-UI111", "STX-UI113", "STX-UI114") and not treat_as_consumer:
+                if v.rule.id in ("STX-UI104", "STX-UI111", "STX-UI113", "STX-UI114", "STX-UI115") and not treat_as_consumer:
                     continue
                 violations.append(v)
         elif kind in {"tsx", "html"}:
