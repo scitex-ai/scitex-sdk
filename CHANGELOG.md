@@ -6,6 +6,13 @@ All notable changes to `scitex-sdk`.
 
 (none yet)
 
+## [0.3.15] - 2026-10-24
+
+UA-native controls follow the app theme (PR #87, operator 2026-10-24):
+light/dark palettes declare `color-scheme` so select popups, checkboxes,
+radios, and scrollbars render in the app theme instead of the OS default
+(bright dropdown in dark mode). 2 new branding tests.
+
 ## [0.3.14] - 2026-10-23
 
 Shared scrollbar surface + shell-head wiring (operator 2026-10-23):
