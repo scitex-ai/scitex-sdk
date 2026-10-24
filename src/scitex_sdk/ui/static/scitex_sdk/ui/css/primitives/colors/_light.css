@@ -14,6 +14,13 @@
 
 :root,
 [data-theme="light"] {
+  /* UA-native controls (select popups, checkboxes, radios, scrollbars)
+   * follow the OS scheme unless told otherwise -- a dark app with no
+   * color-scheme renders bright LIGHT popups. Declare it with the theme
+   * so every native control matches the app (operator 2026-10-24: bright
+   * dropdown in dark mode). */
+  color-scheme: light;
+
   /* ===========================================================================
    * PRIMITIVES (internal only - prefix with _)
    * =========================================================================== */
