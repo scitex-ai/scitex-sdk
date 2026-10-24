@@ -675,3 +675,40 @@ def test_shell_context_and_launcher_context_agree_on_a_good_value():
     from_shell = shell_context("Storage", launcher=launcher)["launcher"]
     # Assert
     assert from_shell == launcher_context(launcher)["launcher"]
+
+
+# --- native control color-scheme ------------------------------------------------
+
+
+def _palette_blocks():
+    """Split the primitives palettes into their light and dark blocks."""
+    light = _css("css/primitives/colors/_light.css")
+    dark = _css("css/primitives/colors/_dark.css")
+    _, _, light_block = light.partition('[data-theme="light"] {')
+    _, _, dark_block = dark.partition('[data-theme="dark"] {')
+    return light_block, dark_block
+
+
+def _color_scheme(block):
+    """The ``color-scheme`` declaration a palette block carries, if any."""
+    found = re.findall(r"color-scheme\s*:\s*([^;]+);", block)
+    return [" ".join(value.split()) for value in found]
+
+
+def test_light_palette_declares_a_light_color_scheme():
+    # Arrange -- without it, UA-native controls (select popups, checkboxes)
+    # follow the OS default and render bright in a dark app.
+    light, _ = _palette_blocks()
+    # Act
+    declared = _color_scheme(light)
+    # Assert
+    assert declared == ["light"]
+
+
+def test_dark_palette_declares_a_dark_color_scheme():
+    # Arrange -- operator 2026-10-24: bright dropdown in dark mode.
+    _, dark = _palette_blocks()
+    # Act
+    declared = _color_scheme(dark)
+    # Assert
+    assert declared == ["dark"]
