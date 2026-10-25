@@ -96,8 +96,9 @@ def test_index_mounts_shared_app_header_without_leaf_title(client):
 
 
 def test_project_picker_helper_requires_library_and_provider():
-    # Arrange — the tag fails loudly without a provider, so the view
-    # flag requires both keys; this env has the library but no provider.
+    # Arrange — the tag degrades gracefully without a provider, so the
+    # view flag still requires both keys to mount the picker include;
+    # this env has the library but no provider.
     from scitex_sdk.creator.views import _project_picker_available
 
     # Act

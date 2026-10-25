@@ -135,9 +135,13 @@ Evaluation order — check THESE in order when the slot is empty (measured
    wants the canonical picker must pass `allow_user_scope=True`
    (Cards `e6e5ee06`); a project-scoped leaf needs nothing extra.
 2. **Signed-in gate.** Anonymous renders `""` by design.
-3. **Provider gate (loud).** Past scope + signed-in, a missing provider
-   RAISES `ImproperlyConfigured` naming the missing host wiring — never an
-   empty slot. Hosts that want optionality must guard the include (the
+3. **Provider gate (graceful by default).** Past scope + signed-in, a
+   missing provider renders `""` — shared primitives must not crash
+   provider-less hosts (cross-app adoption rule, amended 2026-10-24
+   after the SAC v0.34/v0.35 pipeline breakage). Hosts that want the
+   missing wiring to surface at render time pass `strict=True`, which
+   restores the loud `ImproperlyConfigured` naming the missing host
+   wiring. Hosts that want optionality may also guard the include (the
    two-key precedent: library AND provider) rather than relying on an
    empty tag.
 

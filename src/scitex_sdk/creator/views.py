@@ -74,10 +74,11 @@ def _project_picker_available() -> bool:
 
     Writer's precedent: `{% load %}` of a missing library is a hard
     TemplateSyntaxError, so the guard lives here, not in the template.
-    Since the tag now FAILS LOUDLY without a provider (no silent empty
-    slot), the guard also requires one: standalone (no provider) skips
-    the include and renders unchanged markup. One flag, so the two
-    conditions cannot drift apart in the template.
+    The tag degrades gracefully without a provider (empty slot, never
+    raises — cross-app adoption rule, amended 2026-10-24), so this guard
+    is now a markup optimization rather than a crash shield: standalone
+    (no provider) skips the include and renders unchanged markup. One
+    flag, so the two conditions cannot drift apart in the template.
     """
     try:
         from django.template import engines
