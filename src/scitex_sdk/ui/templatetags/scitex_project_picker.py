@@ -6,10 +6,13 @@
 
 Renders nothing unless the app is project-scoped or explicitly opts into
 ``allow_user_scope=True``. A project-scoped, signed-in render with NO
-provider FAILS LOUDLY (``ImproperlyConfigured``) instead of emitting an
-empty slot — an empty picker is undebuggable, a raised error names the
-missing host wiring. User-scoped or signed-out renders stay empty by
-design (no picker applies there).
+provider renders an empty slot by default — shared primitives must not
+crash provider-less hosts (see the cross-app header-consistency adoption
+rule, amended 2026-10-24 after the SAC v0.34/v0.35 pipeline breakage).
+Pass ``strict=True`` to opt back into the loud failure
+(``ImproperlyConfigured`` naming the missing host wiring) where a host
+wants the missing configuration to surface at render time. User-scoped
+or signed-out renders stay empty by design (no picker applies there).
 
 The client additionally requires a provider with
 ``rememberScope``; the legacy HTTP provider never persists nullable user scope.
@@ -72,11 +75,13 @@ def scitex_project_picker(
     placeholder: str = "",
     allow_user_scope: bool = False,
     current_scope=None,
+    strict: bool = False,
 ):
     if scope is None:
         scope = context.get("app_scope")
     project_scope = is_project_scope(scope)
     allow_user_scope = allow_user_scope is True
+    strict = strict is True
     if (not project_scope and not allow_user_scope) or not _signed_in(context):
         return ""
     if current_scope is not None:
@@ -84,17 +89,21 @@ def scitex_project_picker(
             raise ValueError("current scope must be explicit 'user' or 'project'")
     provider_url = provider_url or host_project_provider_url()
     if not provider_url:
-        # No silent fallback: a project-scoped, signed-in render without a
-        # provider would emit an empty slot that looks like a working page
-        # with a missing control — undebuggable. Fail fast so the missing
-        # host wiring surfaces at render time instead of as a mystery.
-        raise ImproperlyConfigured(
-            "scitex_project_picker: project-scoped render with no provider. "
-            "The host must register a project provider "
-            "(scitex_sdk.ui.project_scope.host_project_provider, e.g. "
-            "settings.SCITEX_PROJECT_PROVIDER_URL) or pass provider_url= "
-            "explicitly. See the scitex-ui skill (project picker)."
-        )
+        if strict:
+            # Explicit opt-in only: a project-scoped, signed-in render
+            # without a provider raises, naming the missing host wiring.
+            raise ImproperlyConfigured(
+                "scitex_project_picker: project-scoped render with no provider. "
+                "The host must register a project provider "
+                "(scitex_sdk.ui.project_scope.host_project_provider, e.g. "
+                "settings.SCITEX_PROJECT_PROVIDER_URL) or pass provider_url= "
+                "explicitly. See the scitex-ui skill (project picker)."
+            )
+        # Graceful default (cross-app adoption rule, amended 2026-10-24):
+        # shared primitives must not crash provider-less hosts. An empty
+        # slot is the debuggable shape here — the host opted into the tag
+        # without wiring a provider, and the page must still render.
+        return ""
     values = {
         "provider_url": provider_url,
         "current": project_id_for(current),

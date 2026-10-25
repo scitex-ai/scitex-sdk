@@ -96,12 +96,23 @@ def test_picker_defaults_to_the_host_registered_provider():
     assert 'data-provider-url="/host/projects/"' in html
 
 
-def test_picker_without_any_provider_fails_loud():
+def test_picker_without_any_provider_renders_empty_slot():
     # Arrange — project scope, signed in (no request), no provider
-    # anywhere: the tag must raise, never an undebuggable empty slot.
+    # anywhere: the tag degrades gracefully, never raises (cross-app
+    # adoption rule, amended 2026-10-24).
+    source = '{% load scitex_project_picker %}{% scitex_project_picker scope="project" %}'
+    # Act
+    html = _render_source(source, {})
+    # Assert
+    assert html == ""
+
+
+def test_picker_without_any_provider_is_loud_only_when_strict():
+    # Arrange — same provider-less render with the explicit strict flag:
+    # opting into strict restores the loud failure.
     from django.core.exceptions import ImproperlyConfigured
 
-    source = '{% load scitex_project_picker %}{% scitex_project_picker scope="project" %}'
+    source = '{% load scitex_project_picker %}{% scitex_project_picker scope="project" strict=True %}'
     # Act
     # Assert
     with pytest.raises(ImproperlyConfigured, match="no provider"):
@@ -222,12 +233,22 @@ def test_enabled_picker_still_requires_signed_in_user():
     assert html == ""
 
 
-def test_enabled_picker_without_provider_fails_loud():
+def test_enabled_picker_without_provider_renders_empty_slot():
     # Arrange — user scope opted in, signed in, still no provider:
-    # opting in does not opt out of the provider requirement.
+    # opting in does not opt out of graceful degradation.
+    source = "{% load scitex_project_picker %}{% scitex_project_picker allow_user_scope=True %}"
+    # Act
+    html = _render_source(source, {"app_scope": "user"})
+    # Assert
+    assert html == ""
+
+
+def test_enabled_picker_without_provider_is_loud_only_when_strict():
+    # Arrange — user scope opted in with the explicit strict flag:
+    # strict restores the loud failure for the provider-less render.
     from django.core.exceptions import ImproperlyConfigured
 
-    source = "{% load scitex_project_picker %}{% scitex_project_picker allow_user_scope=True %}"
+    source = "{% load scitex_project_picker %}{% scitex_project_picker allow_user_scope=True strict=True %}"
     # Act
     # Assert
     with pytest.raises(ImproperlyConfigured, match="no provider"):
