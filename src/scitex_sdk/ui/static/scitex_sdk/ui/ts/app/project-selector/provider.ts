@@ -15,6 +15,8 @@ export interface ProjectListing {
   /** Optional explicit capability/current scope supplied by a supporting host. */
   allow_user_scope?: boolean;
   current_scope?: "user" | "project";
+  /** Why user scope is unavailable: the All row renders greyed with this tooltip. */
+  user_scope_disabled_reason?: string;
 }
 
 export interface ProjectProvider {
@@ -106,12 +108,17 @@ export function httpProjectProvider(
           (scope === undefined && current !== null)) {
         throw new Error("invalid current scope selection");
       }
+      const disabledReason = body.user_scope_disabled_reason;
+      if (disabledReason !== undefined && typeof disabledReason !== "string") {
+        throw new Error("invalid user scope disabled reason");
+      }
       if (authority !== listingAuthority) throw new Error("scope listing superseded");
       enabled = true;
       provider.rememberScope = rememberScope;
       return {
         projects: body.projects, current, allow_user_scope: true,
         ...(scope === undefined ? {} : { current_scope: scope }),
+        ...(disabledReason ? { user_scope_disabled_reason: disabledReason } : {}),
       };
     },
     async rememberProject(id: string): Promise<void> {

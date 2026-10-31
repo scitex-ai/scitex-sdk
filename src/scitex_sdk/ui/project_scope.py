@@ -56,6 +56,7 @@ __all__ = [
     "resolve_project",
     "scoped_project_listing_view",
     "supports_scoped_capability",
+    "user_scope_disabled_reason",
 ]
 
 PROJECT_QUERY_PARAM = "project"
@@ -66,16 +67,28 @@ PROJECT_PROVIDER_META_NAME = "stx-project-provider"
 
 @dataclass(frozen=True)
 class ProjectEntry:
-    """One pickable project; ``as_option`` is the TS ``ProjectOption`` shape."""
+    """One pickable project; ``as_option`` is the TS ``ProjectOption`` shape.
+
+    ``disabled`` marks a listed-but-unselectable project (the picker renders
+    it greyed with ``disabled_reason`` as the tooltip and refuses to select
+    it client-side; both listing views refuse it server-side with 403).
+    Absent by default so legacy providers and clients are unaffected.
+    """
 
     id: str
     name: str
     detail: str = ""
+    disabled: bool = False
+    disabled_reason: str = ""
 
     def as_option(self) -> dict:
         option = asdict(self)
         if not self.detail:
             option.pop("detail")
+        if not self.disabled:
+            option.pop("disabled")
+        if not self.disabled_reason:
+            option.pop("disabled_reason")
         return option
 
 
@@ -116,15 +129,7 @@ def resolve_project(
     request: Any, provider: ProjectProvider, explicit: Optional[str] = None
 ) -> Optional[str]:
     """The project id the app should open; see the module docstring for precedence."""
-    accessible = {entry.id for entry in provider.list_projects(request)}
-    if explicit:
-        selected = canonical_project_selector(request, provider, explicit, accessible)
-        if selected is None:
-            return None
-        provider.remember(request, selected)
-        return selected
-    stored = provider.last_visited(request)
-    return stored if stored in accessible else None
+    return _resolve_project_entries(request, provider, provider.list_projects(request), explicit)
 
 
 class LocalProjectProvider:
@@ -198,6 +203,46 @@ def project_id_for(project: Any, provider: Optional[ProjectProvider] = None) -> 
     return to_id(project) if to_id else str(project)
 
 
+def user_scope_disabled_reason(provider: Any, request: Any) -> str | None:
+    """Why the provider's user scope is currently unavailable, if it says so.
+
+    Optional host hook (duck-typed like ``project_id``/``canonical_project_id``):
+    a scoped provider may define ``user_scope_disabled_reason(request)`` returning
+    a non-empty string (shown as the disabled All row's tooltip); anything else
+    (absent, None, empty) means user scope is available. Lets a leaf show a
+    greyed, unselectable All row instead of hiding it or failing on selection.
+    """
+
+    hook = getattr(provider, "user_scope_disabled_reason", None)
+    if hook is None:
+        return None
+    reason = hook(request)
+    return reason if isinstance(reason, str) and reason.strip() else None
+
+
+def _disabled_ids(entries: Collection[Any]) -> set[str]:
+    """Ids a listing marks as disabled (unselectable despite being shown)."""
+    return {entry.id for entry in entries if getattr(entry, "disabled", False)}
+
+
+def _resolve_project_entries(
+    request: Any,
+    provider: ProjectProvider,
+    entries: Collection[Any],
+    explicit: Optional[str] = None,
+) -> Optional[str]:
+    """``resolve_project`` over an already-fetched listing (one provider read)."""
+    accessible = {entry.id for entry in entries}
+    if explicit:
+        selected = canonical_project_selector(request, provider, explicit, accessible)
+        if selected is None:
+            return None
+        provider.remember(request, selected)
+        return selected
+    stored = provider.last_visited(request)
+    return stored if stored in accessible else None
+
+
 def project_listing_view(
     provider: ProjectProvider | Callable[[Any], ProjectProvider],
 ) -> Callable:
@@ -233,8 +278,11 @@ def project_listing_view(
             if not isinstance(project_id, str) or not project_id:
                 return JsonResponse({"error": "project not accessible"}, status=403)
             chosen = resolve_provider(request)
-            selected = resolve_project(request, chosen, explicit=project_id)
-            if selected is None:
+            entries = chosen.list_projects(request)
+            if project_id in _disabled_ids(entries):
+                return JsonResponse({"error": "project not accessible"}, status=403)
+            selected = _resolve_project_entries(request, chosen, entries, explicit=project_id)
+            if selected is None or selected in _disabled_ids(entries):
                 return JsonResponse({"error": "project not accessible"}, status=403)
             return JsonResponse({"current": selected})
         return HttpResponseNotAllowed(["GET", "POST"])
@@ -322,8 +370,14 @@ def scoped_project_listing_view(
     :func:`project_listing_view` (same shapes, same 403s). ``GET`` adds
     ``allow_user_scope`` (true only for a supporting provider) plus
     ``current_scope`` for a committed tagged selection, omitted when
-    unselected. Stale, unknown, or null scopes are never accepted as
-    All; an explicit user selection requires the provider's support.
+    unselected. A supporting provider may additionally define
+    ``user_scope_disabled_reason(request) -> str | None``; a non-empty
+    reason is advertised as ``user_scope_disabled_reason`` and the picker
+    renders All greyed and unselectable (server refuses it with 403 too).
+    Entries flagged ``ProjectEntry.disabled`` ride along via ``as_option``
+    and are refused on POST by both views. Stale, unknown, or null scopes
+    are never accepted as All; an explicit user selection requires the
+    provider's support.
     ``provider`` may be a factory taking the request.
     """
     from django.http import HttpResponseNotAllowed, JsonResponse
@@ -342,6 +396,9 @@ def scoped_project_listing_view(
                 "allow_user_scope": scoped,
             }
             if scoped:
+                reason = user_scope_disabled_reason(chosen, request)
+                if reason is not None:
+                    body["user_scope_disabled_reason"] = reason
                 selection = cast(ScopedProjectProvider, chosen).current_scope(request)
                 valid = isinstance(selection, ProjectSelection) and (
                     (selection.scope == "user" and selection.id is None)
@@ -375,8 +432,13 @@ def scoped_project_listing_view(
                         {"error": "project not accessible"}, status=403
                     )
                 chosen = resolve_provider(request)
-                selected = resolve_project(request, chosen, explicit=project_id)
-                if selected is None:
+                entries = chosen.list_projects(request)
+                if project_id in _disabled_ids(entries):
+                    return JsonResponse(
+                        {"error": "project not accessible"}, status=403
+                    )
+                selected = _resolve_project_entries(request, chosen, entries, explicit=project_id)
+                if selected is None or selected in _disabled_ids(entries):
                     return JsonResponse(
                         {"error": "project not accessible"}, status=403
                     )
@@ -394,13 +456,18 @@ def scoped_project_listing_view(
                 )
             scoped = cast(ScopedProjectProvider, chosen)
             if selection.scope == "user":
+                if user_scope_disabled_reason(chosen, request) is not None:
+                    return JsonResponse(
+                        {"error": "project not accessible"}, status=403
+                    )
                 scoped.remember_scope(request, selection)
                 return JsonResponse({"current": None, "current_scope": "user"})
-            accessible = {entry.id for entry in chosen.list_projects(request)}
+            entries = chosen.list_projects(request)
+            accessible = {entry.id for entry in entries}
             selected = canonical_project_selector(
                 request, chosen, selection.id or "", accessible
             )
-            if selected is None:
+            if selected is None or selected in _disabled_ids(entries):
                 return JsonResponse(
                     {"error": "project not accessible"}, status=403
                 )

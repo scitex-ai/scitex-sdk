@@ -12,7 +12,14 @@ export type ProjectSelection =
   | { scope: "user"; id: null }
   | { scope: "project"; id: string };
 
-export type ProjectChoice = ProjectSelection & { name: string; detail?: string };
+export type ProjectChoice = ProjectSelection & {
+  name: string;
+  detail?: string;
+  /** Listed-but-unselectable row (greyed, skipped, refused). */
+  disabled?: boolean;
+  /** Tooltip for a disabled row; server-provided, passed through. */
+  disabledReason?: string;
+};
 
 export interface ProjectOption {
   /** Stable project identifier (passed back via the change event). */
@@ -21,6 +28,10 @@ export interface ProjectOption {
   name: string;
   /** Optional secondary line under the name (owner, path, host...). */
   detail?: string;
+  /** Listed-but-unselectable project (greyed, skipped, refused). */
+  disabled?: boolean;
+  /** Tooltip for a disabled project; server-provided, passed through. */
+  disabledReason?: string;
 }
 
 export interface ProjectSelectorConfig extends BaseComponentConfig {

@@ -164,6 +164,16 @@
   font-weight: 600;
 }
 
+/* Listed-but-unselectable rows (capability absent for this host/app). */
+.stx-app-project-selector__option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.stx-app-project-selector__option:disabled:hover {
+  background: none;
+}
+
 .stx-app-project-selector__option-name {
   overflow: hidden;
   text-overflow: ellipsis;

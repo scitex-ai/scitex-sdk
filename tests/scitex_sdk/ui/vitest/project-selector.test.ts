@@ -710,3 +710,64 @@ describe("scoped HTTP persistence and first mount", () => {
     } finally { meta.remove(); }
   });
 });
+
+describe("disabled availability rows", () => {
+  const disabledProjects = [
+    { id: "a", name: "Authorized A" },
+    { id: "b", name: "Authorized B", disabled: true, disabledReason: "Archived — read-only" },
+  ];
+
+  it("renders a disabled project greyed with its reason and refuses every selection path", async () => {
+    // Arrange
+    const f = fixture({ allowUserScope: true, provider: { listProjects: async () => ({ projects: disabledProjects, current: "a" }), rememberScope: async () => {} } });
+    await f.selector.ready;
+    const rows = Array.from(f.container.querySelectorAll<HTMLButtonElement>('[role="option"]'));
+    // Act
+    const viaCommand = f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" });
+    rows[2].click();
+    await settle();
+    // Assert
+    expect([rows[2].disabled, rows[2].getAttribute("aria-disabled"), rows[2].title]).toEqual([true, "true", "Archived — read-only"]);
+    expect([viaCommand, f.saved, f.events, f.selector.getSelection()]).toEqual([false, [], [], { scope: "project", id: "a" }]);
+  });
+
+  it("keyboard navigation skips disabled rows and Enter on one is a no-op", async () => {
+    // Arrange
+    const f = fixture({ provider: { listProjects: async () => ({ projects: disabledProjects, current: "a" }) } });
+    await f.selector.ready;
+    const search = f.container.querySelector("input")!;
+    // Act
+    (f.container.querySelector("button") as HTMLButtonElement).click();
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await settle();
+    // Assert
+    expect([f.events, f.selector.getSelection()]).toEqual([[], { scope: "project", id: "a" }]);
+  });
+
+  it("a server disabled reason greys All but keeps projects selectable", async () => {
+    // Arrange
+    const server = await projectHttpServer({ projects, allow_user_scope: true, current_scope: "project", current: "a", user_scope_disabled_reason: "All Projects is unavailable in this app" });
+    const provider = httpProjectProvider(server.url, { allowUserScope: true });
+    const f = fixture({ provider, allowUserScope: true }); await f.selector.ready;
+    const rows = Array.from(f.container.querySelectorAll<HTMLButtonElement>('[role="option"]'));
+    // Act
+    const refused = f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "user", id: null });
+    rows[2].click(); await settle();
+    const post = await server.nextPost(); post.reply({ current_scope: "project", current: "b" });
+    await vi.waitFor(() => expect((f.container.querySelector("button") as HTMLButtonElement).disabled).toBe(false));
+    // Assert
+    expect([rows[0].disabled, rows[0].getAttribute("aria-disabled"), rows[0].title]).toEqual([true, "true", "All Projects is unavailable in this app"]);
+    expect([refused, server.posts, f.events, f.selector.getSelection()]).toEqual([false, [{ scope: "project", id: "b" }], [{ scope: "project", id: "b", name: "Authorized B" }], { scope: "project", id: "b" }]);
+  });
+
+  it("a non-string disabled reason fails the scoped port closed", async () => {
+    // Arrange
+    const server = await projectHttpServer({ projects, allow_user_scope: true, current_scope: "project", current: "a", user_scope_disabled_reason: 42 });
+    const provider = httpProjectProvider(server.url, { allowUserScope: true });
+    const f = fixture({ provider, allowUserScope: true }); await f.selector.ready;
+    // Assert
+    expect([provider.rememberScope, f.selector.getSelection(), options(f.container)]).toEqual([undefined, null, []]);
+    expect(f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "user", id: null })).toBe(false);
+  });
+});
