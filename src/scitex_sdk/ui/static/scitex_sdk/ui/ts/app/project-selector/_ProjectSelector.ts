@@ -58,6 +58,8 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
   private current: ProjectChoice | null;
   private filtered: ProjectChoice[] = [];
   private allowUserScope = false;
+  /** Why the All row is unselectable (null = available). Server-provided. */
+  private userScopeDisabledReason: string | null = null;
   private legacyPersistenceExpected: boolean;
   private pending = false;
   private generation = 0;
@@ -202,12 +204,25 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
       if (!p || typeof p.id !== "string" || !p.id.trim() || typeof p.name !== "string" || seen.has(p.id)) return false;
       seen.add(p.id);
       return true;
-    }).map((p) => ({ id: p.id, name: p.name, ...(typeof p.detail === "string" ? { detail: p.detail } : {}) }));
+    }).map((p) => ({
+      id: p.id,
+      name: p.name,
+      ...(typeof p.detail === "string" ? { detail: p.detail } : {}),
+      ...(p.disabled === true ? { disabled: true as const } : {}),
+      ...(typeof p.disabledReason === "string" && p.disabledReason ? { disabledReason: p.disabledReason } : {}),
+    }));
   }
 
   private choices(): ProjectChoice[] {
     const projects: ProjectChoice[] = this.projects.map((p) => ({ ...p, scope: "project" }));
-    if (this.allowUserScope) projects.unshift({ scope: "user", id: null, name: translate("All Projects", "allProjects") });
+    if (this.allowUserScope) projects.unshift({
+      scope: "user",
+      id: null,
+      name: translate("All Projects", "allProjects"),
+      ...(this.userScopeDisabledReason !== null
+        ? { disabled: true as const, disabledReason: this.userScopeDisabledReason }
+        : {}),
+    });
     return projects;
   }
 
@@ -218,13 +233,14 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
   }
 
   /** Replace the project list, keeping the selection when it is still present. */
-  setProjects(projects: ProjectOption[], currentId?: string | null, currentScope?: "user" | "project"): void {
+  setProjects(projects: ProjectOption[], currentId?: string | null, currentScope?: "user" | "project", userScopeDisabledReason?: string | null): void {
     const validated = this.validProjects(projects);
     this.generation++;
     this.pending = false;
     this.trigger.disabled = false;
     this.projects = validated;
     this.status = "ready";
+    if (userScopeDisabledReason !== undefined) this.userScopeDisabledReason = userScopeDisabledReason;
     const wanted = currentId === undefined ? this.current?.id : currentId;
     const scope = currentScope ?? (currentId === undefined ? this.current?.scope : undefined);
     this.current = this.choice(wanted, scope);
@@ -244,9 +260,10 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
       if (listing.current_scope !== undefined && listing.current_scope !== "user" && listing.current_scope !== "project") throw new Error("invalid current scope");
       if (listing.current_scope === "user" && listing.current != null) throw new Error("user scope requires null project id");
       this.allowUserScope = (this.config.allowUserScope === true || (this.config.allowUserScope === undefined && listing.allow_user_scope === true)) && typeof provider.rememberScope === "function";
+      this.userScopeDisabledReason = typeof listing.user_scope_disabled_reason === "string" && listing.user_scope_disabled_reason ? listing.user_scope_disabled_reason : null;
       if (this.allowUserScope && !this.selectionError.parentNode) this.container.appendChild(this.selectionError);
       this.status = "ready";
-      this.setProjects(projects, this.config.current ?? listing.current ?? null, this.config.currentScope ?? listing.current_scope);
+      this.setProjects(projects, this.config.current ?? listing.current ?? null, this.config.currentScope ?? listing.current_scope, this.userScopeDisabledReason);
     } catch {
       if (this.destroyed || generation !== this.generation) return;
       this.status = "error";
@@ -307,7 +324,11 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
     option.setAttribute("role", "option");
     option.setAttribute("aria-selected", String(isCurrent));
     option.tabIndex = -1;
-    option.disabled = this.pending;
+    option.disabled = this.pending || project.disabled === true;
+    if (project.disabled === true) {
+      option.setAttribute("aria-disabled", "true");
+      if (project.disabledReason) option.title = project.disabledReason;
+    }
 
     const name = document.createElement("span");
     name.className = `${CLS}__option-name`;
@@ -333,7 +354,11 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const step = e.key === "ArrowDown" ? 1 : -1;
-      this.activeIndex = last < 0 ? 0 : (this.activeIndex + step + last + 1) % (last + 1);
+      // Skip disabled rows; a full loop with no enabled row keeps the index.
+      for (let hops = 0; hops <= last; hops++) {
+        this.activeIndex = last < 0 ? 0 : (this.activeIndex + step + last + 1) % (last + 1);
+        if (this.filtered[this.activeIndex]?.disabled !== true) break;
+      }
       this.renderList();
       this.list.children[this.activeIndex]?.scrollIntoView?.({ block: "nearest" });
     } else if (e.key === "Enter") {
@@ -395,7 +420,7 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
     if (value.scope !== "user" && value.scope !== "project") return false;
     if (value.scope === "user" ? value.id !== null : typeof value.id !== "string" || !value.id.trim()) return false;
     const project = this.choices().find((p) => p.scope === value.scope && p.id === value.id);
-    if (!project) return false;
+    if (!project || project.disabled === true) return false;
     this.selectionError.hidden = true;
     const changed = this.current?.scope !== project.scope || this.current?.id !== project.id;
     if (!changed) { this.close(); return false; }
