@@ -6,6 +6,16 @@ All notable changes to `scitex-sdk`.
 
 (none yet)
 
+## [0.3.16] - 2026-10-31
+
+Picker disabled-with-reason contract (PR #90): `ProjectEntry` gains
+`disabled`/`disabled_reason` (absent by default, legacy-safe); the scoped
+listing advertises `user_scope_disabled_reason` so a host can grey out All
+Projects instead of hiding it, and both views refuse disabled ids and
+disabled user-scope with 403 on a single provider read. TS renders disabled
+rows greyed (`aria-disabled` + tooltip) and refuses them on
+command/click/keyboard; non-string reason fails closed.
+
 ## [0.3.15] - 2026-10-24
 
 UA-native controls follow the app theme (PR #87, operator 2026-10-24):
