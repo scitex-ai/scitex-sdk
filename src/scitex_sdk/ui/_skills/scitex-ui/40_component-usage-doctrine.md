@@ -326,3 +326,10 @@ in the active Git repository, including repositories without a first commit.
 Shell calls outside a repository have no claimed project-source scope; they
 are not blocked as if they were failed header inspections. Project auditing
 and CI provide repository-wide coverage independently of client cwd.
+
+
+Repository header context comes from Git-tracked and nonignored source inputs,
+so ignored user data/media/cache trees are not inspected on each edit. An
+explicit editor target is still checked even if ignored. Committed generated
+Vite CSS is checked through its authored frontend source, not mistaken for a
+consumer copy of imported canonical SDK styles.

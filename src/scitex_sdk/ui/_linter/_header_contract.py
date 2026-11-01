@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
@@ -116,23 +117,65 @@ def _owner(path: Path, root: Path) -> bool:
     )
 
 
-def _generated_css(root: Path) -> set[Path]:
+def _source_paths(root: Path) -> set[Path]:
+    """Enumerate Git inputs instead of user data/cache trees in a checkout."""
+    try:
+        repo = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        repo = None
+    if (
+        repo is not None
+        and repo.returncode == 0
+        and Path(repo.stdout.strip()).resolve() == root
+    ):
+        files = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "-z",
+            ],
+            capture_output=True,
+            check=True,
+        )
+        return {root / path for path in os.fsdecode(files.stdout).split("\0") if path}
+    paths = set()
+    for directory, dirs, files in os.walk(root):
+        dirs[:] = [name for name in dirs if name not in _SKIP]
+        paths.update(Path(directory) / name for name in files)
+    return paths
+
+
+def _generated_css(root: Path, paths: set[Path]) -> set[Path]:
     """Skip Vite-declared outputs only when authored frontend source is present.
 
     Bundles include unmodified SDK CSS, so auditing them as consumer overrides
     would reject legitimate imports. The source remains mandatory to inspect.
     """
     generated = set()
-    for directory, dirs, files in os.walk(root):
-        dirs[:] = [name for name in dirs if name not in _SKIP]
-        manifest = Path(directory) / "manifest.json"
-        if Path(directory).name != ".vite" or "manifest.json" not in files:
+    for manifest in paths:
+        if manifest.name != "manifest.json" or manifest.parent.name != ".vite":
             continue
         base = manifest.parent.parent
-        if not any(
-            (parent / "frontend/src").is_dir()
+        source_roots = [
+            parent / "frontend/src"
             for parent in base.parents
             if parent.is_relative_to(root)
+        ]
+        if not any(
+            path.is_relative_to(source)
+            and path.suffix in {".css", ".html", ".ts", ".tsx", ".js", ".jsx"}
+            for source in source_roots
+            for path in paths
         ):
             continue
         content = json.loads(manifest.read_text(encoding="utf-8"))
@@ -163,11 +206,8 @@ def scan_headers(
         path.suffix.lower() in _SUFFIXES for path in targets
     ):
         return []
-    generated = _generated_css(root)
-    paths = set(overlays)
-    for directory, dirs, files in os.walk(root):
-        dirs[:] = [name for name in dirs if name not in _SKIP]
-        paths.update(Path(directory) / name for name in files)
+    paths = _source_paths(root) | set(overlays)
+    generated = _generated_css(root, paths)
     sources = {}
     scopes = set()
     out = []
