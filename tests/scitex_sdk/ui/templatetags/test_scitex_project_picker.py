@@ -392,6 +392,7 @@ def test_malformed_page_view_pair_is_rejected(scope_value, project):
     # Arrange
     source = ('{% load scitex_project_picker %}'
               '{% scitex_project_picker provider_url="/api/projects/" scope="project" view_scope=view_scope view_project=view_project %}')
-    # Act / Assert
+    # Act
+    # Assert
     with pytest.raises(ValueError):
         _render_source(source, {"view_scope": scope_value, "view_project": project})
