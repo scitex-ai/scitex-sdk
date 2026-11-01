@@ -4,6 +4,9 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Creator starter choices and primary buttons use semantic CTA colors; the
+  in-app header reads SciTeX SDK while launcher labels remain SDK.
+
 - AppHeader auto-mount immediately places an existing direct SDK project picker
   in its canonical slot, preserving the control and avoiding a second header row
   while leaf viewer modules load.
