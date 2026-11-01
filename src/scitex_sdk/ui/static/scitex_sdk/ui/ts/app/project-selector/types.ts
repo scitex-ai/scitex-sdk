@@ -49,6 +49,9 @@ export interface ProjectSelectorConfig extends BaseComponentConfig {
   allowUserScope?: boolean;
   /** Explicit current scope. null/missing current project alone is never user scope. */
   currentScope?: "user" | "project";
+  /** Explicit read-only page context, independent of the remembered profile.
+   * Initial rendering never persists it; a user choice supersedes it. */
+  viewSelection?: ProjectSelection;
   /** Optional host registry; otherwise each picker owns a private registry. */
   commands?: CommandRegistry;
   /** Stable command id within that registry. Defaults to project-selector:select. */

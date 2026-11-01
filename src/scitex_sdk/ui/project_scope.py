@@ -126,10 +126,14 @@ def canonical_project_selector(
 
 
 def resolve_project(
-    request: Any, provider: ProjectProvider, explicit: Optional[str] = None
+    request: Any, provider: ProjectProvider, explicit: Optional[str] = None, *, remember: bool = True
 ) -> Optional[str]:
-    """The project id the app should open; see the module docstring for precedence."""
-    return _resolve_project_entries(request, provider, provider.list_projects(request), explicit)
+    """Resolve an accessible project; ``remember=False`` makes explicit GETs read-only.
+
+    Existing callers keep the remembered-selection behavior. Page-specific views
+    can resolve an explicit authorized selector without changing shared preferences.
+    """
+    return _resolve_project_entries(request, provider, provider.list_projects(request), explicit, remember=remember)
 
 
 class LocalProjectProvider:
@@ -248,6 +252,7 @@ def _resolve_project_entries(
     provider: ProjectProvider,
     entries: Collection[Any],
     explicit: Optional[str] = None,
+    *, remember: bool = True,
 ) -> Optional[str]:
     """``resolve_project`` over an already-fetched listing (one provider read)."""
     accessible = {entry.id for entry in entries}
@@ -255,7 +260,8 @@ def _resolve_project_entries(
         selected = canonical_project_selector(request, provider, explicit, accessible)
         if selected is None:
             return None
-        provider.remember(request, selected)
+        if remember:
+            provider.remember(request, selected)
         return selected
     stored = provider.last_visited(request)
     return stored if stored in accessible else None

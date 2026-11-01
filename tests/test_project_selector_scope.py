@@ -251,3 +251,25 @@ def test_absent_reason_hook_means_available_user_scope():
     response = _post(view, {"scope": "user", "id": None})
     # Assert
     assert "user_scope_disabled_reason" not in body and response.status_code == 200
+
+
+def test_explicit_project_can_be_resolved_without_remembering_on_get():
+    # Arrange — a page view must not change a shared profile preference.
+    provider = LegacyProvider()
+    provider.stored = "alpha"
+    request = RequestFactory().get("/?project=beta")
+    # Act
+    selected = scope.resolve_project(request, provider, explicit="beta", remember=False)
+    # Assert
+    assert (selected, provider.stored, provider.remembered) == ("beta", "alpha", [])
+
+
+def test_read_only_project_resolution_still_enforces_access():
+    # Arrange
+    provider = LegacyProvider()
+    provider.stored = "alpha"
+    request = RequestFactory().get("/?project=private")
+    # Act
+    selected = scope.resolve_project(request, provider, explicit="private", remember=False)
+    # Assert
+    assert (selected, provider.stored, provider.remembered) == (None, "alpha", [])

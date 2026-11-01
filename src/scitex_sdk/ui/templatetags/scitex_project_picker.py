@@ -78,6 +78,8 @@ def scitex_project_picker(
     allow_user_scope: bool = False,
     current_scope=None,
     strict: bool = False,
+    view_scope=None,
+    view_project="",
 ):
     if scope is None:
         scope = context.get("app_scope")
@@ -110,7 +112,15 @@ def scitex_project_picker(
         # slot is the debuggable shape here — the host opted into the tag
         # without wiring a provider, and the page must still render.
         return ""
+    if view_scope is not None:
+        if view_scope not in (SCOPE_USER, SCOPE_PROJECT):
+            raise ValueError("view scope must be explicit 'user' or 'project'")
+        view_project = project_id_for(view_project)
+        if (view_scope == SCOPE_USER and view_project) or (view_scope == SCOPE_PROJECT and not view_project):
+            raise ValueError("view selection must pair user/null or project/id")
     values = {
+        "view_scope": view_scope,
+        "view_project": view_project,
         "provider_url": provider_url,
         "current": project_id_for(current),
         "navigate": navigate,
