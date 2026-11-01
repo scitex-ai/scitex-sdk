@@ -360,3 +360,18 @@ def test_picker_assets_have_content_versions():
     # Assert
     assert all(re.search(r"project-selector\." + ext + r"\?v=[a-f0-9]+", html)
                for ext in ("css", "js"))
+
+
+def test_one_provider_authority_is_emitted_per_document():
+    # Arrange
+    from django.test import RequestFactory, override_settings
+    from types import SimpleNamespace
+    request = RequestFactory().get("/apps/writer/")
+    request.user = SimpleNamespace(is_authenticated=True)
+    source = "{% load scitex_project_picker %}{% scitex_project_provider_meta %}{% scitex_project_provider_meta %}"
+    # Act
+    with override_settings(SCITEX_PROJECT_PROVIDER_URL="/host/projects/",
+                           SCITEX_PROJECT_PROVIDER=f"{__name__}.AppContextProvider"):
+        html = _render_source(source, {"request": request})
+    # Assert
+    assert html.count('name="stx-project-provider"') == 1

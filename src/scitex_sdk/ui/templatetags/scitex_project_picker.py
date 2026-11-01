@@ -158,7 +158,20 @@ def scitex_project_provider_meta(context):
     url = host_project_provider_url(context.get("request"))
     if not url or context.get("request") is None or not _signed_in(context):
         return ""
-    if supports_scoped_capability(host_project_provider()):
+    scoped = supports_scoped_capability(host_project_provider())
+    # Includes and inherited host/leaf templates share the outer render frame.
+    # Do not attach this state to the request: later documents need their own tag.
+    frames = context.render_context.dicts
+    if len(frames) >= 2:
+        authority = (url, scoped)
+        frame = frames[1]
+        previous = frame.get("scitex_sdk.project_provider_authority")
+        if previous is not None:
+            if previous != authority:
+                raise ValueError("Conflicting project provider authorities in one document")
+            return ""
+        frame["scitex_sdk.project_provider_authority"] = authority
+    if scoped:
         return format_html(
             '<meta name="{}" content="{}" data-scoped-protocol="true">',
             PROJECT_PROVIDER_META_NAME, url,
