@@ -214,6 +214,21 @@ def scan_headers(
             for selector in match[1].split(","):
                 positive = re.sub(r":not\([^)]*\)", "", selector)
                 direct = bool(_SHARED.search(positive))
+                # Hosts may show/hide their own slot content after mounting.
+                # This does not grant ownership of SDK buttons or typography.
+                own_descendant = re.search(
+                    r"\s+(?:\.(?!stx-)[\w-]+|\[data-(?!stx-)[\w-]+\])\s*$", positive
+                )
+                declarations = [d.strip() for d in match[2].split(";") if d.strip()]
+                visibility_only = bool(declarations) and all(
+                    re.fullmatch(
+                        r"(?:display|visibility)\s*:\s*(?:none|inline|inline-block|block|flex|hidden|visible)",
+                        d,
+                    )
+                    for d in declarations
+                )
+                if own_descendant and visibility_only:
+                    direct = False
                 # A single known ancestor followed by a generic button can
                 # reach the header. Scoped toolbar descendants are independent.
                 generic = re.fullmatch(

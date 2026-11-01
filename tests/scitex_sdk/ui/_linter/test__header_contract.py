@@ -163,3 +163,21 @@ def test_handwritten_canonical_classes_do_not_bypass_renderer_ownership(
     findings = scan_headers(tmp_path)
     # Assert
     assert len(findings) == 1
+
+
+@pytest.mark.parametrize(
+    "declaration, expected", [("display:none", 0), ("font-size:22px", 1)]
+)
+def test_leaf_slot_visibility_is_allowed_without_style_ownership(
+    tmp_path, declaration, expected
+):
+    # Arrange
+    (tmp_path / "leaf.css").write_text(
+        ".stx-app-header__slot--project-selector [data-own-project] {"
+        + declaration
+        + "}"
+    )
+    # Act
+    findings = scan_headers(tmp_path)
+    # Assert
+    assert len(findings) == expected
