@@ -50,3 +50,19 @@ override or a stale bundled SDK stylesheet. Keep installed SDK sources,
 generated frontend bundles, and served static assets consistent. Use the
 existing `app_static` tag for directly linked assets so CSS changes receive
 a content-derived URL.
+
+For an authorized development host, run the real app matrix:
+
+```bash
+SCITEX_HEADER_BASE_URL=https://your-authorized-host.example \
+SCITEX_HEADER_STORAGE_STATE=/private/playwright-session.json \
+npm run test:headers:live
+```
+
+This opens the normal apps and dropdowns at desktop and phone sizes, changes
+the theme only in that browser document, and compares header/picker styles.
+It never chooses a project or saves a theme preference. Apps can still make
+their normal background requests while loading. Override the app-relative
+route list with the JSON array `SCITEX_HEADER_ROUTES` when checking another
+installation. The report is private and exits nonzero on any delivery or
+style mismatch. No missing app or authentication failure counts as a pass.

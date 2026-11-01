@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "build:ui": "node scripts/build-ui.mjs",
-    "test:headers": "playwright test --config=playwright.header.config.ts"
+    "test:headers": "playwright test --config=playwright.header.config.ts",
+    "test:headers:live": "node scripts/verify-header-fleet.mjs"
   },
   "dependencies": {
     "@scitex/sdk": "file:./src/scitex_sdk"
