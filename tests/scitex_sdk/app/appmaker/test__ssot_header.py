@@ -1,35 +1,22 @@
-#!/usr/bin/env python3
 # Timestamp: 2026-10-19
 # File: tests/scitex_sdk/app/appmaker/test__ssot_header.py
 
-"""Scaffolded apps ship the shared SDK SSoT header row.
+"""Generated apps delegate header rendering to the SDK component.
 
-Port of scitex-app commit ccdb19a (card appcreator-ssot-header-row-20261017,
-operator CCT4254): the App Creator scaffold emitted a leaf-local fork
-(``{name}-header`` div, h2 1.5rem + subtitle, no version, no actions slot,
-SDK sheet never linked). Every new app therefore disagreed with
-Writer/Scholar/Stats/Storage about the header before its author wrote a line.
-
-Adoption: the scaffold now emits the SDK row — ``.stx-app-header``
-(scitex-sdk css/app/app-header.css) with title span + live leaf version
-badge (absent when unknown), the canonical project-selector slot, and the
-actions slot. The leaf owns the VALUES, the SDK owns the chrome.
-
-Port note: ccdb19a touched five files; the fifth
-(``_scaffold_agent_context.py``) has no counterpart fork here — the SDK
-``_agents_md`` emits a short workflow doc with no header example, so it
-never taught the fork and is left untouched. The two ``_agents_md``
-assertions from the source test are dropped for the same reason (16 tests).
-
-No mocks: generators are pure string builders; the tree test scaffolds
-for real into a throwaway dir.
-
-STX-TQ002 (AAA markers) + STX-TQ007 (one assert per test) compliant.
+Exercise the actual Django output and registered picker tag. Labels and
+optional versions are mount metadata; the SDK module builds title, picker,
+and actions children. Generated consumers must not copy that child markup.
 """
 
 from __future__ import annotations
 
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlsplit
+
+import pytest
+from django.template import Context, Template
+from django.test import override_settings
 
 from scitex_sdk.app.appmaker._scaffold import init_app
 from scitex_sdk.app.appmaker._scaffold_html import (
@@ -43,8 +30,35 @@ NAME = "demo_ssot_app"
 LABEL = "Demo Ssot"
 
 
+class _RenderedMarkup(HTMLParser):
+    """Collect actual rendered mount/script elements, excluding comments."""
+
+    def __init__(self, source):
+        super().__init__()
+        self.mounts = []
+        self.scripts = []
+        self.pickers = []
+        self.feed(source)
+
+    def handle_starttag(self, tag, attributes):
+        attributes = dict(attributes)
+        if "data-stx-app-header" in attributes:
+            self.mounts.append((tag, attributes))
+        if "data-stx-project-picker" in attributes:
+            self.pickers.append(attributes)
+        if tag == "script":
+            self.scripts.append(attributes)
+
+
+def _rendered(partial, *, version=None):
+    html = Template(partial).render(
+        Context({"app_scope": "user", "app_version": version})
+    )
+    return _RenderedMarkup(html)
+
+
 # ---------------------------------------------------------------------------
-# Partial — the SDK row is emitted (one assert each)
+# Partial — mount metadata delegates rendering to the SDK
 # ---------------------------------------------------------------------------
 
 
@@ -57,49 +71,61 @@ def test_partial_links_sdk_app_header_css() -> None:
     assert needle in partial
 
 
-def test_partial_has_shared_header_row() -> None:
+def test_partial_renders_sdk_header_mount() -> None:
     # Arrange
-    needle = '<header class="stx-app-header '
-    # Act
     partial = _index_partial_html(NAME, LABEL, "fas fa-flask")
+    # Act
+    markup = _rendered(partial)
     # Assert
-    assert needle in partial
+    assert [tag for tag, _ in markup.mounts] == ["div"]
 
 
-def test_partial_has_title_span_with_label() -> None:
+def test_partial_supplies_title_as_renderer_metadata() -> None:
     # Arrange
-    needle = f'<span class="stx-app-header__title">{LABEL}</span>'
-    # Act
     partial = _index_partial_html(NAME, LABEL, "fas fa-flask")
+    # Act
+    markup = _rendered(partial)
     # Assert
-    assert needle in partial
+    assert markup.mounts[0][1]["data-app-title"] == LABEL
 
 
-def test_partial_version_badge_guarded_by_app_version() -> None:
+@pytest.mark.parametrize("version", [None, "1.2.3"])
+def test_partial_supplies_optional_version_without_fake_badge(version) -> None:
     # Arrange
-    needle = "{% if app_version %}"
-    # Act
     partial = _index_partial_html(NAME, LABEL, "fas fa-flask")
+    # Act
+    markup = _rendered(partial, version=version)
     # Assert
-    assert needle in partial
+    assert markup.mounts[0][1].get("data-app-version") == version
 
 
-def test_partial_has_project_selector_slot() -> None:
+def test_partial_renders_real_sdk_picker_with_host_metadata() -> None:
     # Arrange
-    needle = "stx-app-header__slot--project-selector"
-    # Act
     partial = _index_partial_html(NAME, LABEL, "fas fa-flask")
+    context = Context({"app_scope": "project", "current_project": "owned-project"})
+    # Act
+    with override_settings(SCITEX_PROJECT_PROVIDER_URL="/owned-project-provider/"):
+        markup = _RenderedMarkup(Template(partial).render(context))
     # Assert
-    assert needle in partial
+    assert [
+        (picker["data-provider-url"], picker["data-current"])
+        for picker in markup.pickers
+    ] == [("/owned-project-provider/", "owned-project")]
 
 
-def test_partial_has_actions_slot() -> None:
+def test_partial_loads_sdk_module_to_render_header_children() -> None:
     # Arrange
-    needle = '<div class="stx-app-header__actions"></div>'
-    # Act
     partial = _index_partial_html(NAME, LABEL, "fas fa-flask")
+    # Act
+    markup = _rendered(partial)
     # Assert
-    assert needle in partial
+    assert any(
+        script.get("type") == "module"
+        and urlsplit(script.get("src", "")).path.endswith(
+            "scitex_sdk/ui/js/app/app-header.js"
+        )
+        for script in markup.scripts
+    )
 
 
 # ---------------------------------------------------------------------------
