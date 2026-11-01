@@ -42,8 +42,10 @@ try {
             document.body.classList.remove("dark-theme", "light-theme");
             document.body.classList.add(t + "-theme");
           }, theme);
+          await page.waitForTimeout(250);
           await page.locator(".stx-app-header .stx-app-project-selector__trigger").click();
           await page.mouse.move(0, 0);
+          await page.waitForTimeout(250);
           const styles = await page.evaluate(keys => {
             const pick = selector => {
               const e = document.querySelector(selector);
