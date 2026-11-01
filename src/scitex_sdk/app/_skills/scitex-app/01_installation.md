@@ -4,12 +4,12 @@ The implementation belongs to `scitex-sdk`, imported through
 `scitex_sdk.app`. App/UI component identifiers do not name separate
 installation requirements.
 
-The 0.3.0 consolidation candidate is not published yet. From its reviewed
-checkout, run `pip install -e '.[gui]'` for Django GUI development; add
-`chat`, `mcp` or `cli` when required. After publication the equivalent install
-is `pip install 'scitex-sdk[gui]'`.
-The `project`/`all` extra requires published Dev>=0.62.0 and is a genuine
-release gate while that API is unavailable. Contributor tools use
+The 0.3.0 consolidation is published (all releases through 0.3.12
+verified live on PyPI). For Django GUI development, run
+`pip install 'scitex-sdk[gui]'`; add `chat`, `mcp` or `cli` when
+required. From a reviewed checkout, `pip install -e '.[gui]'` works too.
+The `project`/`all` extras require Dev>=0.62 (public) — normal
+resolution succeeds. Contributor tools use
 `pip install -e . --group dev`, with pip>=25.1.
 
 Read the SDK workflow skill, then verify the installed package and current

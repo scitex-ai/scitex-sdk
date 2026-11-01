@@ -201,7 +201,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   // ---- Cell CSS ----
   const getCellClass = (row: number, col: number): string => {
     const parts = [`${CLS}__cell`];
-    if (isCellInRange(row, col, selection))
+    if (isCellInRange(row, col, selection) || selectedRows.has(row) || selectedColumns.has(col))
       parts.push(`${CLS}__cell--selected`);
     if (currentCell?.row === row && currentCell?.col === col)
       parts.push(`${CLS}__cell--current`);

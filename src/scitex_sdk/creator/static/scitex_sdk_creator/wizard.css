@@ -9,7 +9,7 @@
      own ch caps below; the root must not impose one. */
   max-width: none;
   margin: 0;
-  padding: 8px 20px 48px;
+  padding: 0;
   font-size: 14px;
   line-height: 1.55;
 }
@@ -57,13 +57,14 @@
 }
 
 .stx-starter:has(input:checked) {
-  border-color: #3fb950;
-  box-shadow: 0 0 0 1px #3fb950;
+  border-color: var(--role-primary-bg);
+  box-shadow: 0 0 0 1px var(--role-primary-bg);
+  background: var(--color-primary-subtle);
 }
 
 .stx-starter input {
   margin-right: 6px;
-  accent-color: #3fb950;
+  accent-color: var(--role-primary-bg);
 }
 
 .stx-starter strong {
@@ -89,6 +90,11 @@
   text-align: right;
   padding-top: 8px;
   font-weight: 600;
+}
+
+.stx-required {
+  color: #f85149;
+  font-weight: 700;
 }
 
 .stx-field .stx-control {
@@ -129,7 +135,7 @@
   flex-wrap: wrap;
 }
 
-.stx-creator button {
+.stx-actions > button {
   font: inherit;
   padding: 8px 16px;
   border-radius: 8px;
@@ -139,19 +145,20 @@
   cursor: pointer;
 }
 
-.stx-creator button:hover {
+.stx-actions > button:hover {
   border-color: color-mix(in srgb, currentcolor 45%, transparent);
 }
 
-.stx-creator button.stx-primary {
-  background: #1f6feb;
-  border-color: #1f6feb;
-  color: #fff;
+.stx-actions > button.stx-primary {
+  background: var(--role-primary-bg);
+  border-color: var(--role-primary-bg);
+  color: var(--role-primary-text);
   font-weight: 600;
 }
 
-.stx-creator button.stx-primary:hover {
-  background: #388bfd;
+.stx-actions > button.stx-primary:hover {
+  background: var(--role-primary-hover-bg);
+  border-color: var(--role-primary-hover-bg);
 }
 
 /* Result consoles: visible feedback, not a bare div. */

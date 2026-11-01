@@ -210,6 +210,8 @@ var ProjectSelector = class extends BaseComponent {
   current;
   filtered = [];
   allowUserScope = false;
+  /** Why the All row is unselectable (null = available). Server-provided. */
+  userScopeDisabledReason = null;
   legacyPersistenceExpected;
   pending = false;
   generation = 0;
@@ -227,8 +229,14 @@ var ProjectSelector = class extends BaseComponent {
   compositionActive = false;
   outsideClickHandler;
   keyHandler;
+  viewSelection;
   constructor(config) {
     super(config);
+    const view = config.viewSelection;
+    if (view && (view.scope !== "user" && view.scope !== "project" || (view.scope === "user" ? view.id !== null : typeof view.id !== "string" || !view.id.trim()))) {
+      throw new Error("Invalid page view selection");
+    }
+    this.viewSelection = view;
     this.commands = config.commands ?? new CommandRegistry();
     this.selectCommandId = config.selectCommandId ?? PROJECT_SELECTOR_SELECT;
     if (!this.selectCommandId || this.commands.has(this.selectCommandId)) {
@@ -253,7 +261,7 @@ var ProjectSelector = class extends BaseComponent {
     this.projects = this.validProjects(config.projects ?? []);
     this.legacyPersistenceExpected = config.provider?.rememberProject !== void 0;
     this.allowUserScope = config.allowUserScope === true && typeof config.provider?.rememberScope === "function";
-    this.current = this.choice(config.current, config.currentScope);
+    this.current = this.choice(this.viewSelection ? this.viewSelection.id : config.current, this.viewSelection?.scope ?? config.currentScope);
     this.commands.set(this.selectCommand);
     if (this.openCommand) this.commands.set(this.openCommand);
     this.container.className = CLS;
@@ -342,26 +350,38 @@ var ProjectSelector = class extends BaseComponent {
       if (!p || typeof p.id !== "string" || !p.id.trim() || typeof p.name !== "string" || seen.has(p.id)) return false;
       seen.add(p.id);
       return true;
-    }).map((p) => ({ id: p.id, name: p.name, ...typeof p.detail === "string" ? { detail: p.detail } : {} }));
+    }).map((p) => ({
+      id: p.id,
+      name: p.name,
+      ...typeof p.detail === "string" ? { detail: p.detail } : {},
+      ...p.disabled === true ? { disabled: true } : {},
+      ...typeof p.disabledReason === "string" && p.disabledReason ? { disabledReason: p.disabledReason } : {}
+    }));
   }
   choices() {
     const projects = this.projects.map((p) => ({ ...p, scope: "project" }));
-    if (this.allowUserScope) projects.unshift({ scope: "user", id: null, name: translate("All Projects", "allProjects") });
+    if (this.allowUserScope) projects.unshift({
+      scope: "user",
+      id: null,
+      name: translate("All Projects", "allProjects"),
+      ...this.userScopeDisabledReason !== null ? { disabled: true, disabledReason: this.userScopeDisabledReason } : {}
+    });
     return projects;
   }
   choice(id, scope) {
-    if (scope === "user") return this.allowUserScope ? this.choices()[0] : null;
+    if (scope === "user") return this.allowUserScope && this.userScopeDisabledReason === null ? this.choices()[0] : null;
     if (scope !== void 0 && scope !== "project") return null;
-    return this.choices().find((p) => p.scope === "project" && p.id === id) ?? null;
+    return this.choices().find((p) => p.scope === "project" && p.id === id && p.disabled !== true) ?? null;
   }
   /** Replace the project list, keeping the selection when it is still present. */
-  setProjects(projects, currentId, currentScope) {
+  setProjects(projects, currentId, currentScope, userScopeDisabledReason) {
     const validated = this.validProjects(projects);
     this.generation++;
     this.pending = false;
     this.trigger.disabled = false;
     this.projects = validated;
     this.status = "ready";
+    if (userScopeDisabledReason !== void 0) this.userScopeDisabledReason = userScopeDisabledReason;
     const wanted = currentId === void 0 ? this.current?.id : currentId;
     const scope = currentScope ?? (currentId === void 0 ? this.current?.scope : void 0);
     this.current = this.choice(wanted, scope);
@@ -380,9 +400,16 @@ var ProjectSelector = class extends BaseComponent {
       if (listing.current_scope !== void 0 && listing.current_scope !== "user" && listing.current_scope !== "project") throw new Error("invalid current scope");
       if (listing.current_scope === "user" && listing.current != null) throw new Error("user scope requires null project id");
       this.allowUserScope = (this.config.allowUserScope === true || this.config.allowUserScope === void 0 && listing.allow_user_scope === true) && typeof provider.rememberScope === "function";
+      this.userScopeDisabledReason = typeof listing.user_scope_disabled_reason === "string" && listing.user_scope_disabled_reason ? listing.user_scope_disabled_reason : null;
       if (this.allowUserScope && !this.selectionError.parentNode) this.container.appendChild(this.selectionError);
       this.status = "ready";
-      this.setProjects(projects, this.config.current ?? listing.current ?? null, this.config.currentScope ?? listing.current_scope);
+      const view = this.viewSelection;
+      this.setProjects(
+        projects,
+        view ? view.id : this.config.current ?? listing.current ?? null,
+        view?.scope ?? this.config.currentScope ?? listing.current_scope,
+        this.userScopeDisabledReason
+      );
     } catch {
       if (this.destroyed || generation !== this.generation) return;
       this.status = "error";
@@ -437,7 +464,11 @@ var ProjectSelector = class extends BaseComponent {
     option.setAttribute("role", "option");
     option.setAttribute("aria-selected", String(isCurrent));
     option.tabIndex = -1;
-    option.disabled = this.pending;
+    option.disabled = this.pending || project.disabled === true;
+    if (project.disabled === true) {
+      option.setAttribute("aria-disabled", "true");
+      if (project.disabledReason) option.title = project.disabledReason;
+    }
     const name = document.createElement("span");
     name.className = `${CLS}__option-name`;
     name.textContent = project.name;
@@ -459,7 +490,10 @@ var ProjectSelector = class extends BaseComponent {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const step = e.key === "ArrowDown" ? 1 : -1;
-      this.activeIndex = last < 0 ? 0 : (this.activeIndex + step + last + 1) % (last + 1);
+      for (let hops = 0; hops <= last; hops++) {
+        this.activeIndex = last < 0 ? 0 : (this.activeIndex + step + last + 1) % (last + 1);
+        if (this.filtered[this.activeIndex]?.disabled !== true) break;
+      }
       this.renderList();
       this.list.children[this.activeIndex]?.scrollIntoView?.({ block: "nearest" });
     } else if (e.key === "Enter") {
@@ -513,7 +547,7 @@ var ProjectSelector = class extends BaseComponent {
     if (value.scope !== "user" && value.scope !== "project") return false;
     if (value.scope === "user" ? value.id !== null : typeof value.id !== "string" || !value.id.trim()) return false;
     const project = this.choices().find((p) => p.scope === value.scope && p.id === value.id);
-    if (!project) return false;
+    if (!project || project.disabled === true) return false;
     this.selectionError.hidden = true;
     const changed = this.current?.scope !== project.scope || this.current?.id !== project.id;
     if (!changed) {
@@ -591,6 +625,7 @@ var ProjectSelector = class extends BaseComponent {
     }
   }
   applyChoice(project) {
+    this.viewSelection = void 0;
     this.current = project;
     this.renderLabel();
     this.renderList();
@@ -620,8 +655,10 @@ function usesScopedHttpTransport(provider) {
   return provider !== void 0 && Reflect.get(provider, SCOPED_HTTP_TRANSPORT) === true;
 }
 function hostProjectProvider(doc = document, options = {}) {
-  const url = doc.querySelector(`meta[name="${PROJECT_PROVIDER_META_NAME}"]`)?.getAttribute("content");
-  return url ? httpProjectProvider(url, options) : null;
+  const meta = doc.querySelector(`meta[name="${PROJECT_PROVIDER_META_NAME}"]`);
+  const url = meta?.getAttribute("content");
+  const allowUserScope = options.allowUserScope ?? meta?.getAttribute("data-scoped-protocol") === "true";
+  return url ? httpProjectProvider(url, { ...options, allowUserScope }) : null;
 }
 function httpProjectProvider(url, options = {}) {
   const scoped = options.allowUserScope === true;
@@ -640,6 +677,10 @@ function httpProjectProvider(url, options = {}) {
       });
       if (!response.ok) throw new Error(`project listing failed: HTTP ${response.status}`);
       const body = await response.json();
+      if (Array.isArray(body.projects)) body.projects = body.projects.map((project) => {
+        const reason = project?.disabled_reason;
+        return typeof reason === "string" && reason ? { ...project, disabledReason: project.disabledReason || reason } : project;
+      });
       if (!scoped) return { projects: body.projects ?? [], current: body.current ?? null };
       if (body.allow_user_scope !== true || !Array.isArray(body.projects)) {
         throw new Error("scoped project provider is not enabled");
@@ -649,6 +690,10 @@ function httpProjectProvider(url, options = {}) {
       if (scope !== void 0 && scope !== "user" && scope !== "project" || scope === "user" && body.current !== null || scope === "project" && (typeof current !== "string" || !current.trim()) || scope === void 0 && current !== null) {
         throw new Error("invalid current scope selection");
       }
+      const disabledReason = body.user_scope_disabled_reason;
+      if (disabledReason !== void 0 && typeof disabledReason !== "string") {
+        throw new Error("invalid user scope disabled reason");
+      }
       if (authority !== listingAuthority) throw new Error("scope listing superseded");
       enabled = true;
       provider.rememberScope = rememberScope;
@@ -656,7 +701,8 @@ function httpProjectProvider(url, options = {}) {
         projects: body.projects,
         current,
         allow_user_scope: true,
-        ...scope === void 0 ? {} : { current_scope: scope }
+        ...scope === void 0 ? {} : { current_scope: scope },
+        ...disabledReason ? { user_scope_disabled_reason: disabledReason } : {}
       };
     },
     async rememberProject(id) {
@@ -731,7 +777,7 @@ function appScope(doc = document) {
 
 // ts/shell/app-scope-selector.ts
 function mountProjectSelectorByScope(options, doc = document) {
-  const provider = options.provider ?? (options.projects ? void 0 : hostProjectProvider(doc, { allowUserScope: options.allowUserScope === true }) ?? void 0);
+  const provider = options.provider ?? (options.projects ? void 0 : hostProjectProvider(doc, { allowUserScope: options.allowUserScope }) ?? void 0);
   const scopedHttp = usesScopedHttpTransport(provider);
   if ((options.scope ?? appScope(doc)) !== SCOPE_PROJECT && !(options.allowUserScope === true && (typeof provider?.rememberScope === "function" || scopedHttp))) {
     return null;

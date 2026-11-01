@@ -13,19 +13,52 @@ retired App/UI distributions, and normal source/sdist/wheel/frontend identity.
 Persisted Django labels/FKs, `scitex_ui` tag libraries, template blocks, existing
 env names and local configuration/storage contracts remain unchanged.
 
-## Sequential publication proposal
+## Current 0.3.17 release procedure
 
-1. Close Dev's genuine project API and native release gates, then make a genuine
-   Dev release at least 0.62 available publicly. Diagnostic SCM wheels below
-   0.62 do not meet SDK's project/all floor. Dev's existing normal all/dev graph
+The source version is an unpublished preview until normal publication succeeds.
+`pyproject.toml` requires Dev>=0.62.6 for CLI/project tooling and `[all]`;
+old versions in the historical observations below are not current install floors.
+
+1. Qualify the exact combined source. Stacked pull requests whose base is a
+   feature branch do not trigger `frontend.yml` or `python-package.yml`: those
+   PR events target `main`/`develop` only. Dispatch both existing workflows at
+   the candidate branch, verify each run's `headSha`, or requalify after merging
+   into a covered branch. An empty checks list is not a pass.
+2. Review and merge the source in order, retaining the 0.3.17 Python/frontend
+   versions and published dependency requirements. Do not tag an earlier base
+   that omits the public PDF or request-local selection APIs.
+3. Push `v0.3.17` at the accepted commit using the repository's release process.
+   The tag triggers `pypi-publish-and-github-release-on-tag.yml`. Its manual
+   dispatch accepts an already-existing tag; it does not create one.
+4. Require the release's Python 3.11/3.12/3.13 tests, frontend gates, source/
+   sdist/wheel/frontend identity checks, and normal built-wheel `[all]` install
+   plus `pip check`. The ownership report explicitly distinguishes bootstrap
+   observation from strict dependency retirement.
+5. Publication uses the existing `pypi` environment and PyPI trusted publisher.
+   Keep the workflow filename and environment identity. The GitHub release is
+   created only after publication; verify the public distributions correspond
+   to the accepted source before releasing LivePaper 0.2.20 and its Writer
+   consumers. Retry an existing tag through the existing workflow only after
+   classifying its actual failure; do not bypass a failed release gate.
+
+The public dependency-retirement inventory remains a separate gate; SDK
+publication does not certify migrated downstream graphs. See the historical
+bootstrap observations and checker limitations below.
+
+## Historical sequential publication proposal
+
+1. (Done — Dev 0.62.4 is public.) Closed Dev's genuine project API and
+   native release gates, then made the genuine Dev release 0.62
+   publicly. Diagnostic SCM wheels below 0.62 do not meet SDK's
+   project/all floor. Dev's existing normal all/dev graph
    can resolve published dependencies; it does not require SDK 0.3 directly.
-2. Publish SDK's genuine 0.3 including the reviewed optional project-selector
-   normalization needed by migrated Writer/Hub, after its source/full suite, strict access,
-   frontend, normal base/GUI, artifact/direct-ownership, and **normal built-wheel
-   [all] install plus pip check** gates pass against published dependencies.
-   During this bootstrap, report every transitive retired dist/import as
-   `DEPENDENCY_RETIREMENT_NOT_READY`. A normal resolvable legacy graph is not a
-   clean migration. Direct SDK ownership errors still block publication.
+2. (Done — SDK 0.3.x shipped through 0.3.12, verified live on PyPI after
+   the normal built-wheel [all] + pip check gates passed.)
+   The 0.3.3 declaration raised optional CLI/project and contributor tooling to
+   Dev>=0.62 (Dev 0.62.4 public) for the declared UI provider replacement SPI.
+   It shipped with the reviewed optional project-selector normalization needed
+   by migrated Writer/Hub; transitive retired dists/imports were reported as
+   `DEPENDENCY_RETIREMENT_NOT_READY` during bootstrap.
 3. With SDK 0.3 publicly installable, release each accepted canonical consumer
    only after its native tests and normal install gates pass. Keep each actual
    active SDK>=0.3 declaration, including optional runtime groups. Register the
@@ -51,10 +84,10 @@ No release, dispatch, merge, tag, version override or archive runs here.
 At the observed published versions, Dev 0.61 requires Scholar>=1.4.3; Scholar
 1.13 requires Session>=0.1.5; Session 0.3.1 requires plt>=0.24; plt 0.24.6 requires
 FigRecipe>=0.24. Published FigRecipe 0.35 directly requires App>=0.25. Its extra
-runtime groups also require UI>=0.23. SDK's all-extra still requires genuine
-Dev>=0.62, which is currently unavailable and causes normal resolution refusal.
-After Dev is published, that normal graph can remain legacy until canonical
-FigRecipe, Scholar and the other owning consumers are genuinely published.
+runtime groups also require UI>=0.23. SDK's all-extra required genuine
+Dev>=0.62; Dev 0.62.4 is now public so normal resolution succeeds, and
+that graph can remain legacy until canonical FigRecipe, Scholar and the
+other owning consumers are genuinely published.
 
 FigRecipe canonical PR432 descends from the published v0.35.0 commit
 `3b015a368761a1bf11c51d769774bc3f93c92edf`; the tag is an ancestor of develop
@@ -66,15 +99,6 @@ ancestry. PR432 now has a reviewed, unpublished 0.36.0 candidate at
 canonical parent. Its version correction is not a public release. A genuine
 canonical release newer than published 0.35 must still register its source and
 artifact association before dependency retirement can pass.
-
-The 0.3.3 candidate raises optional CLI/project and contributor tooling to
-Dev>=0.62.4.dev0 for the declared UI provider replacement SPI. The project
-primitive itself existed in Dev 0.62, but an older engine would also discover
-the incompatible SDK linter provider. `all` includes both tooling extras.
-The paired Dev candidate is private, so a compatible public Dev release remains
-a genuine prerequisite for normal SDK `[all]` publication. See
-[the provider transition](UI_LINTER_PROVIDER_TRANSITION.md). No floor is lowered
-to resolve the bootstrap.
 
 ## Checker scope and remaining proof
 

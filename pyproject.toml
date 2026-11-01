@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scitex-sdk"
-version = "0.3.12"
+version = "0.3.17"
 description = "SciTeX app contracts, UI components, and host capabilities in one SDK."
 readme = "README.md"
 license = "AGPL-3.0-only"
@@ -24,9 +24,11 @@ dependencies = [
 gui = ["django>=4.2"]
 chat = ["anthropic>=0.25.0", "litellm>=1.0.0", "requests>=2.28.0"]
 mcp = ["fastmcp>=2.0.0"]
-cli = ["scitex-dev>=0.62.4.dev0"]
+# Optional runtime capabilities. extras install their runtime deps
+# (Dev>=0.62.6 carries the canonical native hook dispatcher).
+cli = ["scitex-dev>=0.62.6"]
 # SDK tooling requires the project API and declared linter provider SPI.
-project = ["scitex-dev>=0.62.4.dev0"]
+project = ["scitex-dev>=0.62.6"]
 all = ["scitex-sdk[gui,chat,mcp,cli,project]"]
 
 # Contributor tooling is not a public runtime capability. pip >=25.1 supports
@@ -46,7 +48,7 @@ dev = [
     "pytest>=7.0.0",
     "requests>=2.28.0",
     # The real access core used by strict contributor conformance ships here.
-    "scitex-dev>=0.62.4.dev0",
+    "scitex-dev>=0.62.6",
 ]
 docs = [
     "sphinx>=7.0",
@@ -72,6 +74,12 @@ scitex-ui = "scitex_sdk.ui"
 
 [project.entry-points."scitex_dev.linter.plugins"]
 ui = "scitex_sdk.ui._linter_plugin:get_plugin"
+
+[project.entry-points."scitex_dev.audit.project"]
+scitex-sdk = "scitex_sdk._audit_plugin:get_plugin"
+
+[project.entry-points."scitex_dev.hooks"]
+scitex-sdk = "scitex_sdk._hook_rules:provide"
 
 [project.urls]
 Homepage = "https://github.com/scitex-ai/scitex-sdk"
@@ -103,7 +111,7 @@ only-include = [
     "src/scitex_sdk", "scripts", "tests", "docs", "examples", ".github",
     "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml", ".gitignore",
     "package.json", "package-lock.json", "tsconfig.json", "eslint.config.mjs",
-    "vitest.config.ts", ".readthedocs.yaml",
+    "vitest.config.ts", "playwright.header.config.ts", ".readthedocs.yaml",
 ]
 
 [tool.pytest.ini_options]

@@ -7,9 +7,13 @@ drifted: some tabs showed the generic browser globe, and titles read
 
 The convention is:
 
-* **Title** — ``"SciTeX <Tool>"`` (SciTeX Writer, SciTeX Scholar, SciTeX
-  FigRecipe, SciTeX Todo). :func:`shell_title` normalises a tool name into
-  that form and is idempotent, so passing ``"SciTeX Writer"`` is also fine.
+* **Title** — the short app name (``Writer``, ``Scholar``, ``FigRecipe``).
+  :func:`shell_title` strips a ``"SciTeX "`` prefix when one is passed, so
+  ``"SciTeX Writer"`` and ``"Writer"`` both render ``"Writer"``. The tab
+  carries no brand text by design: the favicon IS the brand (operator
+  2026-10-23 — the official white-on-navy mark reads at 16px where a
+  "SciTeX " prefix is truncated noise), and the project name lives in the
+  app page itself.
 * **Favicon** — the shared brand mark at ``scitex_sdk/ui/img/scitex-favicon.svg``,
   rendered whenever a view supplies no ``favicon_href``.
 
@@ -53,18 +57,22 @@ FAVICON_STATIC_PATH = "scitex_sdk/ui/img/scitex-favicon.svg"
 
 
 def shell_title(tool: str) -> str:
-    """Return the tab title for ``tool`` in the ``"SciTeX <Tool>"`` convention.
+    """Return the tab title for ``tool``: the SHORT name, never brand-prefixed.
 
-    Idempotent: a name that already carries the brand prefix is returned
-    unchanged, so callers can pass either ``"Writer"`` or ``"SciTeX Writer"``.
-    An empty/blank name degrades to the bare brand rather than ``"SciTeX "``.
+    Strips a leading ``"SciTeX "`` when one is passed, so callers holding the
+    full product name (``"SciTeX Writer"``) and callers holding the tile label
+    (``"Writer"``) render identically. Idempotent: an already-short name is
+    returned unchanged. An empty/blank name degrades to the bare brand rather
+    than an empty title.
     """
     name = (tool or "").strip()
     if not name:
         return BRAND
-    if name == BRAND or name.startswith(f"{BRAND} "):
+    if name == BRAND:
         return name
-    return f"{BRAND} {name}"
+    if name.startswith(f"{BRAND} "):
+        return name[len(BRAND) + 1 :].strip() or BRAND
+    return name
 
 
 #: Panes an app may declare. See :func:`shell_context`'s ``panes`` parameter.

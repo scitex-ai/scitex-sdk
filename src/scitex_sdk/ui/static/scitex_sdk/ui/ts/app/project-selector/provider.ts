@@ -15,6 +15,8 @@ export interface ProjectListing {
   /** Optional explicit capability/current scope supplied by a supporting host. */
   allow_user_scope?: boolean;
   current_scope?: "user" | "project";
+  /** Why user scope is unavailable: the All row renders greyed with this tooltip. */
+  user_scope_disabled_reason?: string;
 }
 
 export interface ProjectProvider {
@@ -65,8 +67,10 @@ export function hostProjectProvider(
   doc: Document = document,
   options: HttpProjectProviderOptions = {},
 ): ProjectProvider | null {
-  const url = doc.querySelector(`meta[name="${PROJECT_PROVIDER_META_NAME}"]`)?.getAttribute("content");
-  return url ? httpProjectProvider(url, options) : null;
+  const meta = doc.querySelector(`meta[name="${PROJECT_PROVIDER_META_NAME}"]`);
+  const url = meta?.getAttribute("content");
+  const allowUserScope = options.allowUserScope ?? meta?.getAttribute("data-scoped-protocol") === "true";
+  return url ? httpProjectProvider(url, { ...options, allowUserScope }) : null;
 }
 
 /**
@@ -94,6 +98,12 @@ export function httpProjectProvider(
       });
       if (!response.ok) throw new Error(`project listing failed: HTTP ${response.status}`);
       const body = (await response.json()) as ProjectListing;
+      // Python's public wire contract uses snake_case; components use camelCase.
+      if (Array.isArray(body.projects)) body.projects = body.projects.map((project) => {
+        const reason = (project as ProjectOption & { disabled_reason?: unknown })?.disabled_reason;
+        return typeof reason === "string" && reason
+          ? { ...project, disabledReason: project.disabledReason || reason } : project;
+      });
       if (!scoped) return { projects: body.projects ?? [], current: body.current ?? null };
       if (body.allow_user_scope !== true || !Array.isArray(body.projects)) {
         throw new Error("scoped project provider is not enabled");
@@ -106,12 +116,17 @@ export function httpProjectProvider(
           (scope === undefined && current !== null)) {
         throw new Error("invalid current scope selection");
       }
+      const disabledReason = body.user_scope_disabled_reason;
+      if (disabledReason !== undefined && typeof disabledReason !== "string") {
+        throw new Error("invalid user scope disabled reason");
+      }
       if (authority !== listingAuthority) throw new Error("scope listing superseded");
       enabled = true;
       provider.rememberScope = rememberScope;
       return {
         projects: body.projects, current, allow_user_scope: true,
         ...(scope === undefined ? {} : { current_scope: scope }),
+        ...(disabledReason ? { user_scope_disabled_reason: disabledReason } : {}),
       };
     },
     async rememberProject(id: string): Promise<void> {

@@ -5,7 +5,16 @@
     {% scitex_project_picker scope="project" current=current_project %}
 
 Renders nothing unless the app is project-scoped or explicitly opts into
-``allow_user_scope=True``. The client additionally requires a provider with
+``allow_user_scope=True``. A project-scoped, signed-in render with NO
+provider renders an empty slot by default — shared primitives must not
+crash provider-less hosts (see the cross-app header-consistency adoption
+rule, amended 2026-10-24 after the SAC v0.34/v0.35 pipeline breakage).
+Pass ``strict=True`` to opt back into the loud failure
+(``ImproperlyConfigured`` naming the missing host wiring) where a host
+wants the missing configuration to surface at render time. User-scoped
+or signed-out renders stay empty by design (no picker applies there).
+
+The client additionally requires a provider with
 ``rememberScope``; the legacy HTTP provider never persists nullable user scope.
 ``current_scope="user"`` is explicit; an empty current project never means user.
 ``scope`` defaults to the
@@ -23,12 +32,15 @@ advertises the provider to client-side pickers (``hostProjectProvider()``).
 from __future__ import annotations
 
 from django import template
+from django.core.exceptions import ImproperlyConfigured
 from django.template.loader import render_to_string
 from django.utils.html import format_html
 
 from scitex_sdk.ui.project_scope import (
     PROJECT_PROVIDER_META_NAME,
     host_project_provider_url,
+    host_project_provider,
+    supports_scoped_capability,
     project_id_for,
 )
 
@@ -65,20 +77,50 @@ def scitex_project_picker(
     placeholder: str = "",
     allow_user_scope: bool = False,
     current_scope=None,
+    strict: bool = False,
+    view_scope=None,
+    view_project="",
 ):
     if scope is None:
         scope = context.get("app_scope")
     project_scope = is_project_scope(scope)
     allow_user_scope = allow_user_scope is True
+    # Scoped hosts advertise availability through provider hooks. Request both
+    # choices so unsupported All stays visible-disabled, not silently omitted.
+    if project_scope and supports_scoped_capability(host_project_provider()):
+        allow_user_scope = True
+    strict = strict is True
     if (not project_scope and not allow_user_scope) or not _signed_in(context):
         return ""
     if current_scope is not None:
         if current_scope not in (SCOPE_USER, SCOPE_PROJECT):
             raise ValueError("current scope must be explicit 'user' or 'project'")
-    provider_url = provider_url or host_project_provider_url()
+    provider_url = host_project_provider_url(context.get("request"), provider_url or None)
     if not provider_url:
+        if strict:
+            # Explicit opt-in only: a project-scoped, signed-in render
+            # without a provider raises, naming the missing host wiring.
+            raise ImproperlyConfigured(
+                "scitex_project_picker: project-scoped render with no provider. "
+                "The host must register a project provider "
+                "(scitex_sdk.ui.project_scope.host_project_provider, e.g. "
+                "settings.SCITEX_PROJECT_PROVIDER_URL) or pass provider_url= "
+                "explicitly. See the scitex-ui skill (project picker)."
+            )
+        # Graceful default (cross-app adoption rule, amended 2026-10-24):
+        # shared primitives must not crash provider-less hosts. An empty
+        # slot is the debuggable shape here — the host opted into the tag
+        # without wiring a provider, and the page must still render.
         return ""
+    if view_scope is not None:
+        if view_scope not in (SCOPE_USER, SCOPE_PROJECT):
+            raise ValueError("view scope must be explicit 'user' or 'project'")
+        view_project = project_id_for(view_project)
+        if (view_scope == SCOPE_USER and view_project) or (view_scope == SCOPE_PROJECT and not view_project):
+            raise ValueError("view selection must pair user/null or project/id")
     values = {
+        "view_scope": view_scope,
+        "view_project": view_project,
         "provider_url": provider_url,
         "current": project_id_for(current),
         "navigate": navigate,
@@ -123,9 +165,27 @@ def _picker_tag(parser, token):
 
 @register.simple_tag(takes_context=True)
 def scitex_project_provider_meta(context):
-    url = host_project_provider_url()
+    url = host_project_provider_url(context.get("request"))
     if not url or context.get("request") is None or not _signed_in(context):
         return ""
+    scoped = supports_scoped_capability(host_project_provider())
+    # Includes and inherited host/leaf templates share the outer render frame.
+    # Do not attach this state to the request: later documents need their own tag.
+    frames = context.render_context.dicts
+    if len(frames) >= 2:
+        authority = (url, scoped)
+        frame = frames[1]
+        previous = frame.get("scitex_sdk.project_provider_authority")
+        if previous is not None:
+            if previous != authority:
+                raise ValueError("Conflicting project provider authorities in one document")
+            return ""
+        frame["scitex_sdk.project_provider_authority"] = authority
+    if scoped:
+        return format_html(
+            '<meta name="{}" content="{}" data-scoped-protocol="true">',
+            PROJECT_PROVIDER_META_NAME, url,
+        )
     return format_html('<meta name="{}" content="{}">', PROJECT_PROVIDER_META_NAME, url)
 
 

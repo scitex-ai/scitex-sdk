@@ -1,7 +1,7 @@
 {
   "name": "@scitex/sdk",
   "private": true,
-  "version": "0.3.12",
+  "version": "0.3.17",
   "description": "SciTeX SDK frontend sources and static UI assets",
   "type": "module",
   "license": "AGPL-3.0-only",
@@ -73,6 +73,7 @@
     "./ui/vendor/*": "./ui/static/scitex_sdk/ui/vendor/*",
     "./ui/img/*": "./ui/static/scitex_sdk/ui/img/*",
     "./ui/react/_base": "./ui/static/scitex_sdk/ui/react/_base/index.ts",
+    "./ui/react/app/app-header": "./ui/static/scitex_sdk/ui/react/app/app-header/index.ts",
     "./ui/react/app/alert-banner": "./ui/static/scitex_sdk/ui/react/app/alert-banner/index.ts",
     "./ui/react/app/bridge": "./ui/static/scitex_sdk/ui/react/app/bridge/index.ts",
     "./ui/react/app/confirm-modal": "./ui/static/scitex_sdk/ui/react/app/confirm-modal/index.ts",
@@ -85,7 +86,8 @@
     "./ui/react/app/pdf-viewer": "./ui/static/scitex_sdk/ui/react/app/pdf-viewer/index.ts",
     "./ui/react/app/recent-pane": "./ui/static/scitex_sdk/ui/react/app/recent-pane/index.ts",
     "./ui/react/app/selector-nav": "./ui/static/scitex_sdk/ui/react/app/selector-nav/index.ts",
-    "./ui/react/app/tooltip": "./ui/static/scitex_sdk/ui/react/app/tooltip/index.ts"
+    "./ui/react/app/tooltip": "./ui/static/scitex_sdk/ui/react/app/tooltip/index.ts",
+    "./ui/app/filter-field": "./ui/static/scitex_sdk/ui/ts/app/filter-field/index.ts"
   },
   "files": [
     "ui/static/scitex_sdk/ui/**"

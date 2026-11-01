@@ -12,7 +12,14 @@ export type ProjectSelection =
   | { scope: "user"; id: null }
   | { scope: "project"; id: string };
 
-export type ProjectChoice = ProjectSelection & { name: string; detail?: string };
+export type ProjectChoice = ProjectSelection & {
+  name: string;
+  detail?: string;
+  /** Listed-but-unselectable row (greyed, skipped, refused). */
+  disabled?: boolean;
+  /** Tooltip for a disabled row; server-provided, passed through. */
+  disabledReason?: string;
+};
 
 export interface ProjectOption {
   /** Stable project identifier (passed back via the change event). */
@@ -21,6 +28,10 @@ export interface ProjectOption {
   name: string;
   /** Optional secondary line under the name (owner, path, host...). */
   detail?: string;
+  /** Listed-but-unselectable project (greyed, skipped, refused). */
+  disabled?: boolean;
+  /** Tooltip for a disabled project; server-provided, passed through. */
+  disabledReason?: string;
 }
 
 export interface ProjectSelectorConfig extends BaseComponentConfig {
@@ -38,6 +49,9 @@ export interface ProjectSelectorConfig extends BaseComponentConfig {
   allowUserScope?: boolean;
   /** Explicit current scope. null/missing current project alone is never user scope. */
   currentScope?: "user" | "project";
+  /** Explicit read-only page context, independent of the remembered profile.
+   * Initial rendering never persists it; a user choice supersedes it. */
+  viewSelection?: ProjectSelection;
   /** Optional host registry; otherwise each picker owns a private registry. */
   commands?: CommandRegistry;
   /** Stable command id within that registry. Defaults to project-selector:select. */

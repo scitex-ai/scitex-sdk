@@ -29,6 +29,7 @@ from typing import Callable, Optional, Union
 
 from . import _gui_runtime as _gr
 from ._standalone import run_standalone
+from ._app_scope import normalize_scope_capabilities
 
 try:
     from ._django import (
@@ -228,6 +229,7 @@ def serve_gui(
 
 __all__ = [
     "run_standalone",
+    "normalize_scope_capabilities",
     "MOUNT_META_NAME",
     "MountPrefixMismatch",
     "mount_prefix",

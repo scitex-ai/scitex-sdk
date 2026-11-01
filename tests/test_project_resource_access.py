@@ -54,14 +54,23 @@ class Storage:
 
 
 @pytest.fixture
-def hosted(tmp_path, monkeypatch):
+def hosted(tmp_path):
+    # Arrange — expose the fake provider module-globally without the
+    # monkeypatch fixture: explicit save/restore around the test.
     projects, storage = Projects(), Storage(tmp_path)
-    monkeypatch.setitem(globals(), "_projects", projects)
-    with override_settings(
-        SCITEX_APP_MODE="hub", SCITEX_PROJECT_PROVIDER=__name__ + "._projects",
-        SCITEX_PROJECT_STORAGE=storage,
-    ):
-        yield projects, storage
+    prior = globals().get("_projects", None)
+    globals()["_projects"] = projects
+    try:
+        with override_settings(
+            SCITEX_APP_MODE="hub", SCITEX_PROJECT_PROVIDER=__name__ + "._projects",
+            SCITEX_PROJECT_STORAGE=storage,
+        ):
+            yield projects, storage
+    finally:
+        if prior is None:
+            globals().pop("_projects", None)
+        else:
+            globals()["_projects"] = prior
 
 
 def request(project="alpha", authenticated=True):

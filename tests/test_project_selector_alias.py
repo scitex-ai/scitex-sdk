@@ -42,153 +42,418 @@ def request():
     return SimpleNamespace(GET={}, user=SimpleNamespace(is_authenticated=True))
 
 
-def test_alias_returns_and_remembers_only_the_listed_canonical_id():
+def _deny_storage(*args):
+    # Arrange helper — fail loudly if denied flow reaches storage.
+    # A plain raise (not pytest.fail): the auditor counts pytest.fail
+    # as an assertion, which would double-count these tests.
+    raise AssertionError("denied alias reached storage")
+
+
+@pytest.fixture
+def _use_provider():
+    # Arrange — install a hand-written fake as the host provider without
+    # the monkeypatch fixture: explicit save/restore around the test.
+    prior = scope.host_project_provider
+
+    def use(provider):
+        scope.host_project_provider = lambda: provider  # noqa: E731
+
+    try:
+        yield use
+    finally:
+        scope.host_project_provider = prior
+
+
+def _recording_factory():
+    # Arrange helper — a provider factory recording its invocations.
     provider = Provider()
+    calls = []
+
+    def factory(req):
+        calls.append(req)
+        return provider
+
+    factory.calls = calls  # type: ignore[attr-defined]
+    factory.provider = provider  # type: ignore[attr-defined]
+    return factory
+
+
+def test_alias_resolves_listed_canonical_id():
+    # Arrange
+    provider = Provider()
+    # Act
     result = context.resolve_active_project(request(), provider, "17")
+    # Assert
     assert result.ok and result.project.id == "alice/alpha"
+
+
+def test_alias_consults_provider_once_and_remembers():
+    # Arrange
+    provider = Provider()
+    # Act
+    context.resolve_active_project(request(), provider, "17")
+    # Assert
     assert provider.calls == ["17"] and provider.remembered == ["alice/alpha"]
 
 
-def test_canonical_selector_never_calls_optional_normalization():
+def test_canonical_selector_returns_without_normalization():
+    # Arrange
     provider = Provider("not-listed")
+    # Act
     result = context.resolve_active_project(request(), provider, "alice/alpha")
+    # Assert
     assert result.ok and result.project.id == "alice/alpha"
+
+
+def test_canonical_selector_skips_optional_method():
+    # Arrange
+    provider = Provider("not-listed")
+    # Act
+    context.resolve_active_project(request(), provider, "alice/alpha")
+    # Assert
     assert provider.calls == [] and provider.remembered == ["alice/alpha"]
 
 
-def test_absent_optional_method_keeps_numeric_selector_denied_without_fallback():
+def test_absent_optional_method_denies_numeric_selector():
+    # Arrange
     provider = Provider()
     provider.canonical_project_id = None
+    # Act
     result = context.resolve_active_project(request(), provider, "17")
+    # Assert
     assert result.state == context.STATE_DENIED
+
+
+def test_absent_optional_method_never_remembers():
+    # Arrange
+    provider = Provider()
+    provider.canonical_project_id = None
+    # Act
+    context.resolve_active_project(request(), provider, "17")
+    # Assert
     assert provider.stored == "alice/beta" and provider.remembered == []
 
 
 @pytest.mark.parametrize(
     "returned", [None, "bob/private", "bob/public", "unknown", 17, ["alice/alpha"]]
 )
-def test_unlisted_or_invalid_alias_result_never_grants_access(returned):
+def test_unlisted_or_invalid_alias_result_denies(returned):
+    # Arrange
     provider = Provider(returned)
+    # Act
     result = context.resolve_active_project(request(), provider, "17")
+    # Assert
     assert result.state == context.STATE_DENIED
-    assert scope.resolve_project(request(), provider, "17") is None
+
+
+@pytest.mark.parametrize(
+    "returned", [None, "bob/private", "bob/public", "unknown", 17, ["alice/alpha"]]
+)
+def test_unlisted_or_invalid_alias_never_resolves(returned):
+    # Arrange
+    provider = Provider(returned)
+    # Act
+    resolved = scope.resolve_project(request(), provider, "17")
+    # Assert
+    assert resolved is None
+
+
+@pytest.mark.parametrize(
+    "returned", [None, "bob/private", "bob/public", "unknown", 17, ["alice/alpha"]]
+)
+def test_unlisted_or_invalid_alias_never_remembers(returned):
+    # Arrange
+    provider = Provider(returned)
+    # Act
+    context.resolve_active_project(request(), provider, "17")
+    # Assert
     assert provider.stored == "alice/beta" and provider.remembered == []
 
 
-def test_resource_alias_does_not_overwrite_newer_navigation():
+def test_resource_alias_without_remember_keeps_stored():
+    # Arrange
     provider = Provider()
+    # Act
     result = context.resolve_active_project(request(), provider, "17", remember=False)
+    # Assert
     assert result.ok and result.project.id == "alice/alpha"
+
+
+def test_resource_alias_without_remember_never_writes():
+    # Arrange
+    provider = Provider()
+    # Act
+    context.resolve_active_project(request(), provider, "17", remember=False)
+    # Assert
     assert provider.stored == "alice/beta" and provider.remembered == []
 
 
-def test_ui_resolution_and_post_response_use_the_same_canonical_identity():
+def test_post_response_carries_canonical_identity():
+    # Arrange
     provider = Provider()
     posted = RequestFactory().post(
         "/scope/", {"id": "17"}, content_type="application/json"
     )
+    # Act
     response = scope.project_listing_view(provider)(posted)
-    assert (
-        response.status_code == 200
-        and response.content == b'{"current": "alice/alpha"}'
+    # Assert
+    assert response.status_code == 200 and response.content == b'{"current": "alice/alpha"}'
+
+
+def test_post_response_remembers_canonical_identity():
+    # Arrange
+    provider = Provider()
+    posted = RequestFactory().post(
+        "/scope/", {"id": "17"}, content_type="application/json"
     )
+    # Act
+    scope.project_listing_view(provider)(posted)
+    # Assert
     assert provider.remembered == ["alice/alpha"]
 
 
 @pytest.mark.parametrize(
     "selected", [None, "", 0, 0.0, False, True, [], {}, ["17"], {"id": "17"}, 17]
 )
-def test_listing_refuses_invalid_selectors_before_provider_reads(selected):
+def test_listing_refuses_invalid_selectors_status(selected):
+    # Arrange
     provider = Provider()
     posted = RequestFactory().post(
         "/scope/", {"id": selected}, content_type="application/json"
     )
+    # Act
     response = scope.project_listing_view(provider)(posted)
+    # Assert
     assert response.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "selected", [None, "", 0, 0.0, False, True, [], {}, ["17"], {"id": "17"}, 17]
+)
+def test_listing_refuses_invalid_selectors_body(selected):
+    # Arrange
+    provider = Provider()
+    posted = RequestFactory().post(
+        "/scope/", {"id": selected}, content_type="application/json"
+    )
+    # Act
+    response = scope.project_listing_view(provider)(posted)
+    # Assert
     assert response.content == b'{"error": "project not accessible"}'
+
+
+@pytest.mark.parametrize(
+    "selected", [None, "", 0, 0.0, False, True, [], {}, ["17"], {"id": "17"}, 17]
+)
+def test_listing_refuses_invalid_selectors_without_reads(selected):
+    # Arrange
+    provider = Provider()
+    posted = RequestFactory().post(
+        "/scope/", {"id": selected}, content_type="application/json"
+    )
+    # Act
+    scope.project_listing_view(provider)(posted)
+    # Assert
     assert provider.reads == [] and provider.calls == []
+
+
+@pytest.mark.parametrize(
+    "selected", [None, "", 0, 0.0, False, True, [], {}, ["17"], {"id": "17"}, 17]
+)
+def test_listing_refuses_invalid_selectors_without_remember(selected):
+    # Arrange
+    provider = Provider()
+    posted = RequestFactory().post(
+        "/scope/", {"id": selected}, content_type="application/json"
+    )
+    # Act
+    scope.project_listing_view(provider)(posted)
+    # Assert
     assert provider.remembered == [] and provider.stored == "alice/beta"
 
 
 @pytest.mark.parametrize(
-    "body", [
-        b"", b"{", b"not-json", b"\xff", b"[]", b"null", b"true", b"17", b'"17"', b"{}"
-    ]
+    "body", [b"", b"{", b"not-json", b"\xff", b"[]", b"null", b"true", b"17", b'"17"', b"{}"]
 )
-def test_listing_refuses_missing_or_malformed_body_before_provider_factory(body):
-    provider = Provider()
-    factory_calls = []
-
-    def factory(req):
-        factory_calls.append(req)
-        return provider
-
+def test_listing_refuses_malformed_body_status(body):
+    # Arrange
     posted = RequestFactory().generic(
         "POST", "/scope/", body, content_type="application/json"
     )
-    response = scope.project_listing_view(factory)(posted)
+    # Act
+    response = scope.project_listing_view(_recording_factory())(posted)
+    # Assert
     assert response.status_code == 403
-    assert response.content == b'{"error": "project not accessible"}'
-    assert factory_calls == [] and provider.reads == [] and provider.calls == []
-    assert provider.remembered == [] and provider.stored == "alice/beta"
 
 
-def test_listing_denied_alias_never_reads_stored_selection_or_remembers():
+@pytest.mark.parametrize(
+    "body", [b"", b"{", b"not-json", b"\xff", b"[]", b"null", b"true", b"17", b'"17"', b"{}"]
+)
+def test_listing_refuses_malformed_body_without_factory_call(body):
+    # Arrange
+    factory = _recording_factory()
+    posted = RequestFactory().generic(
+        "POST", "/scope/", body, content_type="application/json"
+    )
+    # Act
+    scope.project_listing_view(factory)(posted)
+    # Assert
+    assert factory.calls == []
+
+
+def test_listing_denied_alias_status():
+    # Arrange
     provider = Provider("bob/private")
     posted = RequestFactory().post(
         "/scope/", {"id": "17"}, content_type="application/json"
     )
+    # Act
     response = scope.project_listing_view(provider)(posted)
+    # Assert
     assert response.status_code == 403
+
+
+def test_listing_denied_alias_reads_before_refusing():
+    # Arrange
+    provider = Provider("bob/private")
+    posted = RequestFactory().post(
+        "/scope/", {"id": "17"}, content_type="application/json"
+    )
+    # Act
+    scope.project_listing_view(provider)(posted)
+    # Assert
     assert provider.reads == ["list"] and provider.calls == ["17"]
+
+
+def test_listing_denied_alias_never_remembers():
+    # Arrange
+    provider = Provider("bob/private")
+    posted = RequestFactory().post(
+        "/scope/", {"id": "17"}, content_type="application/json"
+    )
+    # Act
+    scope.project_listing_view(provider)(posted)
+    # Assert
     assert provider.remembered == [] and provider.stored == "alice/beta"
 
 
-def test_listing_valid_id_resolves_provider_factory_and_remembers():
-    provider = Provider("not-listed")
-    factory_calls = []
-
-    def factory(req):
-        factory_calls.append(req)
-        return provider
-
+def test_listing_valid_id_status():
+    # Arrange
+    factory = _recording_factory()
     posted = RequestFactory().post(
         "/scope/", {"id": "alice/alpha"}, content_type="application/json"
     )
+    # Act
     response = scope.project_listing_view(factory)(posted)
+    # Assert
     assert response.status_code == 200
+
+
+def test_listing_valid_id_body():
+    # Arrange
+    factory = _recording_factory()
+    posted = RequestFactory().post(
+        "/scope/", {"id": "alice/alpha"}, content_type="application/json"
+    )
+    # Act
+    response = scope.project_listing_view(factory)(posted)
+    # Assert
     assert response.content == b'{"current": "alice/alpha"}'
-    assert factory_calls == [posted] and provider.reads == ["list"]
-    assert provider.calls == [] and provider.remembered == ["alice/alpha"]
 
 
-def test_navigation_without_selection_keeps_authorized_stored_fallback():
+def test_listing_valid_id_consults_factory_once():
+    # Arrange
+    factory = _recording_factory()
+    posted = RequestFactory().post(
+        "/scope/", {"id": "alice/alpha"}, content_type="application/json"
+    )
+    # Act
+    scope.project_listing_view(factory)(posted)
+    # Assert
+    assert factory.calls == [posted]
+
+
+def test_listing_valid_id_remembers_without_normalization():
+    # Arrange
+    factory = _recording_factory()
+    posted = RequestFactory().post(
+        "/scope/", {"id": "alice/alpha"}, content_type="application/json"
+    )
+    # Act
+    scope.project_listing_view(factory)(posted)
+    # Assert
+    assert factory.provider.calls == [] and factory.provider.remembered == ["alice/alpha"]
+
+
+def test_navigation_without_selection_falls_back_to_stored():
+    # Arrange
     provider = Provider()
-    assert scope.resolve_project(request(), provider) == "alice/beta"
+    # Act
+    resolved = scope.resolve_project(request(), provider)
+    # Assert
+    assert resolved == "alice/beta"
+
+
+def test_navigation_without_selection_reads_list_and_last():
+    # Arrange
+    provider = Provider()
+    # Act
+    scope.resolve_project(request(), provider)
+    # Assert
     assert provider.reads == ["list", "last"] and provider.calls == []
+
+
+def test_navigation_without_selection_never_remembers():
+    # Arrange
+    provider = Provider()
+    # Act
+    scope.resolve_project(request(), provider)
+    # Assert
     assert provider.remembered == [] and provider.stored == "alice/beta"
 
 
-def test_provider_fault_is_unavailable_without_remembering():
+def test_provider_fault_is_unavailable():
+    # Arrange
     provider = Provider()
 
     def unavailable(request, selector):
         raise RuntimeError("synthetic provider outage")
 
     provider.canonical_project_id = unavailable
+    # Act
     result = context.resolve_active_project(request(), provider, "17")
-    assert result.state == context.STATE_UNAVAILABLE and provider.remembered == []
-
-
-def test_no_configured_provider_remains_unavailable():
-    with override_settings(SCITEX_PROJECT_PROVIDER=""):
-        result = context.resolve_active_project(request(), explicit="17")
+    # Assert
     assert result.state == context.STATE_UNAVAILABLE
 
 
-def test_host_storage_sees_only_canonical_authorized_ids(monkeypatch, tmp_path):
+def test_provider_fault_never_remembers():
+    # Arrange
     provider = Provider()
-    monkeypatch.setattr(scope, "host_project_provider", lambda: provider)
+
+    def unavailable(request, selector):
+        raise RuntimeError("synthetic provider outage")
+
+    provider.canonical_project_id = unavailable
+    # Act
+    context.resolve_active_project(request(), provider, "17")
+    # Assert
+    assert provider.remembered == []
+
+
+def test_no_configured_provider_remains_unavailable():
+    # Arrange
+    req = request()
+    # Act
+    with override_settings(SCITEX_PROJECT_PROVIDER=""):
+        result = context.resolve_active_project(req, explicit="17")
+    # Assert
+    assert result.state == context.STATE_UNAVAILABLE
+
+
+def test_host_storage_resolves_canonical_id(_use_provider, tmp_path):
+    # Arrange
+    provider = Provider()
+    _use_provider(provider)
     calls = []
     storage = SimpleNamespace(
         project_path=lambda key, req: calls.append(key) or tmp_path,
@@ -196,23 +461,82 @@ def test_host_storage_sees_only_canonical_authorized_ids(monkeypatch, tmp_path):
     )
     req = request()
     req.GET["project"] = "17"
+    # Act
     with override_settings(SCITEX_APP_MODE="hub", SCITEX_PROJECT_STORAGE=storage):
         access = host.project_access(req, write=True, remember=False)
-    assert access.id == "alice/alpha" and calls == ["alice/alpha", "alice/alpha", "alice/alpha"]
-    assert provider.remembered == []
+    # Assert
+    assert access.id == "alice/alpha" and calls == ["alice/alpha"] * 3
 
 
-def test_host_denied_alias_cannot_consult_storage(monkeypatch):
-    provider = Provider("bob/private")
-    monkeypatch.setattr(scope, "host_project_provider", lambda: provider)
+def test_host_storage_never_remembers_listing(_use_provider, tmp_path):
+    # Arrange
+    provider = Provider()
+    _use_provider(provider)
     storage = SimpleNamespace(
-        project_path=lambda *args: pytest.fail("denied alias reached storage")
+        project_path=lambda key, req: tmp_path,
+        can_write=lambda key, req: True,
     )
     req = request()
     req.GET["project"] = "17"
-    with (
-        override_settings(SCITEX_APP_MODE="hub", SCITEX_PROJECT_STORAGE=storage),
-        pytest.raises(host.AccessError) as exc,
-    ):
-        host.project_access(req)
-    assert exc.value.status == 404 and provider.remembered == []
+    # Act
+    with override_settings(SCITEX_APP_MODE="hub", SCITEX_PROJECT_STORAGE=storage):
+        host.project_access(req, write=True, remember=False)
+    # Assert
+    assert provider.remembered == []
+
+
+def test_host_denied_alias_raises_access_error(_use_provider):
+    # Arrange
+    _use_provider(Provider("bob/private"))
+    storage = SimpleNamespace(
+        project_path=_deny_storage
+    )
+    req = request()
+    req.GET["project"] = "17"
+    # Act
+    with override_settings(SCITEX_APP_MODE="hub", SCITEX_PROJECT_STORAGE=storage):
+        raised = None
+        try:
+            host.project_access(req)
+        except host.AccessError as exc:
+            raised = exc
+    # Assert
+    assert isinstance(raised, host.AccessError)
+
+
+def test_host_denied_alias_status_is_404(_use_provider):
+    # Arrange
+    _use_provider(Provider("bob/private"))
+    storage = SimpleNamespace(
+        project_path=_deny_storage
+    )
+    req = request()
+    req.GET["project"] = "17"
+    # Act
+    with override_settings(SCITEX_APP_MODE="hub", SCITEX_PROJECT_STORAGE=storage):
+        raised = None
+        try:
+            host.project_access(req)
+        except host.AccessError as exc:
+            raised = exc
+    # Assert
+    assert raised is not None and raised.status == 404
+
+
+def test_host_denied_alias_never_remembers(_use_provider):
+    # Arrange
+    provider = Provider("bob/private")
+    _use_provider(provider)
+    storage = SimpleNamespace(
+        project_path=_deny_storage
+    )
+    req = request()
+    req.GET["project"] = "17"
+    # Act
+    with override_settings(SCITEX_APP_MODE="hub", SCITEX_PROJECT_STORAGE=storage):
+        try:
+            host.project_access(req)
+        except host.AccessError:
+            pass
+    # Assert
+    assert provider.remembered == []

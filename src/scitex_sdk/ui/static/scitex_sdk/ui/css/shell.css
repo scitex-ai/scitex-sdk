@@ -33,6 +33,7 @@
 @import "./shell/stx-shell-sidebar.css";
 @import "./shell/terminal.css";
 @import "./shell/theme.css";
+@import "./shell/scrollbars.css";
 @import "./shell/viewer.css";
 @import "./shell/workspace-files-tree.css";
 @import "./shell/workspace-files-tree/base.css";

@@ -4,7 +4,8 @@
 declare ``namespace_aliases = ("old_name",)`` in its URLconf. Each alias is an
 instance namespace over the same relative URLconf, never a second view tree.
 Hosts must use this helper to consume the declaration; plain Django include
-does not support aliases. This is an unpublished coordinated SDK contract.
+does not support aliases. This is a shipped but not-yet-adopted cross-package
+contract: implemented and tested in the SDK, awaiting its first leaf adopter.
 """
 
 from __future__ import annotations

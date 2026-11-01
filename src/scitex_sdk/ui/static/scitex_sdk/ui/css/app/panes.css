@@ -25,6 +25,22 @@
   min-height: 0;
 }
 
+/* Opt-in content/details layout. Inline sizes restored by a host resizer
+ * override this default; the viewport bound still protects narrow screens. */
+.stx-panes[data-stx-panes-layout="main-details"] {
+  --stx-panes-columns: minmax(0, 1fr) auto;
+}
+
+.stx-panes[data-stx-panes-layout="main-details"] > [data-stx-pane="details"] {
+  width: var(--stx-panes-details-width, 320px);
+  max-width: var(--stx-panes-details-max-width, 40vw);
+}
+
+.stx-panes[data-stx-panes-layout="main-details"] > [data-stx-pane="details"][data-stx-pane-collapsed] {
+  /* Keep an inline remembered width intact for expansion. */
+  width: auto !important;
+}
+
 /* Opt-in sticky header row inside a pane (its title and controls). */
 .stx-panes--single > .stx-panes__pane > [data-stx-pane-header] {
   position: sticky;
@@ -134,6 +150,11 @@
   width: 100%;
   overflow: auto;
   overscroll-behavior: contain;
+}
+
+.stx-panes.stx-panes--single[data-stx-panes-layout="main-details"] > [data-stx-pane="details"][data-stx-pane-active] {
+  width: 100% !important;
+  max-width: none;
 }
 
 /* ── Accordion for secondary settings inside a pane ────────────────── */

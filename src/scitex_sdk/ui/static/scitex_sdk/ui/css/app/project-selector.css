@@ -23,9 +23,19 @@
  */
 
 .stx-app-project-selector {
+  /* Global --spacing-xs is rem-based. Header control spacing must remain
+     identical when the surrounding application uses a different root size. */
+  --stx-project-selector-gap: 4px;
   position: relative;
   display: inline-block;
   min-width: 200px;
+  /* Same component metrics under both the Hub's 14px root and a leaf's
+     16px root; never inherit an app's alternate font or line-height. */
+  font-family: var(--base-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol");
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
 }
 
 .stx-app-project-selector__trigger {
@@ -33,7 +43,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-xs, 4px);
+  gap: var(--stx-project-selector-gap);
   width: 100%;
   height: var(--button-height, 36px);
   padding: 0 12px;
@@ -44,7 +54,7 @@
   color: var(--text-primary, #333);
 
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -79,7 +89,7 @@
 .stx-app-project-selector__panel {
   display: none;
   position: absolute;
-  top: calc(100% + var(--spacing-xs, 4px));
+  top: calc(100% + var(--stx-project-selector-gap));
   left: 0;
   right: 0;
   z-index: 100;
@@ -99,9 +109,9 @@
 .stx-app-project-selector__search {
   box-sizing: border-box;
   display: block;
-  width: calc(100% - 2 * var(--spacing-xs, 4px));
+  width: calc(100% - 2 * var(--stx-project-selector-gap));
   height: var(--input-height, 36px);
-  margin: var(--spacing-xs, 4px);
+  margin: var(--stx-project-selector-gap);
   padding: 0 10px;
 
   border: 1px solid var(--border-default, #999);
@@ -122,7 +132,7 @@
 }
 
 .stx-app-project-selector__list {
-  padding: var(--spacing-xs, 4px);
+  padding: var(--stx-project-selector-gap);
 }
 
 /* Real <button> options — platform keyboard operability for free. */
@@ -141,7 +151,7 @@
   color: var(--text-primary, #333);
 
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 14px;
   text-align: left;
   cursor: pointer;
 }
@@ -164,6 +174,16 @@
   font-weight: 600;
 }
 
+/* Listed-but-unselectable rows (capability absent for this host/app). */
+.stx-app-project-selector__option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.stx-app-project-selector__option:disabled:hover {
+  background: none;
+}
+
 .stx-app-project-selector__option-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -172,7 +192,7 @@
 
 .stx-app-project-selector__option-detail {
   color: var(--text-muted, #777);
-  font-size: 0.75rem;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -181,7 +201,7 @@
 .stx-app-project-selector__empty {
   padding: 10px;
   color: var(--text-muted, #777);
-  font-size: 0.85rem;
+  font-size: 14px;
 }
 
 /* Phones and touch screens: every tap target at least 44px. */
@@ -249,5 +269,13 @@
   }
   .stx-app-header__slot--project-selector .stx-app-project-selector {
     width: 100%;
+  }
+  /* Framework bindings can add wrappers between the slot and the picker.
+     Grow the slot's child too, instead of letting inline-flex shrink that
+     wrapper to the current label and truncate the entire dropdown. */
+  .stx-app-header .stx-app-header__slot--project-selector > * {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
   }
 }

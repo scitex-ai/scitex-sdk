@@ -96,13 +96,27 @@ def test_picker_defaults_to_the_host_registered_provider():
     assert 'data-provider-url="/host/projects/"' in html
 
 
-def test_picker_without_any_provider_renders_nothing():
-    # Arrange
+def test_picker_without_any_provider_renders_empty_slot():
+    # Arrange — project scope, signed in (no request), no provider
+    # anywhere: the tag degrades gracefully, never raises (cross-app
+    # adoption rule, amended 2026-10-24).
     source = '{% load scitex_project_picker %}{% scitex_project_picker scope="project" %}'
     # Act
     html = _render_source(source, {})
     # Assert
     assert html == ""
+
+
+def test_picker_without_any_provider_is_loud_only_when_strict():
+    # Arrange — same provider-less render with the explicit strict flag:
+    # opting into strict restores the loud failure.
+    from django.core.exceptions import ImproperlyConfigured
+
+    source = '{% load scitex_project_picker %}{% scitex_project_picker scope="project" strict=True %}'
+    # Act
+    # Assert
+    with pytest.raises(ImproperlyConfigured, match="no provider"):
+        _render_source(source, {})
 
 
 def test_picker_maps_a_project_object_through_the_host_provider():
@@ -219,13 +233,26 @@ def test_enabled_picker_still_requires_signed_in_user():
     assert html == ""
 
 
-def test_enabled_picker_still_requires_host_provider():
-    # Arrange
+def test_enabled_picker_without_provider_renders_empty_slot():
+    # Arrange — user scope opted in, signed in, still no provider:
+    # opting in does not opt out of graceful degradation.
     source = "{% load scitex_project_picker %}{% scitex_project_picker allow_user_scope=True %}"
     # Act
     html = _render_source(source, {"app_scope": "user"})
     # Assert
     assert html == ""
+
+
+def test_enabled_picker_without_provider_is_loud_only_when_strict():
+    # Arrange — user scope opted in with the explicit strict flag:
+    # strict restores the loud failure for the provider-less render.
+    from django.core.exceptions import ImproperlyConfigured
+
+    source = "{% load scitex_project_picker %}{% scitex_project_picker allow_user_scope=True strict=True %}"
+    # Act
+    # Assert
+    with pytest.raises(ImproperlyConfigured, match="no provider"):
+        _render_source(source, {"app_scope": "user"})
 
 
 @pytest.mark.parametrize(
@@ -270,3 +297,102 @@ def test_direct_picker_helper_keeps_standalone_rendering_without_active_template
 
 
 # EOF
+
+
+class AppContextProvider:
+    """Real host protocol implementation with an optional contextual URL hook."""
+
+    def list_projects(self, request):
+        return []
+
+    def last_visited(self, request):
+        return None
+
+    def remember(self, request, project_id):
+        raise ValueError("no projects")
+
+    def current_scope(self, request):
+        return None
+
+    def remember_scope(self, request, selection):
+        raise ValueError("no selection")
+
+    def project_provider_url(self, request, base_url):
+        return base_url + "?app=" + request.path_info.split("/")[2]
+
+
+def test_host_context_reaches_explicit_picker_and_canonical_meta():
+    # Arrange
+    from django.test import RequestFactory, override_settings
+    request = RequestFactory().get("/apps/writer/")
+    from types import SimpleNamespace
+    request.user = SimpleNamespace(is_authenticated=True)
+    source = ("{% load scitex_project_picker %}{% scitex_project_provider_meta %}"
+              '{% scitex_project_picker scope="project" provider_url="/host/projects/" %}')
+    # Act
+    with override_settings(SCITEX_PROJECT_PROVIDER_URL="/host/projects/",
+                           SCITEX_PROJECT_PROVIDER=f"{__name__}.AppContextProvider"):
+        html = _render_source(source, {"request": request})
+    # Assert
+    assert ('content="/host/projects/?app=writer"' in html
+            and 'data-provider-url="/host/projects/?app=writer"' in html
+            and 'data-allow-user-scope="true"' in html
+            and 'data-scoped-protocol="true"' in html)
+
+
+def test_provider_url_without_request_remains_legacy_compatible():
+    # Arrange
+    from django.test import override_settings
+    from scitex_sdk.ui.project_scope import host_project_provider_url
+    # Act
+    with override_settings(SCITEX_PROJECT_PROVIDER_URL="/host/projects/",
+                           SCITEX_PROJECT_PROVIDER=f"{__name__}.AppContextProvider"):
+        url = host_project_provider_url()
+    # Assert
+    assert url == "/host/projects/"
+
+
+def test_picker_assets_have_content_versions():
+    # Arrange
+    import re
+    # Act
+    html = _render({"app_scope": "project"})
+    # Assert
+    assert all(re.search(r"project-selector\." + ext + r"\?v=[a-f0-9]+", html)
+               for ext in ("css", "js"))
+
+
+def test_one_provider_authority_is_emitted_per_document():
+    # Arrange
+    from django.test import RequestFactory, override_settings
+    from types import SimpleNamespace
+    request = RequestFactory().get("/apps/writer/")
+    request.user = SimpleNamespace(is_authenticated=True)
+    source = "{% load scitex_project_picker %}{% scitex_project_provider_meta %}{% scitex_project_provider_meta %}"
+    # Act
+    with override_settings(SCITEX_PROJECT_PROVIDER_URL="/host/projects/",
+                           SCITEX_PROJECT_PROVIDER=f"{__name__}.AppContextProvider"):
+        html = _render_source(source, {"request": request})
+    # Assert
+    assert html.count('name="stx-project-provider"') == 1
+
+
+def test_explicit_page_view_is_separate_from_remembered_scope():
+    # Arrange
+    source = ('{% load scitex_project_picker %}'
+              '{% scitex_project_picker provider_url="/api/projects/" scope="project" view_scope="user" %}')
+    # Act
+    html = _render_source(source, {})
+    # Assert
+    assert 'data-view-scope="user" data-view-project=""' in html
+
+
+@pytest.mark.parametrize("scope_value,project", [("user", "alpha"), ("project", ""), ("unknown", "")])
+def test_malformed_page_view_pair_is_rejected(scope_value, project):
+    # Arrange
+    source = ('{% load scitex_project_picker %}'
+              '{% scitex_project_picker provider_url="/api/projects/" scope="project" view_scope=view_scope view_project=view_project %}')
+    # Act
+    # Assert
+    with pytest.raises(ValueError):
+        _render_source(source, {"view_scope": scope_value, "view_project": project})

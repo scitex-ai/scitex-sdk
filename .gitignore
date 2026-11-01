@@ -9,3 +9,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 node_modules/
+test-results/
+playwright-report/
+.worktrees/
+.worktrees/

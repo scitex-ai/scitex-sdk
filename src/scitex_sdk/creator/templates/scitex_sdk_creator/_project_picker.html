@@ -6,8 +6,9 @@ Project-scoped ONLY (`scope="project"`, no `allow_user_scope`): the SDK
 wizard scaffolds/validates concrete app directories, so an All-Projects
 user scope does not fit — "not selected" is the right default, and
 picking a project resumes it by prefilling the target below.
-The tag renders NOTHING unless the request is signed in AND the host
-registered a project provider, so standalone serves unchanged markup.
-Included only when `project_picker_available` (view probes the template
-engines: `{% load %}` of a missing library is a hard TemplateSyntaxError).
+The tag FAILS LOUDLY without a provider, so this include is guarded by
+`project_picker_available` (library AND host provider — the view probes
+both, since `{% load %}` of a missing library is a hard TemplateSyntaxError
+and an unprovided tag now raises instead of rendering nothing).
+Included only when the picker can actually render.
 {% endcomment %}{% scitex_project_picker scope="project" %}

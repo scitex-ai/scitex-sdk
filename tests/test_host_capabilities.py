@@ -47,14 +47,27 @@ class Storage:
 
 
 @pytest.fixture
-def hosted(tmp_path, monkeypatch):
+def hosted(tmp_path):
+    # Arrange — real module attribute with try/finally restore
+    # (real module attribute): the provider resolves through the real import path.
+    import sys
+
+    module = sys.modules[__name__]
+    had_projects = hasattr(module, "_projects")
+    previous_projects = getattr(module, "_projects", None)
     projects, storage = Projects(), Storage(tmp_path)
-    monkeypatch.setattr(__import__(__name__, fromlist=["_"]), "_projects", projects, raising=False)
+    module._projects = projects
     with override_settings(
         SCITEX_APP_MODE="hub", SCITEX_PROJECT_PROVIDER=__name__ + "._projects",
         SCITEX_PROJECT_STORAGE=storage, SCITEX_PROJECT_STORE=None,
     ):
-        yield projects, storage
+        try:
+            yield projects, storage
+        finally:
+            if had_projects:
+                module._projects = previous_projects
+            else:
+                del module._projects
 
 
 @pytest.fixture
@@ -414,18 +427,15 @@ def test_allowed_write_validates_permission_before_and_after_resolution(hosted):
     assert access.can_write is True and permission_calls == ["owned", "owned"]
 
 
-def test_missing_permission_check_maps_to_capability_failure(hosted, tmp_path, monkeypatch):
+def test_missing_permission_check_maps_to_capability_failure(hosted, tmp_path):
     # Arrange
     from types import SimpleNamespace
 
     from django.test import override_settings
     from scitex_sdk.host import CapabilityUnavailable
 
-    projects, _ = hosted
+    hosted
     storage = SimpleNamespace(project_path=lambda project_id, req: str(tmp_path))
-    monkeypatch.setattr(
-        "tests.test_host_capabilities._projects", projects, raising=False
-    )
     # Act
     try:
         with override_settings(

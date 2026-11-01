@@ -192,3 +192,84 @@ def test_capability_detection_keeps_protocol_unchanged():
     pass
     # Assert
     assert scope.supports_scoped_capability(scoped) and not scope.supports_scoped_capability(legacy) and legacy_body["allow_user_scope"] is False and "current_scope" not in legacy_body
+
+
+class DisabledProvider(ScopedProvider):
+    def list_projects(self, request):
+        # Arrange
+        return [
+            scope.ProjectEntry("alpha", "Alpha"),
+            scope.ProjectEntry("beta", "Beta", disabled=True, disabled_reason="Archived — read-only"),
+        ]
+
+    def user_scope_disabled_reason(self, request):
+        # Arrange
+        return "All Projects is unavailable in this app"
+
+
+def test_disabled_entry_rides_along_but_legacy_post_refuses_it():
+    # Arrange
+    provider = DisabledProvider()
+    view = scope.project_listing_view(provider)
+    # Act
+    body = _body(view(RequestFactory().get("/")))
+    refused = _post(view, {"id": "beta"})
+    accepted = _post(view, {"id": "alpha"})
+    # Assert
+    assert body["projects"][1] == {"id": "beta", "name": "Beta", "disabled": True, "disabled_reason": "Archived — read-only"}
+    assert refused.status_code == 403 and accepted.status_code == 200 and provider.remembered == ["alpha"]
+
+
+def test_scoped_get_advertises_user_scope_disabled_reason():
+    # Arrange
+    provider = DisabledProvider()
+    view = scope.scoped_project_listing_view(provider)
+    # Act
+    body = _body(view(RequestFactory().get("/")))
+    # Assert
+    assert body["allow_user_scope"] is True and body["user_scope_disabled_reason"] == "All Projects is unavailable in this app"
+
+
+def test_scoped_post_refuses_disabled_user_and_project_without_side_effects():
+    # Arrange
+    provider = DisabledProvider()
+    view = scope.scoped_project_listing_view(provider)
+    # Act
+    user_status = _post(view, {"scope": "user", "id": None}).status_code
+    project_status = _post(view, {"scope": "project", "id": "beta"}).status_code
+    legacy_status = _post(view, {"id": "beta"}).status_code
+    # Assert
+    assert (user_status, project_status, legacy_status) == (403, 403, 403) and provider.scope_commits == [] and provider.remembered == []
+
+
+def test_absent_reason_hook_means_available_user_scope():
+    # Arrange
+    provider = ScopedProvider()
+    view = scope.scoped_project_listing_view(provider)
+    # Act
+    body = _body(view(RequestFactory().get("/")))
+    response = _post(view, {"scope": "user", "id": None})
+    # Assert
+    assert "user_scope_disabled_reason" not in body and response.status_code == 200
+
+
+def test_explicit_project_can_be_resolved_without_remembering_on_get():
+    # Arrange — a page view must not change a shared profile preference.
+    provider = LegacyProvider()
+    provider.stored = "alpha"
+    request = RequestFactory().get("/?project=beta")
+    # Act
+    selected = scope.resolve_project(request, provider, explicit="beta", remember=False)
+    # Assert
+    assert (selected, provider.stored, provider.remembered) == ("beta", "alpha", [])
+
+
+def test_read_only_project_resolution_still_enforces_access():
+    # Arrange
+    provider = LegacyProvider()
+    provider.stored = "alpha"
+    request = RequestFactory().get("/?project=private")
+    # Act
+    selected = scope.resolve_project(request, provider, explicit="private", remember=False)
+    # Assert
+    assert (selected, provider.stored, provider.remembered) == (None, "alpha", [])

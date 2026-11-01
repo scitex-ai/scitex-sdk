@@ -4,6 +4,82 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.17] - Unpublished preview
+
+- Expose request-local project view selections independently of remembered
+  preference; authorize project access with optional `remember=False`.
+- Expose public PDF page surfaces and viewport coordinate conversion, with
+  opt-in selectable text and link layers. Existing two-argument render
+  callbacks remain supported.
+- Add the shared DataTable, focus-aware filter fields, and source ownership
+  checks. Their public UI builds ship in the Python wheel.
+- This source version is a preview until the normal release workflow publishes
+  it. LivePaper 0.2.20 and Writer consumers requiring these APIs must follow
+  the SDK release; source installation is not evidence of public availability.
+
+- Normalize AppHeader and ProjectSelector typography independently of page root
+  fonts, and limit Creator button styles to its action rows. Add Chromium
+  regressions for both themes, phone/desktop layouts and scope availability.
+
+- Add opt-in main-details panes layout with a shared 320px Details default,
+  responsive bounds and phone width, and collapse behavior preserving host
+  restored inline sizes. See docs/ui/main-details-panes.md; source preview only.
+
+- Creator starter choices and primary buttons use the semantic navy/gold primary-action roles; the
+  in-app header reads SciTeX SDK while launcher labels remain SDK.
+
+- AppHeader auto-mount immediately places an existing direct SDK project picker
+  in its canonical slot, preserving the control and avoiding a second header row
+  while leaf viewer modules load.
+
+## [0.3.16] - 2026-10-31
+
+Picker disabled-with-reason contract (PR #90): `ProjectEntry` gains
+`disabled`/`disabled_reason` (absent by default, legacy-safe); the scoped
+listing advertises `user_scope_disabled_reason` so a host can grey out All
+Projects instead of hiding it, and both views refuse disabled ids and
+disabled user-scope with 403 on a single provider read. TS renders disabled
+rows greyed (`aria-disabled` + tooltip) and refuses them on
+command/click/keyboard; non-string reason fails closed.
+
+## [0.3.15] - 2026-10-24
+
+UA-native controls follow the app theme (PR #87, operator 2026-10-24):
+light/dark palettes declare `color-scheme` so select popups, checkboxes,
+radios, and scrollbars render in the app theme instead of the OS default
+(bright dropdown in dark mode). 2 new branding tests.
+
+## [0.3.14] - 2026-10-23
+
+Shared scrollbar surface + shell-head wiring (operator 2026-10-23):
+`shell/scrollbars.css` paints the default scrollbar for every scroll
+container from workspace tokens (thumb/border-default, track/bg-secondary,
+hover/border-hover), `color-scheme: light/dark` per theme, wired into
+shell.css/all.css bundles AND loaded in `standalone_shell.html` right
+after theme.css (leaf pages include shell files individually, never the
+bundles — bundle-only wiring reached zero pages). New linter STX-UI115
+(warning) flags leaf-local scrollbar colouring; STX-UI116 covers
+short tab titles.
+
+## [0.3.13] - 2026-10-23
+
+Tab chrome SSOT, short titles + official mark (operator 2026-10-23):
+`shell_title` strips a `SciTeX ` prefix (tab carries no brand text —
+the favicon IS the brand; project name lives in the app page), new
+linter STX-UI116 (warning) flags hardcoded `SciTeX `-prefixed
+`data-app-title` / `<title>` in templates, and the canonical favicon is
+the official white-on-navy mark (same snake geometry, no dev-vs-prod
+conditional; PNG set regenerated).
+- Leaf-declared launcher `group` (operator 2026-10-23): optional manifest
+  field `foundation` | `work` | `publication` (closed enum, typo is a
+  validator ERROR; omitted = host keeps existing grouping), readable at
+  runtime via `ScitexAppConfig.app_group`. Tile labels go short
+  (`Cards`, `Agent Container`, `Storage`, `Scholar`, `Stats`, `FigRecipe`,
+  `Writer`): the `SciTeX ` prefix is now a validator ADVISORY, and tile
+  label vs in-app header title are independent strings. Leaf value edits +
+  hub launcher dedup (agent-container WORK duplicate dropped) are App-lane
+  execution.
+
 ## [0.3.12] - 2026-10-22
 
 Identical-row pack (PR #73): STX-UI112 hardcoded tab titles, UI-113

@@ -154,6 +154,34 @@ _MANIFEST_COMPARE_KEYS = ("label", "icon")
 # the shared shell or _branding_head.html partial. Generated docs trees
 # are never scanned (see _DEFAULT_SKIP_DIRS).
 _TITLE_LITERAL_RE = re.compile(r"<title>(?P<text>[^<>{}]+)</title>", re.IGNORECASE)
+# UI-116 — hardcoded `SciTeX `-prefixed app title (operator 2026-10-23):
+# tab and in-app header titles use the SHORT tile form. Two shapes: the
+# `data-app-title` mount attribute (plain, single- or double-quoted, or a
+# {% translate %} tag in either quoting) and a literal `<title>` element.
+# Values carrying template syntax elsewhere are still flagged when the
+# brand prefix is literal — the prefix is never dynamic, only the name
+# around it could be, and a dynamic name comes from the tile label via
+# shell_title(), which strips it.
+_BRANDED_DATA_TITLE_RE = re.compile(
+    r"""data-app-title\s*=\s*(?:"SciTeX\s|'SciTeX\s|"\{%[^}]*?["']SciTeX\s|'\{%[^}]*?["']SciTeX\s)""",
+    re.IGNORECASE,
+)
+_BRANDED_TITLE_TAG_RE = re.compile(
+    r"""<title>[^<>{}]*SciTeX\s""",
+    re.IGNORECASE,
+)
+
+# UI-112b — a MULTI-LINE `{# ... #}` "comment". Django only strips
+# single-line {# #}; a multi-line one is emitted VERBATIM into the page
+# (measured twice 2026-10-22: journal app.html, scholar workspace_assets).
+# Use {% comment %}...{% endcomment %} for multi-line commentary.
+_MULTILINE_HASH_COMMENT_RE = re.compile(r"\{#.*?#}", re.DOTALL)
+
+
+def _is_multiline_hash_comment(text: str, start: int, end: int) -> bool:
+    """True when a `{# ... #}` match spans a newline (and is thus emitted
+    verbatim by Django instead of stripped)."""
+    return "\n" in text[start:end]
 
 # UI-113 — consumer CSS overriding the shared AppHeader row. Row height,
 # placement and font size come from the SDK alone; any leaf restyle is
@@ -183,6 +211,22 @@ _LAYOUT_IMPORTANT_RE = re.compile(
 # primitive. Variants (`.btn-primary`, `.btn:hover`) are not flagged on
 # their own — they follow the base; fix the base and they collapse.
 _LEAF_BUTTON_RE = re.compile(r"^(?:\.btn|button)\s*\{", re.IGNORECASE)
+
+# UI-115 — leaf-local scrollbar COLOURING outside the shared shell
+# scrollbar surface. Colour declarations (`scrollbar-color:` /
+# `::-webkit-scrollbar-{thumb,track}` with a colour) in a consumer CSS
+# file that does NOT import `shell/scrollbars.css` fork the theme: the
+# FigRecipe canvas shipped a light native scrollbar on dark for exactly
+# this reason. Width/shape-only rules (no colour) are out of scope —
+# keep them; only colour forks are flagged. The shared shell file
+# itself and the file-tabs strip (width-only, token-backed thumb) are
+# exempt: the former IS the surface, the latter carries no colour fork.
+_SCROLLBAR_COLOUR_RE = re.compile(
+    r"(scrollbar-color\s*:|::-webkit-scrollbar-(thumb|track)\s*\{?)",
+    re.IGNORECASE,
+)
+_SCROLLBAR_SURFACE_RE = re.compile(r"shell/scrollbars\.css")
+_FILE_TABS_STRIP_RE = re.compile(r"stx-app-file-tabs")
 
 
 # --------------------------------------------------------------------------- #
@@ -376,22 +420,6 @@ def _scan_css(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
                 source_line=line.rstrip("\n"),
             )
 
-    # UI-113 — consumer restyle of the shared AppHeader row. Row height,
-    # placement and font size come from the SDK alone; any leaf restyle
-    # is a fork. Commented-out code is not a restyle.
-    for lineno, line in enumerate(lines, start=1):
-        if _is_comment_line(line):
-            continue
-        m = _APPHEADER_SELECTOR_RE.search(line)
-        if m and not _in_comment(lineno, m.start()):
-            yield UIViolation(
-                rule=rules["STX-UI113"],
-                path=str(path),
-                line=lineno,
-                col=m.start(),
-                source_line=line.rstrip("\n"),
-            )
-
     # UI-114 — leaf-local button base: a parallel button system next to
     # the shared `.stx-button` primitive. Variants keyed off the base
     # (`.btn-primary`, `.btn:hover`) are not flagged on their own.
@@ -407,6 +435,36 @@ def _scan_css(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
                 col=m.start(),
                 source_line=line.rstrip("\n"),
             )
+
+    # UI-115 — leaf-local scrollbar COLOURING without the shared shell
+    # surface. Same 6-line window as UI-105: a scrollbar selector /
+    # declaration whose RULE BODY carries a RAW colour (hex/rgb outside
+    # var()) in a file that never imports `shell/scrollbars.css`.
+    # Token-backed declarations are the fixed state, not a fork.
+    # Width/shape-only rules, the shared surface itself, and the
+    # width-only file-tabs strip are out of scope.
+    if "STX-UI115" in rules and not _SCROLLBAR_SURFACE_RE.search(text):
+        for lineno, line in enumerate(lines, start=1):
+            if _is_comment_line(line):
+                continue
+            if _FILE_TABS_STRIP_RE.search(line):
+                continue
+            if not _SCROLLBAR_COLOUR_RE.search(line):
+                continue
+            window = lines[lineno - 1 : min(len(lines), lineno + 6)]
+            for offset, w_line in enumerate(window):
+                if _is_comment_line(w_line):
+                    continue
+                cols = _hex_or_rgb_positions(w_line)
+                if cols:
+                    yield UIViolation(
+                        rule=rules["STX-UI115"],
+                        path=str(path),
+                        line=lineno + offset,
+                        col=cols[0],
+                        source_line=w_line.rstrip("\n"),
+                    )
+                    break
 
     # UI-111 — unconditional `!important` directional override in a file that
     # also carries @media. Overrides already inside a media query are
@@ -578,6 +636,64 @@ def _scan_tsx_html(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolat
             )
 
 
+    # UI-116 — hardcoded `SciTeX `-prefixed app title: the tab and the
+    # in-app header use the SHORT tile form (operator 2026-10-23); Django
+    # templates only (.html/.htm). Template syntax elsewhere in the value
+    # does not exempt the literal prefix.
+    if str(path).lower().endswith((".html", ".htm")):
+        for match in _BRANDED_DATA_TITLE_RE.finditer(joined):
+            pre = joined[: match.start()]
+            lineno = pre.count("\n") + 1
+            last_nl = pre.rfind("\n")
+            col = match.start() - (last_nl + 1)
+            yield UIViolation(
+                rule=rules["STX-UI116"],
+                path=str(path),
+                line=lineno,
+                col=col,
+                source_line=(
+                    lines[lineno - 1].rstrip("\n") if 1 <= lineno <= len(lines) else ""
+                ),
+            )
+        for match in _BRANDED_TITLE_TAG_RE.finditer(joined):
+            pre = joined[: match.start()]
+            lineno = pre.count("\n") + 1
+            last_nl = pre.rfind("\n")
+            col = match.start() - (last_nl + 1)
+            yield UIViolation(
+                rule=rules["STX-UI116"],
+                path=str(path),
+                line=lineno,
+                col=col,
+                source_line=(
+                    lines[lineno - 1].rstrip("\n") if 1 <= lineno <= len(lines) else ""
+                ),
+            )
+
+
+    # UI-112b — a MULTI-LINE `{# ... #}` "comment" is not a comment:
+    # Django only strips the single-line form, so the block is emitted
+    # VERBATIM into the page (measured twice 2026-10-22). Use
+    # {% comment %}...{% endcomment %} for multi-line commentary.
+    if str(path).lower().endswith((".html", ".htm")):
+        for match in _MULTILINE_HASH_COMMENT_RE.finditer(joined):
+            if not _is_multiline_hash_comment(joined, match.start(), match.end()):
+                continue
+            pre = joined[: match.start()]
+            lineno = pre.count("\n") + 1
+            last_nl = pre.rfind("\n")
+            col = match.start() - (last_nl + 1)
+            yield UIViolation(
+                rule=rules["STX-UI112"],
+                path=str(path),
+                line=lineno,
+                col=col,
+                source_line=(
+                    lines[lineno - 1].rstrip("\n") if 1 <= lineno <= len(lines) else ""
+                ),
+            )
+
+
 def _leaf_manifest_from_dist(pip_package: str) -> dict | None:
     """Load the leaf's own manifest.json from its installed distribution.
 
@@ -681,9 +797,12 @@ def scan_path(
         (shell/primitives edits), UI-111 (unconditional `!important`
         directional overrides) and UI-113 (AppHeader restyles) and
         UI-114 (parallel button bases; the SDK defines `.stx-button`)
+        and UI-115 (scrollbar colouring without the shared surface;
+        the SDK defines `shell/scrollbars.css`)
         fire. Pass False to run inside scitex-ui itself, where editing
         shell/primitives, using `!important`, defining the header
-        row, and defining the button primitive are the point.
+        row, defining the button primitive, and defining the scrollbar
+        surface are the point.
     skip_dirs
         Directory NAMES to skip while walking. Defaults skip
         ``node_modules``, ``.venv``, ``.git`` etc.
@@ -706,13 +825,20 @@ def scan_path(
         lines = text.splitlines()
         if kind == "css":
             for v in _scan_css(path, lines, rules):
-                if v.rule.id in ("STX-UI104", "STX-UI111", "STX-UI113", "STX-UI114") and not treat_as_consumer:
+                if v.rule.id in ("STX-UI104", "STX-UI111", "STX-UI113", "STX-UI114", "STX-UI115") and not treat_as_consumer:
                     continue
                 violations.append(v)
         elif kind in {"tsx", "html"}:
             violations.extend(_scan_tsx_html(path, lines, rules))
         elif kind == "json":
             violations.extend(_scan_json(path, text, rules))
+    if treat_as_consumer:
+        from ._header_contract import scan_headers
+        root = target_path if target_path.is_dir() else target_path.parent
+        targets = None if target_path.is_dir() else {target_path.resolve()}
+        for finding in scan_headers(root, targets=targets):
+            violations.append(UIViolation(rule=rules["STX-UI113"], path=finding.path,
+                                          line=finding.line, col=0, source_line=finding.detail))
     return violations
 
 

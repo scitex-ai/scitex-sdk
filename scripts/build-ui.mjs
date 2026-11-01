@@ -27,8 +27,10 @@ const entries = [
   ["app/dropdown/index", "app/dropdown"],
   ["app/empty/index", "app/empty"],
   ["app/file-tabs/index", "app/file-tabs"],
+  ["app/filter-field/auto-mount", "app/filter-field"],
   ["app/import-export/index", "app/import-export"],
   ["app/panes/auto-mount", "app/panes"],
+  ["app/pdf-viewer/index", "app/pdf-viewer"],
   ["app/project-selector/auto-mount", "app/project-selector"],
   ["app/receipt/index", "app/receipt"],
   ["app/reply-quote/index", "app/reply-quote"],
@@ -60,6 +62,9 @@ for (const [source, output, format = "esm"] of selected) {
     entryPoints: [entry],
     outfile: resolve(staticRoot, outfile),
     bundle: true,
+    // Browser PDF adopters inject their already-loaded runtime; npm consumers
+    // resolve the same optional dynamic import through package exports.
+    external: source === "app/pdf-viewer/index" ? ["pdfjs-dist"] : [],
     format,
     platform: "browser",
     banner: {

@@ -710,3 +710,190 @@ describe("scoped HTTP persistence and first mount", () => {
     } finally { meta.remove(); }
   });
 });
+
+describe("disabled availability rows", () => {
+  const disabledProjects = [
+    { id: "a", name: "Authorized A" },
+    { id: "b", name: "Authorized B", disabled: true, disabledReason: "Archived — read-only" },
+  ];
+
+  it("renders a disabled project greyed with its reason and refuses every selection path", async () => {
+    // Arrange
+    const f = fixture({ allowUserScope: true, provider: { listProjects: async () => ({ projects: disabledProjects, current: "a" }), rememberScope: async () => {} } });
+    await f.selector.ready;
+    const rows = Array.from(f.container.querySelectorAll<HTMLButtonElement>('[role="option"]'));
+    // Act
+    const viaCommand = f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "project", id: "b" });
+    rows[2].click();
+    await settle();
+    // Assert
+    expect([rows[2].disabled, rows[2].getAttribute("aria-disabled"), rows[2].title]).toEqual([true, "true", "Archived — read-only"]);
+    expect([viaCommand, f.saved, f.events, f.selector.getSelection()]).toEqual([false, [], [], { scope: "project", id: "a" }]);
+  });
+
+  it("keyboard navigation skips disabled rows and Enter on one is a no-op", async () => {
+    // Arrange
+    const f = fixture({ provider: { listProjects: async () => ({ projects: disabledProjects, current: "a" }) } });
+    await f.selector.ready;
+    const search = f.container.querySelector("input")!;
+    // Act
+    (f.container.querySelector("button") as HTMLButtonElement).click();
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await settle();
+    // Assert
+    expect([f.events, f.selector.getSelection()]).toEqual([[], { scope: "project", id: "a" }]);
+  });
+
+  it("a server disabled reason greys All but keeps projects selectable", async () => {
+    // Arrange
+    const server = await projectHttpServer({ projects, allow_user_scope: true, current_scope: "project", current: "a", user_scope_disabled_reason: "All Projects is unavailable in this app" });
+    const provider = httpProjectProvider(server.url, { allowUserScope: true });
+    const f = fixture({ provider, allowUserScope: true }); await f.selector.ready;
+    const rows = Array.from(f.container.querySelectorAll<HTMLButtonElement>('[role="option"]'));
+    // Act
+    const refused = f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "user", id: null });
+    rows[2].click(); await settle();
+    const post = await server.nextPost(); post.reply({ current_scope: "project", current: "b" });
+    await vi.waitFor(() => expect((f.container.querySelector("button") as HTMLButtonElement).disabled).toBe(false));
+    // Assert
+    expect([rows[0].disabled, rows[0].getAttribute("aria-disabled"), rows[0].title]).toEqual([true, "true", "All Projects is unavailable in this app"]);
+    expect([refused, server.posts, f.events, f.selector.getSelection()]).toEqual([false, [{ scope: "project", id: "b" }], [{ scope: "project", id: "b", name: "Authorized B" }], { scope: "project", id: "b" }]);
+  });
+
+  it("a non-string disabled reason fails the scoped port closed", async () => {
+    // Arrange
+    const server = await projectHttpServer({ projects, allow_user_scope: true, current_scope: "project", current: "a", user_scope_disabled_reason: 42 });
+    const provider = httpProjectProvider(server.url, { allowUserScope: true });
+    const f = fixture({ provider, allowUserScope: true }); await f.selector.ready;
+    // Assert
+    expect([provider.rememberScope, f.selector.getSelection(), options(f.container)]).toEqual([undefined, null, []]);
+    expect(f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "user", id: null })).toBe(false);
+  });
+});
+
+
+describe("unsupported saved choices", () => {
+  it("does not display an explicit disabled project over an unselected listing", async () => {
+    // Arrange
+    const persisted: unknown[] = [];
+    const provider: ProjectProvider = {
+      listProjects: async () => ({ projects: [{ id: "example", name: "Example", disabled: true, disabledReason: "Project filtering is unavailable" }], current: null, allow_user_scope: true }),
+      rememberScope: async (selection) => { persisted.push(selection); },
+    };
+    const f = fixture({ current: "example", provider, allowUserScope: true });
+    // Act
+    await f.selector.ready;
+    // Assert
+    expect([f.selector.getSelection(), f.container.querySelector(".stx-app-project-selector__placeholder")?.textContent, persisted, f.events]).toEqual([null, "Select project", [], []]);
+  });
+
+  it("does not display a saved All choice when that operation is disabled", async () => {
+    // Arrange
+    const persisted: unknown[] = [];
+    const provider: ProjectProvider = {
+      listProjects: async () => ({ projects, current: null, allow_user_scope: true, user_scope_disabled_reason: "One project is required" }),
+      rememberScope: async (selection) => { persisted.push(selection); },
+    };
+    const f = fixture({ currentScope: "user", provider, allowUserScope: true });
+    // Act
+    await f.selector.ready;
+    // Assert
+    expect([f.selector.getSelection(), f.container.querySelector(".stx-app-project-selector__placeholder")?.textContent, persisted, f.events]).toEqual([null, "Select project", [], []]);
+  });
+
+  it("preserves an explicit allowed project over an empty listing projection", async () => {
+    // Arrange
+    const provider: ProjectProvider = { listProjects: async () => ({ projects, current: null }), rememberScope: async () => {} };
+    const f = fixture({ current: "a", provider });
+    // Act
+    await f.selector.ready;
+    // Assert
+    expect(f.selector.getSelection()).toEqual({ scope: "project", id: "a" });
+  });
+});
+
+
+describe("host advertised scoped protocol", () => {
+  it.each([[true, true], [true, false], [false, true], [false, false]])("preserves disabled choices through real meta and HTTP (%s,%s)", async (user, project) => {
+    // Arrange
+    const server = await projectHttpServer({ projects: [{ id: "a", name: "Authorized A", ...(!project ? { disabled: true, disabled_reason: "No project operations" } : {}) }], current: null, allow_user_scope: true, ...(!user ? { user_scope_disabled_reason: "No aggregate view" } : {}) });
+    const meta = document.createElement("meta");
+    meta.name = "stx-project-provider"; meta.content = server.url;
+    meta.setAttribute("data-scoped-protocol", "true"); document.head.append(meta);
+    const container = document.createElement("div"); document.body.append(container);
+    // Act
+    const selector = mountProjectSelectorByScope({ container, scope: "project" })!;
+    instances.push(selector); await selector.ready;
+    const f = { container, selector };
+    const rows = [...f.container.querySelectorAll('[role="option"]')];
+    const snapshot = rows.map((row) => [row.textContent, row.getAttribute("aria-disabled") === "true", row.getAttribute("title")]);
+    meta.remove();
+    // Assert
+    expect([snapshot, server.posts, f.selector.getSelection()]).toEqual([[["All Projects", !user, user ? null : "No aggregate view"], ["Authorized A", !project, project ? null : "No project operations"]], [], null]);
+  });
+});
+
+
+it("retains explicit legacy opt-out despite scoped host metadata", async () => {
+  // Arrange
+  const server = await projectHttpServer({ projects, current: "a", allow_user_scope: true, current_scope: "project" });
+  const meta = document.createElement("meta"); meta.name = "stx-project-provider";
+  meta.content = server.url; meta.setAttribute("data-scoped-protocol", "true"); document.head.append(meta);
+  const container = document.createElement("div"); document.body.append(container);
+  // Act
+  const selector = mountProjectSelectorByScope({ container, scope: "project", allowUserScope: false })!;
+  instances.push(selector); await selector.ready; meta.remove();
+  // Assert
+  expect([options(container), selector.getSelection(), server.posts]).toEqual([["Authorized A", "Authorized B"], { scope: "project", id: "a" }, []]);
+});
+
+it("keeps user-only app mounting explicitly gated despite scoped host metadata", async () => {
+  // Arrange
+  const meta = document.createElement("meta"); meta.name = "stx-project-provider";
+  meta.content = "/not-requested"; meta.setAttribute("data-scoped-protocol", "true"); document.head.append(meta);
+  const container = document.createElement("div"); document.body.append(container);
+  // Act
+  const selector = mountProjectSelectorByScope({ container, scope: "user" }); meta.remove();
+  // Assert
+  expect([selector, container.innerHTML]).toEqual([null, ""]);
+});
+
+describe("request-local page selection", () => {
+  it("can show All without changing a remembered project", async () => {
+    const f = fixture({ allowUserScope: true, viewSelection: { scope: "user", id: null } });
+    await f.selector.ready;
+    expect([f.container.querySelector('button')?.textContent, f.saved, f.events]).toEqual(["All Projects", [], []]);
+  });
+
+  it("an explicit user choice supersedes the read-only initial view", async () => {
+    const f = fixture({ allowUserScope: true, viewSelection: { scope: "user", id: null } });
+    await f.selector.ready;
+    f.selector.commands.run(f.selector.selectCommandId, { via: "user" }, { scope: "project", id: "b" });
+    await settle();
+    expect([f.container.querySelector('button')?.textContent, f.saved]).toEqual(["Authorized B", [{ scope: "project", id: "b" }]]);
+  });
+
+  it("an unknown page project never becomes selected or persisted", async () => {
+    const f = fixture({ allowUserScope: true, viewSelection: { scope: "project", id: "foreign" } });
+    await f.selector.ready;
+    expect([f.container.querySelector('button')?.textContent, f.saved]).toEqual(["Select project", []]);
+  });
+
+  for (const userAllowed of [true, false]) for (const projectAllowed of [true, false]) {
+    it(`preserves capability limits for page views: user=${userAllowed}, project=${projectAllowed}`, async () => {
+      const saved: unknown[] = [];
+      const provider = {
+        listProjects: async () => ({ projects: projects.map(p => ({ ...p, disabled: !projectAllowed })),
+          current: "a", current_scope: "project" as const, allow_user_scope: true,
+          user_scope_disabled_reason: userAllowed ? undefined : "User scope unavailable" }),
+        rememberScope: async (choice: unknown) => { saved.push(choice); },
+      };
+      const user = fixture({ provider, allowUserScope: true, viewSelection: { scope: "user", id: null } });
+      const project = fixture({ provider, allowUserScope: true, viewSelection: { scope: "project", id: "b" } });
+      await Promise.all([user.selector.ready, project.selector.ready]);
+      expect([user.container.querySelector('button')?.textContent, project.container.querySelector('button')?.textContent, saved])
+        .toEqual([userAllowed ? "All Projects" : "Select project", projectAllowed ? "Authorized B" : "Select project", []]);
+    });
+  }
+});

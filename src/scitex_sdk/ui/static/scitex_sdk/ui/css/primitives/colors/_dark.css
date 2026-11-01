@@ -10,6 +10,11 @@
  * ============================================================================= */
 
 [data-theme="dark"] {
+  /* UA-native controls follow the app theme, not the OS default
+   * (see _light.css): without this, select popups and checkboxes render
+   * bright in a dark app. */
+  color-scheme: dark;
+
   /* Cool-tinted dark primitives (GitHub Dark inspired)
    * Professional, modern feel with slight blue tint */
   --_scitex-01: #161b22;

@@ -160,20 +160,7 @@ body {
   position: relative;
 }
 
-/* --- Accent Border (preset or custom) --- */
-
-.stx-shell-content[data-app-accent]::before,
-.stx-shell-content[data-app-accent-custom]::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--stx-app-accent, transparent);
-  z-index: 100;
-  pointer-events: none;
-}
+/* App accents style content controls; no stripe separates host and app. */
 
 /* Preset accent mapping */
 .stx-shell-content[data-app-accent="writer"] {

@@ -89,7 +89,7 @@ export function mountProjectSelectorByScope(
 ): ProjectSelector | null {
   const provider =
     options.provider ?? (options.projects ? undefined :
-      hostProjectProvider(doc, { allowUserScope: options.allowUserScope === true }) ?? undefined);
+      hostProjectProvider(doc, { allowUserScope: options.allowUserScope }) ?? undefined);
   const scopedHttp = usesScopedHttpTransport(provider);
   if ((options.scope ?? appScope(doc)) !== SCOPE_PROJECT &&
       !(options.allowUserScope === true && (typeof provider?.rememberScope === "function" || scopedHttp))) {
