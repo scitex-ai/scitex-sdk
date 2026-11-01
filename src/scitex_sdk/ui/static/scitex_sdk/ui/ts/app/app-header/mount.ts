@@ -23,6 +23,17 @@ export function mountAppHeader(
     if (element.hasAttribute(MOUNTED_ATTRIBUTE)) continue;
     element.setAttribute(MOUNTED_ATTRIBUTE, "");
     const header = new AppHeader({ ...options, container: element });
+    // Django renders the SDK picker before this module mounts the header.
+    // Adopt that same node immediately, rather than leaving a second row until
+    // a leaf's (potentially much larger) viewer module finishes loading.
+    // Only direct SDK controls belong here; scripts, catalogs and embedded
+    // surfaces stay in their original containers.
+    const pickers = element.querySelectorAll<HTMLElement>(
+      ":scope > .stx-app-project-selector[data-stx-project-picker]",
+    );
+    if (header.projectSlot && pickers.length === 1) {
+      header.projectSlot.appendChild(pickers[0]);
+    }
     instances.push(header);
     mounted.push(header);
   }
