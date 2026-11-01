@@ -42,7 +42,11 @@ async function mount(page: Page, rootSize: number, theme: string,
   await page.goto("http://sdk.test/");
   await page.waitForFunction(() => (window as Window & { headerReady?: boolean }).headerReady);
   await expect(page.locator(".stx-app-project-selector__trigger")).toBeEnabled();
-  await expect(page.locator(".stx-app-project-selector__trigger")).toHaveText("Example");
+  if (projectAllowed) {
+    await expect(page.locator(".stx-app-project-selector__trigger")).toHaveText("Example");
+  } else {
+    await expect(page.locator(".stx-app-project-selector__trigger")).not.toHaveText("Example");
+  }
 }
 
 for (const theme of ["light", "dark"]) {
