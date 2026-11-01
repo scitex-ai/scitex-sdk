@@ -86,6 +86,7 @@ def test_independent_controls_and_comments_are_allowed(tmp_path, source):
 
 def test_only_canonical_sdk_css_is_exempt(tmp_path):
     # Arrange
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "scitex-sdk"\n')
     owner = tmp_path / "src/scitex_sdk/ui/static/scitex_sdk/ui/css/app/app-header.css"
     owner.parent.mkdir(parents=True)
     owner.write_text(".stx-app-header {height:40px}")
@@ -111,3 +112,15 @@ def test_only_literal_stylesheets_are_scanned_in_markup(tmp_path, source, count)
     # Act
     # Assert
     assert len(scan_headers(tmp_path)) == count
+
+
+def test_consumer_cannot_claim_owner_by_copying_sdk_paths(tmp_path):
+    # Arrange
+    path = tmp_path / "src/scitex_sdk/ui/static/scitex_sdk/ui/css/app/app-header.css"
+    path.parent.mkdir(parents=True)
+    path.write_text(".stx-app-header {font-size:80px}")
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "consumer"\n')
+    # Act
+    findings = scan_headers(tmp_path)
+    # Assert
+    assert len(findings) == 1
