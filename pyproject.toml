@@ -75,6 +75,9 @@ scitex-ui = "scitex_sdk.ui"
 [project.entry-points."scitex_dev.linter.plugins"]
 ui = "scitex_sdk.ui._linter_plugin:get_plugin"
 
+[project.entry-points."scitex_dev.audit.project"]
+scitex-sdk = "scitex_sdk._audit_plugin:get_plugin"
+
 [project.entry-points."scitex_dev.hooks"]
 scitex-sdk = "scitex_sdk._hook_rules:provide"
 
@@ -108,7 +111,7 @@ only-include = [
     "src/scitex_sdk", "scripts", "tests", "docs", "examples", ".github",
     "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml", ".gitignore",
     "package.json", "package-lock.json", "tsconfig.json", "eslint.config.mjs",
-    "vitest.config.ts", ".readthedocs.yaml",
+    "vitest.config.ts", "playwright.header.config.ts", ".readthedocs.yaml",
 ]
 
 [tool.pytest.ini_options]
