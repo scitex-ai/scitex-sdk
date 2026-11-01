@@ -17,6 +17,7 @@ and [workflow skill](src/scitex_sdk/_skills/scitex-sdk/SKILL.md).
 
 In-app headers use one shared appearance across apps. See the
 [header contract and browser checks](docs/ui/app-header-contract.md).
+Shared filter fields follow the [filter contract](docs/ui/filter-field-contract.md).
 
 ```bash
 # Install the GUI runtime for SDK 0.3.0 or newer.

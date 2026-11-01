@@ -86,7 +86,8 @@
     "./ui/react/app/pdf-viewer": "./ui/static/scitex_sdk/ui/react/app/pdf-viewer/index.ts",
     "./ui/react/app/recent-pane": "./ui/static/scitex_sdk/ui/react/app/recent-pane/index.ts",
     "./ui/react/app/selector-nav": "./ui/static/scitex_sdk/ui/react/app/selector-nav/index.ts",
-    "./ui/react/app/tooltip": "./ui/static/scitex_sdk/ui/react/app/tooltip/index.ts"
+    "./ui/react/app/tooltip": "./ui/static/scitex_sdk/ui/react/app/tooltip/index.ts",
+    "./ui/app/filter-field": "./ui/static/scitex_sdk/ui/ts/app/filter-field/index.ts"
   },
   "files": [
     "ui/static/scitex_sdk/ui/**"
