@@ -23,8 +23,8 @@ def provide() -> list:
     if HookRule is None:
         return []
     header = {
-        "rule": "Use the SDK AppHeader and project dropdown without local markup/style forks.",
-        "reason": "App headers share typography and dropdown geometry across installed apps.",
+        "rule": "Use SDK AppHeader, project dropdown, and FilterField without local chrome forks.",
+        "reason": "App headers, dropdowns, and keyword filters share canonical chrome across apps.",
         "severity": "deny",
         "provider": "scitex-sdk",
         "owner_module": "scitex_sdk",

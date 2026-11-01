@@ -335,3 +335,35 @@ so ignored user data/media/cache trees are not inspected on each edit. An
 explicit editor target is still checked even if ignored. Committed generated
 Vite CSS is checked through its authored frontend source, not mistaken for a
 consumer copy of imported canonical SDK styles.
+
+
+### Keyword filter chrome
+
+Use an empty SDK mount; keep result filtering in the leaf's input handler:
+
+```html
+<div data-stx-filter data-filter-subject="agents" data-filter-id="agents-filter"></div>
+```
+
+The SDK renderer owns the icon, input geometry, placeholder, and keyboard hint.
+Do not hand-author `stx-filter-field*` children or override their styles. Only
+`ui/static/scitex_sdk/ui/css/app/filter-field.css` in the SDK owns these selectors.
+Recognizable local filter containers with keyboard hints or icons also fork the
+contract. Ordinary search fields, content controls, and result-filtering logic
+remain leaf-owned. Dynamic DOM/style generation requires browser verification;
+the source scanner proves literal ownership, not every runtime cascade.
+
+Dev's existing project-audit dispatcher runs `PS-SDK-FILTER` at error severity:
+
+```bash
+scitex-dev ecosystem audit-project scitex-agent-container --path . --rule PS-SDK-FILTER
+```
+
+The existing SDK header pre-edit/post-shell descriptors run this check as well;
+there is no second native binding to install. `python -m scitex_dev.hooks.dispatch
+--provider scitex-sdk` consumes native event JSON on stdin. Proposed editor
+writes are checked before mutation; post-shell reports completed source changes.
+Missing scanners fail closed. Updating package source does not update an older
+isolated hook interpreter automatically: qualify/install the new SDK there,
+then test its saved command. Hermes loading/consent and its observation-only
+post-tool boundary remain as described above.

@@ -87,6 +87,7 @@ def _source_changes(payload):
 
 def check_payload(payload):
     """Inspect proposed editor contents or actual changed shell outputs."""
+    from .ui._linter._filter_contract import scan_filters
     from .ui._linter._header_contract import scan_headers
 
     changed = _source_changes(payload)
@@ -96,6 +97,9 @@ def check_payload(payload):
     return [
         f"PS-SDK-HEADER: {f.path}:{f.line}: {f.detail}"
         for f in scan_headers(root, overlays=overlays, targets=targets)
+    ] + [
+        f"PS-SDK-FILTER: {f.path}:{f.line}: {f.detail}"
+        for f in scan_filters(root, overlays=overlays, targets=targets)
     ]
 
 

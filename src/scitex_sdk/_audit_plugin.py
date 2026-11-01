@@ -13,12 +13,25 @@ def check_header_contract(repo_root, violation_class, violations):
         )
 
 
+def check_filter_contract(repo_root, violation_class, violations):
+    """Report filter chrome ownership at mandatory error severity."""
+    from .ui._linter._filter_contract import scan_filters
+
+    for finding in scan_filters(repo_root):
+        violations.append(
+            violation_class(
+                "PS-SDK-FILTER", f"{finding.path}:{finding.line}", finding.detail
+            )
+        )
+
+
 def get_plugin():
     """Load the scanner eagerly: an incomplete installation must not pass."""
+    from .ui._linter._filter_contract import scan_filters
     from .ui._linter._header_contract import scan_headers
 
-    if not callable(scan_headers):
-        raise TypeError("SDK header scanner is unavailable")
+    if not callable(scan_headers) or not callable(scan_filters):
+        raise TypeError("SDK chrome scanner is unavailable")
     return {
         "rules": [
             (
@@ -27,7 +40,14 @@ def get_plugin():
                 "SDK app-header and dropdown ownership",
                 "E",
                 "sdk-header-contract",
-            )
+            ),
+            (
+                "PS-SDK-FILTER",
+                "UI",
+                "SDK filter chrome ownership",
+                "E",
+                "sdk-filter-contract",
+            ),
         ],
-        "checks": [check_header_contract],
+        "checks": [check_header_contract, check_filter_contract],
     }
