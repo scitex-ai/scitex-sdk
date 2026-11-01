@@ -48,3 +48,12 @@ def test_manifest_validator_rejects_invalid_scope_capabilities(tmp_path):
     errors = validate_manifest(tmp_path)
     # Assert
     assert any("scope_capabilities requires explicit" in error for error in errors)
+
+
+def test_public_embed_exports_the_existing_normalizer():
+    # Arrange
+    from scitex_sdk.app.embed import normalize_scope_capabilities as public_normalizer
+    # Act
+    result = public_normalizer is normalize_scope_capabilities
+    # Assert
+    assert result
