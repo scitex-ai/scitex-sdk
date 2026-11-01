@@ -76,3 +76,17 @@ it does not define a second header template or stylesheet. Text updates preserve
 the mounted picker. React unmount destroys only the binding-owned row. A host
 that already owns a server-declared header should portal into that row instead
 of rendering another binding.
+
+## Host boundary and viewport frame
+
+The SDK shell adds no accent stripe at the top of app content, including
+`#main-content[data-app-accent]` and `.stx-shell-content`. Accent tokens remain
+available for content controls and panel tints; they do not create a second
+horizontal line immediately below the global header.
+
+The host owns the outer frame width, centering, and platform backdrop. A leaf
+fills its allotted content pane and keeps layout changes inside that pane.
+It must not override the host's `.workspace-layout` / `.workspace-three-col`
+width, margins, or background. On Hub, `--site-content-max-width` matches app
+and global-header widths; surrounding space uses Hub's theme-aware backdrop.
+SDK project audits and native hooks enforce ownership of these shell surfaces.

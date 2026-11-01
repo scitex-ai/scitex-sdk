@@ -216,27 +216,7 @@
   border-bottom-color: var(--workspace-border-default);
 }
 
-/* ===========================================================================
-   MODULE ACCENT BORDER
-   Continuous accent line across the top of the module content area.
-   Framework-controlled via #main-content[data-app-accent].
-   Uses ::before pseudo-element with high z-index to prevent app overrides.
-
-   Usage: Add data-app-accent="writer" on the module container.
-   =========================================================================== */
-
-/* Accent line: single continuous bar across the top of module content */
-#main-content[data-app-accent]::before {
-  content: "" !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  height: 2px !important;
-  background: var(--app-accent-color, transparent) !important;
-  z-index: 100 !important;
-  pointer-events: none !important;
-}
+/* Module accent tokens may tint panel headers; the module boundary has no stripe. */
 
 /* Module panel headers still get tinted background.
    `data-pane`, not `data-pane-type`: scitex-hub writes `data-pane="module"` in
