@@ -13,7 +13,7 @@ async function mount(page: Page, theme: string, rootSize = 16) {
         <link rel="stylesheet" href="${ui}/css/shell/theme.css">
         <link rel="stylesheet" href="${ui}/css/app/filter-field.css">
         <style>html{font-size:${rootSize}px}body{margin:8px}</style>
-        </head><body><div data-stx-filter data-filter-subject="agents" data-filter-id="filter"></div>
+        </head><body><div data-stx-filter-field data-filter-subject="agents" data-filter-id="filter"></div>
         <script type="module" src="${ui}/js/app/filter-field.js"></script></body></html>` });
       return;
     }
@@ -50,7 +50,7 @@ for (const theme of ["light", "dark"]) {
       await expect(hint).toHaveText("Esc");
       await input.blur();
       await expect(hint).toHaveText("Ctrl+K");
-      const geometry = await page.locator('[data-stx-filter]').evaluate(root => {
+      const geometry = await page.locator('[data-stx-filter-field]').evaluate(root => {
         const icon = root.querySelector('svg')!.getBoundingClientRect();
         const input = root.querySelector('input')!.getBoundingClientRect();
         const hint = root.querySelector('kbd')!;

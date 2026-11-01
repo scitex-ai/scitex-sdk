@@ -18,7 +18,7 @@ export class FilterField {
         event.shiftKey || event.altKey || event.key.toLowerCase() !== "k") return;
     // A page may contain several filters. The focused filter, otherwise the
     // first visible one, owns the shortcut; hidden tab panes cannot steal it.
-    const visible = Array.from(document.querySelectorAll<HTMLElement>("[data-stx-filter-mounted]"))
+    const visible = Array.from(document.querySelectorAll<HTMLElement>("[data-stx-filter-field-mounted]"))
       .filter(element => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden");
     const focused = visible.find(element => element.contains(document.activeElement));
     if ((focused || visible[0]) !== this.element) return;
@@ -28,7 +28,7 @@ export class FilterField {
   };
 
   constructor(readonly element: HTMLElement) {
-    if (element.hasAttribute("data-stx-filter-mounted")) throw new Error("Filter already mounted");
+    if (element.hasAttribute("data-stx-filter-field-mounted")) throw new Error("Filter already mounted");
     const subject = element.dataset.filterSubject?.trim();
     if (!subject) throw new Error("A filter needs data-filter-subject");
     if (element.children.length) throw new Error("Use an empty SDK filter mount");
@@ -52,7 +52,7 @@ export class FilterField {
     this.hint = document.createElement("kbd");
     this.hint.className = "stx-filter-field__hint";
     element.append(this.icon, this.input, this.hint);
-    element.setAttribute("data-stx-filter-mounted", "");
+    element.setAttribute("data-stx-filter-field-mounted", "");
     this.input.addEventListener("focus", this.onFocus);
     this.input.addEventListener("blur", this.onBlur);
     this.input.addEventListener("keydown", this.onKey);
@@ -76,7 +76,7 @@ export class FilterField {
     this.input.remove();
     this.icon.remove();
     this.hint.remove();
-    this.element.removeAttribute("data-stx-filter-mounted");
+    this.element.removeAttribute("data-stx-filter-field-mounted");
     this.element.classList.remove("stx-filter-field");
     instances.delete(this.element);
   }
@@ -84,8 +84,8 @@ export class FilterField {
 
 const instances = new WeakMap<HTMLElement, FilterField>();
 export function mountFilterFields(root: ParentNode = document): FilterField[] {
-  const elements = Array.from(root.querySelectorAll<HTMLElement>("[data-stx-filter]"));
-  if (root instanceof HTMLElement && root.matches("[data-stx-filter]")) elements.unshift(root);
+  const elements = Array.from(root.querySelectorAll<HTMLElement>("[data-stx-filter-field]"));
+  if (root instanceof HTMLElement && root.matches("[data-stx-filter-field]")) elements.unshift(root);
   return elements.map(element => {
     let instance = instances.get(element);
     if (!instance) {

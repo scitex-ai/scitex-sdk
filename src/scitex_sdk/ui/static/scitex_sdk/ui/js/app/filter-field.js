@@ -4,7 +4,7 @@
 var FilterField = class {
   constructor(element) {
     this.element = element;
-    if (element.hasAttribute("data-stx-filter-mounted")) throw new Error("Filter already mounted");
+    if (element.hasAttribute("data-stx-filter-field-mounted")) throw new Error("Filter already mounted");
     const subject = element.dataset.filterSubject?.trim();
     if (!subject) throw new Error("A filter needs data-filter-subject");
     if (element.children.length) throw new Error("Use an empty SDK filter mount");
@@ -28,7 +28,7 @@ var FilterField = class {
     this.hint = document.createElement("kbd");
     this.hint.className = "stx-filter-field__hint";
     element.append(this.icon, this.input, this.hint);
-    element.setAttribute("data-stx-filter-mounted", "");
+    element.setAttribute("data-stx-filter-field-mounted", "");
     this.input.addEventListener("focus", this.onFocus);
     this.input.addEventListener("blur", this.onBlur);
     this.input.addEventListener("keydown", this.onKey);
@@ -50,7 +50,7 @@ var FilterField = class {
   };
   onShortcut = (event) => {
     if (event.defaultPrevented || event.isComposing || !event.ctrlKey && !event.metaKey || event.shiftKey || event.altKey || event.key.toLowerCase() !== "k") return;
-    const visible = Array.from(document.querySelectorAll("[data-stx-filter-mounted]")).filter((element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden");
+    const visible = Array.from(document.querySelectorAll("[data-stx-filter-field-mounted]")).filter((element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden");
     const focused = visible.find((element) => element.contains(document.activeElement));
     if ((focused || visible[0]) !== this.element) return;
     event.preventDefault();
@@ -71,15 +71,15 @@ var FilterField = class {
     this.input.remove();
     this.icon.remove();
     this.hint.remove();
-    this.element.removeAttribute("data-stx-filter-mounted");
+    this.element.removeAttribute("data-stx-filter-field-mounted");
     this.element.classList.remove("stx-filter-field");
     instances.delete(this.element);
   }
 };
 var instances = /* @__PURE__ */ new WeakMap();
 function mountFilterFields(root = document) {
-  const elements = Array.from(root.querySelectorAll("[data-stx-filter]"));
-  if (root instanceof HTMLElement && root.matches("[data-stx-filter]")) elements.unshift(root);
+  const elements = Array.from(root.querySelectorAll("[data-stx-filter-field]"));
+  if (root instanceof HTMLElement && root.matches("[data-stx-filter-field]")) elements.unshift(root);
   return elements.map((element) => {
     let instance = instances.get(element);
     if (!instance) {

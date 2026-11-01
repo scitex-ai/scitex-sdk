@@ -9,7 +9,7 @@ For a Django-mounted app:
 ```django
 {% load scitex_static %}
 <link rel="stylesheet" href="{% app_static 'scitex_sdk/ui/css/app/filter-field.css' %}">
-<div data-stx-filter data-filter-subject="agents" data-filter-id="agents-filter"></div>
+<div data-stx-filter-field data-filter-subject="agents" data-filter-id="agents-filter"></div>
 <script type="module" src="{% app_static 'scitex_sdk/ui/js/app/filter-field.js' %}"></script>
 ```
 
