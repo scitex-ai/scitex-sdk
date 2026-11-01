@@ -38,3 +38,13 @@ def test_generated_starter_declares_actual_user_workspace_support():
     manifest = json.loads(_manifest_json("sample", "Sample", "fas fa-star", "", None, "MIT"))
     # Assert
     assert manifest["scope_capabilities"] == {"user": True, "project": False}
+
+
+def test_manifest_validator_rejects_invalid_scope_capabilities(tmp_path):
+    # Arrange
+    from scitex_sdk.app.appmaker._validate._manifest import validate_manifest
+    (tmp_path / "manifest.json").write_text('{"scope_capabilities":{"user":"true","project":false}}')
+    # Act
+    errors = validate_manifest(tmp_path)
+    # Assert
+    assert any("scope_capabilities requires explicit" in error for error in errors)
