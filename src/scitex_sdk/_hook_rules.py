@@ -63,7 +63,7 @@ def provide() -> list:
             severity="warn",
             matches=("Edit", "Write"),
             provider="scitex-sdk",
-            check="scitex_sdk.ui._linter._checker:scan_path",
+            check="scitex_sdk._header_hook:check_scrollbar_payload",
             doctrine="src/scitex_sdk/ui/_skills/scitex-ui/40_component-usage-doctrine.md",
         ),
     ]

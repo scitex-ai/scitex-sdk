@@ -128,3 +128,52 @@ def test_missing_scanner_denies_executable_hook(tmp_path):
     )
     # Assert
     assert result.returncode == 2
+
+
+def test_existing_scrollbar_hook_accepts_native_payload(tmp_path):
+    # Arrange
+    from scitex_sdk._header_hook import check_scrollbar_payload
+
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"file_path": "leaf.css", "content": ".toolbar{height:40px}"},
+    }
+    # Act
+    findings = check_scrollbar_payload(payload)
+    # Assert
+    assert findings == []
+
+
+def test_existing_scrollbar_warning_retains_actual_detection(tmp_path):
+    # Arrange
+    from scitex_sdk._header_hook import check_scrollbar_payload
+
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {
+            "file_path": "leaf.css",
+            "content": ".toolbar{scrollbar-color:#fff #000}",
+        },
+    }
+    # Act
+    findings = check_scrollbar_payload(payload)
+    # Assert
+    assert any("STX-UI115" in finding for finding in findings)
+
+
+def test_published_canonical_dev_dispatcher_allows_safe_sdk_edit(tmp_path):
+    # Arrange
+    from scitex_dev.hooks._dispatch import dispatch
+
+    payload = {
+        "hook_event_name": "PreToolUse",
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"file_path": "leaf.css", "content": ".toolbar{height:40px}"},
+    }
+    # Act
+    findings = dispatch(payload, provider="scitex-sdk")
+    # Assert
+    assert findings == []
