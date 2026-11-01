@@ -16,11 +16,12 @@
  * A fixed bar at `bottom: 0` is under two other things: the hub's site dock and
  * the iOS home indicator. Writer's comment states the requirement exactly —
  * "Above the hub's site dock when there is one, and above the iOS home bar
- * always" — and `--site-dock-clearance` is the dock's own height, published by
- * the hub. It is consumed here WITH a `0px` fallback on purpose: an app served
- * without the hub's stylesheet has no dock, so 0 is the correct value there,
- * not a missing one. (That token is defined by the hub and by nothing in this
- * package — recorded in the extraction inventory as the shared-token hole it is.)
+ * always" — and `--site-dock-clearance` is the dock's own height. It is
+ * consumed here WITH a `0px` fallback on purpose: the token is defined
+ * nowhere (verified: no definition in hub 316767a219 or in this package),
+ * so 0 is the correct value wherever the dock is absent or unpublished —
+ * not a missing one. (Recorded in the extraction inventory as the
+ * shared-token hole it is; revisit if the hub ever publishes it.)
  *
  * The reservation is a SEPARATE, OPT-IN UTILITY (`.stx-action-bar-space`) that
  * the consumer applies to its own scrolling container, and it is deliberately

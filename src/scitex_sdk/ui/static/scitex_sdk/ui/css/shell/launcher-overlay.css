@@ -7,19 +7,21 @@
  * §4, verbatim: "The floating launcher overlays content; it does not reserve a
  * full-width bottom strip. Apps use the full available viewport."
  *
- * WHAT THIS FILE REFUSES TO DO, because the shipped dock does it. scitex-hub's
- * site-dock.css solves the dock/content collision by RESERVING a band —
- * `body:has(> .site-dock) { padding-bottom: var(--site-dock-clearance) }`. The
- * dock is translucent and floats over the page, and the page is nevertheless
- * permanently shorter by its height; that reservation is what makes the strip
- * real. §4 forbids it and moves the collision to the one moment it matters,
- * while an actionable control has focus — which is a RUNTIME job, so it lives in
+ * WHAT THIS FILE REFUSES TO DO. The dock/content collision is solved WITHOUT
+ * a reserved band: scitex-hub carries no page-level dock reserve (verified on
+ * hub 316767a219 — site-dock.css holds only scroll-padding/scroll-margin
+ * alignment on the mobile menu, gated on a non-floating dock), and
+ * `--site-dock-clearance` is defined nowhere fleet-wide, so it resolves to
+ * the 0px fallback everywhere it is consumed. §4 forbids the band and moves
+ * the collision to the one moment it matters, while an actionable control
+ * has focus — which is a RUNTIME job, so it lives in
  * ts/shell/launcher-overlay.ts, not here.
  *
- * NO RULE IN THIS FILE TOUCHES body/html/:root PADDING OR MARGIN. That is not a
- * style note; tests/develop/test_launcher_overlay_contract.py fails if one
- * appears, in either direction, because a reserved band is invisible on a wide
- * screen and only shows as a permanently short app surface.
+ * NO RULE IN THIS FILE TOUCHES body/html PADDING OR MARGIN, and no :root
+ * rule declares any. That is not a style note;
+ * tests/develop/test_launcher_overlay_contract.py fails if one appears,
+ * because a reserved band is invisible on a wide screen and only shows as
+ * a permanently short app surface.
  *
  * The overlay is also out of flow by construction: `position: fixed` with no
  * in-flow sibling, so page content lays out as if it were not there.
