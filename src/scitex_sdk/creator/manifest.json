@@ -30,5 +30,12 @@
   },
   "mount_policy": {
     "login_required": true
+  },
+  "scope_capabilities": {
+    "user": true,
+    "project": false
+  },
+  "scope_capability_reasons": {
+    "project": "The app wizard uses an explicit target directory; project-scoped operations are not implemented."
   }
 }

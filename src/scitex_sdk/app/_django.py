@@ -151,6 +151,13 @@ class ScitexAppConfig(AppConfig):
         return normalize_scope(self.manifest.get("scope"))
 
     @property
+    def scope_capabilities(self):
+        """Leaf-owned operational support; omission makes no support claim."""
+        from ._app_scope import normalize_scope_capabilities
+
+        return normalize_scope_capabilities(self.manifest.get("scope_capabilities"))
+
+    @property
     def is_project_scoped(self) -> bool:
         """True only if the app opts into per-app project selection."""
         from ._app_scope import SCOPE_PROJECT

@@ -157,3 +157,17 @@ def app_scope_context(request) -> dict:
         return {"app_scope": config.app_scope}
     except Exception:
         return {"app_scope": DEFAULT_SCOPE}
+
+
+def normalize_scope_capabilities(value):
+    """Optional explicit operational support, independent of storage scope.
+
+    Missing declarations make no capability claim. Both keys are required
+    and accept literal booleans only; manifest typos must fail loudly.
+    """
+    if value is None:
+        return None
+    if (not isinstance(value, dict) or set(value) != {"user", "project"}
+            or any(type(value[key]) is not bool for key in ("user", "project"))):
+        raise ValueError("scope_capabilities requires explicit user/project booleans")
+    return dict(value)
