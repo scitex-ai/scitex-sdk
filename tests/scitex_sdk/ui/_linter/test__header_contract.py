@@ -199,3 +199,34 @@ def test_project_picker_children_are_owned_by_sdk_renderer(tmp_path, source, exp
     findings = scan_headers(tmp_path)
     # Assert
     assert len(findings) == expected
+
+
+def test_gitignored_user_data_is_not_project_source_context(tmp_path):
+    # Arrange
+    import subprocess
+
+    subprocess.run(["git", "init", str(tmp_path)], capture_output=True, check=True)
+    (tmp_path / ".gitignore").write_text("data/\n")
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data/user-manuscript.html").write_bytes(b"\xff")
+    source = tmp_path / "leaf.css"
+    source.write_text(".toolbar{}")
+    # Act
+    findings = scan_headers(tmp_path)
+    # Assert
+    assert findings == []
+
+
+def test_explicit_ignored_editor_target_is_still_checked(tmp_path):
+    # Arrange
+    import subprocess
+
+    subprocess.run(["git", "init", str(tmp_path)], capture_output=True, check=True)
+    (tmp_path / ".gitignore").write_text("local.css\n")
+    path = tmp_path / "local.css"
+    # Act
+    findings = scan_headers(
+        tmp_path, overlays={path: ".stx-app-header{font-size:80px}"}, targets={path}
+    )
+    # Assert
+    assert len(findings) == 1
