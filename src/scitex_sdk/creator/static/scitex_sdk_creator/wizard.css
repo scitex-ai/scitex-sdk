@@ -57,13 +57,14 @@
 }
 
 .stx-starter:has(input:checked) {
-  border-color: #3fb950;
-  box-shadow: 0 0 0 1px #3fb950;
+  border-color: var(--color-cta);
+  box-shadow: 0 0 0 1px var(--color-cta);
+  background: var(--color-cta-subtle);
 }
 
 .stx-starter input {
   margin-right: 6px;
-  accent-color: #3fb950;
+  accent-color: var(--color-cta);
 }
 
 .stx-starter strong {
@@ -149,14 +150,15 @@
 }
 
 .stx-creator button.stx-primary {
-  background: #1f6feb;
-  border-color: #1f6feb;
-  color: #fff;
+  background: var(--color-cta);
+  border-color: var(--color-cta);
+  color: var(--color-fg-on-emphasis);
   font-weight: 600;
 }
 
 .stx-creator button.stx-primary:hover {
-  background: #388bfd;
+  background: var(--color-cta-hover);
+  border-color: var(--color-cta-hover);
 }
 
 /* Result consoles: visible feedback, not a bare div. */

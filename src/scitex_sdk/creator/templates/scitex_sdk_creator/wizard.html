@@ -2,13 +2,14 @@
 {% load static %}
 
 {% block scitex_app_content %}
-<link rel="stylesheet" href="{% static 'scitex_sdk_creator/wizard.css' %}">
+<link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/primitives/colors.css' %}">
+<link rel="stylesheet" href="{% static 'scitex_sdk_creator/wizard.css' %}?v={{ sdk_version|urlencode }}-semantic-cta">
 <div class="stx-creator">
   {# Shared AppHeader primitive (data-stx-app-header mount), like every other #}
   {# leaf app — no leaf-local <header>. Title/version flow from the view. #}
   <link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/app/app-header.css' %}">
   <div data-stx-app-header
-       data-app-title="SDK"
+       data-app-title="SciTeX SDK"
        {% if sdk_version %}data-app-version="{{ sdk_version }}"{% endif %}></div>
   <script type="module" src="{% static 'scitex_sdk/ui/js/app/app-header.js' %}"></script>
   {% if project_picker_available %}{% include "scitex_sdk_creator/_project_picker.html" %}{% endif %}
