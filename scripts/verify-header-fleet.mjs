@@ -67,7 +67,12 @@ try {
             // An unknown version is intentionally absent; compare its appearance when present.
             if (part === "version" && (!styles[part] || !reference[part])) continue;
             if (part === "option" && (!styles[part] || !reference[part])) continue;
-            for (const field of fields) if (styles[part]?.[field] !== reference[part]?.[field]) {
+            for (const field of fields) if (
+              // Project rows may have an owner/detail line; content changes
+              // intrinsic height, but header and trigger geometry must match.
+              !(field === "height" && part !== "header" && part !== "trigger") &&
+              styles[part]?.[field] !== reference[part]?.[field]
+            ) {
               failures.push({ route, width, theme, part, field, expected: reference[part]?.[field], actual: styles[part]?.[field] });
             }
           }
