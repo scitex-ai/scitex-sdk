@@ -8,7 +8,7 @@ All notable changes to `scitex-sdk`.
   responsive bounds and phone width, and collapse behavior preserving host
   restored inline sizes. See docs/ui/main-details-panes.md; source preview only.
 
-- Creator starter choices and primary buttons use semantic CTA colors; the
+- Creator starter choices and primary buttons use the semantic navy/gold primary-action roles; the
   in-app header reads SciTeX SDK while launcher labels remain SDK.
 
 - AppHeader auto-mount immediately places an existing direct SDK project picker

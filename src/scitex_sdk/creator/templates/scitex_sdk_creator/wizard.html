@@ -1,9 +1,9 @@
 {% extends "scitex_sdk/app/app_shell.html" %}
-{% load static %}
+{% load static scitex_static %}
 
 {% block scitex_app_content %}
 <link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/primitives/colors.css' %}">
-<link rel="stylesheet" href="{% static 'scitex_sdk_creator/wizard.css' %}?v={{ sdk_version|urlencode }}-semantic-cta">
+<link rel="stylesheet" href="{% app_static 'scitex_sdk_creator/wizard.css' %}">
 <div class="stx-creator">
   {# Shared AppHeader primitive (data-stx-app-header mount), like every other #}
   {# leaf app — no leaf-local <header>. Title/version flow from the view. #}
