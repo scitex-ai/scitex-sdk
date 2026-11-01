@@ -88,8 +88,18 @@ class _Markup(HTMLParser):
 def _owner(path: Path, root: Path) -> bool:
     """Only canonical SDK resources own these selectors, never the whole repo."""
     relative = path.relative_to(root).as_posix()
-    return path.name in _OWNER and relative.startswith(
-        "src/scitex_sdk/ui/static/scitex_sdk/ui/css/app/"
+    if relative not in {
+        f"src/scitex_sdk/ui/static/scitex_sdk/ui/css/app/{name}" for name in _OWNER
+    }:
+        return False
+    manifest = root / "pyproject.toml"
+    if not manifest.is_file():
+        return False
+    project = re.search(
+        r"(?ms)^\[project\]\s*$(.*?)(?=^\[|\Z)", manifest.read_text(encoding="utf-8")
+    )
+    return bool(
+        project and re.search(r"(?m)^name\s*=\s*['\"]scitex-sdk['\"]\s*$", project[1])
     )
 
 
