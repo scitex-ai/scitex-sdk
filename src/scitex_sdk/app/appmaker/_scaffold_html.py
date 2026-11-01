@@ -273,32 +273,19 @@ def _index_partial_html(name, label, icon, *, react_mount: bool = False):
     mount_div = ""
     if react_mount:
         mount_div = f'\n    <div id="{name}-root"></div>\n'
-    return f"""{{% load static %}}
-{{% comment %}}SDK SSoT header row (scitex-sdk, css/app/app-header.css — linked below).
-   The ROW is shared: identity (title + live leaf version) on the left, the
-   canonical project-selector slot, then the actions slot. The leaf owns the
-   VALUES, the SDK owns the chrome — never restyle `.stx-app-header` here.
-   - version: `app_version` comes from the context builder (installed dist
-     version); the badge renders only when passed — unknown stays ABSENT.
-   - picker slot: EMPTY on purpose. Wire the project picker here only when
-     this surface is project-scoped (user-scope surfaces correctly render no
-     picker); the slot stays so there is exactly one place for it.
-   - actions: EMPTY on purpose. Page-level actions live in the app content,
-     which already knows their state; a second set here would be a second
-     source of truth.{{% endcomment %}}
-<link rel="stylesheet" href="{{% static 'scitex_sdk/ui/css/app/app-header.css' %}}">
+    return f"""{{% load static scitex_static scitex_project_picker %}}
+{{% comment %}}The SDK renders the header and picker children. The leaf supplies
+label/version and inherits host-advertised scope availability; it does not
+copy component markup or implement its own dropdown.{{% endcomment %}}
+<link rel="stylesheet" href="{{% app_static 'scitex_sdk/ui/css/app/app-header.css' %}}">
 <div class="{name}-container" data-pane-type="app"
      data-ai-hint="Main container for {label} app">
-    <header class="stx-app-header {name}-app-header" data-ai-hint="{label} app header">
-        <div class="stx-app-header__identity">
-            <span class="stx-app-header__title">{label}</span>
-            {{% if app_version %}}<span class="stx-app-header__version"
-                  title="{label} package serving this page">v{{{{ app_version }}}}</span>{{% endif %}}
-        </div>
-        <div class="stx-app-header__slot--project-selector">
-        </div>
-        <div class="stx-app-header__actions"></div>
-    </header>
+    <div data-stx-app-header data-app-title="{label}"
+         {{% if app_version %}}data-app-version="{{{{ app_version }}}}"{{% endif %}}
+         data-ai-hint="{label} app header">
+        {{% scitex_project_picker current=current_project %}}
+    </div>
+    <script type="module" src="{{% app_static 'scitex_sdk/ui/js/app/app-header.js' %}}"></script>
 
     <div class="{name}-content" data-ai-hint="{label} content area">
         <div class="{name}-getting-started">
