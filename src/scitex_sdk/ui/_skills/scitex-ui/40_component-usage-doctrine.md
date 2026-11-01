@@ -295,8 +295,11 @@ imports and unreadable source fail enforcement rather than passing silently.
 
 The detector checks literal CSS selectors, inline header styles, recognizable
 local app-header markup, and generic button rules scoped to a known literal
-header ancestor. It allows canonical SDK server-rendered markup and unrelated
-toolbar controls. Tests/examples and build outputs are excluded. Dynamic
+header ancestor. It allows SDK mount markup and unrelated toolbar controls.
+Handwritten canonical header classes do not establish ownership; use the
+SDK renderer or its React binding. Tests/examples, documentation artifacts, and build directories are excluded.
+Vite-manifest-declared CSS outputs are excluded only when authored frontend
+source is present; imported canonical SDK CSS in a bundle is not a local fork. Dynamic
 DOM/style generation, inherited browser defaults, and complex selector
 cascades require the SDK's real browser contract suite (`npm run test:headers`)
 and host integration checks; static source auditing does not prove computed
