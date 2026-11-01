@@ -771,3 +771,44 @@ describe("disabled availability rows", () => {
     expect(f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "user", id: null })).toBe(false);
   });
 });
+
+
+describe("unsupported saved choices", () => {
+  it("does not display an explicit disabled project over an unselected listing", async () => {
+    // Arrange
+    const persisted: unknown[] = [];
+    const provider: ProjectProvider = {
+      listProjects: async () => ({ projects: [{ id: "example", name: "Example", disabled: true, disabledReason: "Project filtering is unavailable" }], current: null, allow_user_scope: true }),
+      rememberScope: async (selection) => { persisted.push(selection); },
+    };
+    const f = fixture({ current: "example", provider, allowUserScope: true });
+    // Act
+    await f.selector.ready;
+    // Assert
+    expect([f.selector.getSelection(), f.container.querySelector(".stx-app-project-selector__placeholder")?.textContent, persisted, f.events]).toEqual([null, "Select project", [], []]);
+  });
+
+  it("does not display a saved All choice when that operation is disabled", async () => {
+    // Arrange
+    const persisted: unknown[] = [];
+    const provider: ProjectProvider = {
+      listProjects: async () => ({ projects, current: null, allow_user_scope: true, user_scope_disabled_reason: "One project is required" }),
+      rememberScope: async (selection) => { persisted.push(selection); },
+    };
+    const f = fixture({ currentScope: "user", provider, allowUserScope: true });
+    // Act
+    await f.selector.ready;
+    // Assert
+    expect([f.selector.getSelection(), f.container.querySelector(".stx-app-project-selector__placeholder")?.textContent, persisted, f.events]).toEqual([null, "Select project", [], []]);
+  });
+
+  it("preserves an explicit allowed project over an empty listing projection", async () => {
+    // Arrange
+    const provider: ProjectProvider = { listProjects: async () => ({ projects, current: null }), rememberScope: async () => {} };
+    const f = fixture({ current: "a", provider });
+    // Act
+    await f.selector.ready;
+    // Assert
+    expect(f.selector.getSelection()).toEqual({ scope: "project", id: "a" });
+  });
+});

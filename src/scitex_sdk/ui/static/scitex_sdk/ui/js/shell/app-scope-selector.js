@@ -363,9 +363,9 @@ var ProjectSelector = class extends BaseComponent {
     return projects;
   }
   choice(id, scope) {
-    if (scope === "user") return this.allowUserScope ? this.choices()[0] : null;
+    if (scope === "user") return this.allowUserScope && this.userScopeDisabledReason === null ? this.choices()[0] : null;
     if (scope !== void 0 && scope !== "project") return null;
-    return this.choices().find((p) => p.scope === "project" && p.id === id) ?? null;
+    return this.choices().find((p) => p.scope === "project" && p.id === id && p.disabled !== true) ?? null;
   }
   /** Replace the project list, keeping the selection when it is still present. */
   setProjects(projects, currentId, currentScope, userScopeDisabledReason) {

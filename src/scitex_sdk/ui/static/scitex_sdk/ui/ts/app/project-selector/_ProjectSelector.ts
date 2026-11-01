@@ -227,9 +227,9 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
   }
 
   private choice(id?: string | null, scope?: string): ProjectChoice | null {
-    if (scope === "user") return this.allowUserScope ? this.choices()[0] : null;
+    if (scope === "user") return this.allowUserScope && this.userScopeDisabledReason === null ? this.choices()[0] : null;
     if (scope !== undefined && scope !== "project") return null;
-    return this.choices().find((p) => p.scope === "project" && p.id === id) ?? null;
+    return this.choices().find((p) => p.scope === "project" && p.id === id && p.disabled !== true) ?? null;
   }
 
   /** Replace the project list, keeping the selection when it is still present. */
