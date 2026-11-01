@@ -156,6 +156,10 @@ def scan_headers(
     root = Path(root).resolve()
     overlays = {Path(p).resolve(): text for p, text in (overlays or {}).items()}
     targets = None if targets is None else {Path(p).resolve() for p in targets}
+    if targets is not None and not any(
+        path.suffix.lower() in _SUFFIXES for path in targets
+    ):
+        return []
     generated = _generated_css(root)
     paths = set(overlays)
     for directory, dirs, files in os.walk(root):

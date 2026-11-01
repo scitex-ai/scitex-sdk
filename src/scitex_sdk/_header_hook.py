@@ -8,9 +8,8 @@ import sys
 from pathlib import Path
 
 
-def check_payload(payload):
-    """Inspect proposed editor contents or actual changed shell outputs."""
-    from .ui._linter._header_contract import scan_headers
+def _source_changes(payload):
+    """Read proposed or changed files without mutating the project."""
 
     cwd = Path(payload.get("cwd") or Path.cwd()).resolve()
     result = subprocess.run(
@@ -57,11 +56,44 @@ def check_payload(payload):
             )
             targets.update(root / p for p in changed.stdout.decode().split("\0") if p)
     else:
+        return None
+    return root, overlays, targets
+
+
+def check_payload(payload):
+    """Inspect proposed editor contents or actual changed shell outputs."""
+    from .ui._linter._header_contract import scan_headers
+
+    changed = _source_changes(payload)
+    if changed is None:
         return []
+    root, overlays, targets = changed
     return [
         f"PS-SDK-HEADER: {f.path}:{f.line}: {f.detail}"
         for f in scan_headers(root, overlays=overlays, targets=targets)
     ]
+
+
+def check_scrollbar_payload(payload):
+    """Adapt the existing scrollbar warning to the native payload protocol."""
+    from .ui._linter._checker import _scan_css
+    from .ui._linter._rules import build_rules
+
+    changed = _source_changes(payload)
+    if changed is None:
+        return []
+    _, overlays, targets = changed
+    findings = []
+    for path in targets:
+        if path.suffix.lower() != ".css":
+            continue
+        text = overlays[path] if path in overlays else path.read_text(encoding="utf-8")
+        for finding in _scan_css(path, text.splitlines(), build_rules()):
+            if finding.rule.id in {"STX-UI105", "STX-UI115"}:
+                findings.append(
+                    f"{finding.rule.id}: {finding.path}:{finding.line}: {finding.rule.message}"
+                )
+    return findings
 
 
 def main():

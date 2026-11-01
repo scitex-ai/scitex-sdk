@@ -3,7 +3,7 @@
 The selection state lives in scitex-dev (CUI-level, every package resolves
 through it). This module re-exports the SAME objects (identity, not copies),
 per the facade contract. Requires scitex-dev with the primitive
-(>=0.62.0); anything older fails loud with the floor, never a silent None.
+(>=0.62.6); anything older fails loud with the floor, never a silent None.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ try:
     )
 except ImportError as e:  # pragma: no cover - resolved at install time
     raise ImportError(
-        "scitex_sdk.project requires scitex-dev>=0.62.0 (active-project "
+        "scitex_sdk.project requires scitex-dev>=0.62.6 (active-project "
         "primitive). Install or upgrade scitex-dev; refusing to substitute "
         "a local reimplementation that would drift."
     ) from e

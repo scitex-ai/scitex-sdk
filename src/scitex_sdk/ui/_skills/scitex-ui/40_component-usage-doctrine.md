@@ -304,3 +304,17 @@ DOM/style generation, inherited browser defaults, and complex selector
 cascades require the SDK's real browser contract suite (`npm run test:headers`)
 and host integration checks; static source auditing does not prove computed
 style equality. Only the two canonical SDK CSS resources own these selectors.
+
+
+Native interception uses the canonical Dev 0.62.6 bridge:
+
+```bash
+scitex-dev hooks install --provider scitex-sdk --config .claude/settings.json --harness claude --dry-run
+```
+
+Remove `--dry-run` to merge bindings, then verify an actual native refusal.
+The SDK `cli`/`project` extras require Dev>=0.62.6. The header and existing
+scrollbar checks both accept native payload dictionaries and return violation
+strings. Hermes requires native command consent and config/plugin loading;
+its post-tool event observes changes and cannot veto them. Installing or
+listing rules alone does not prove that a running agent loaded its settings.
