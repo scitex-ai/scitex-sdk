@@ -23,3 +23,12 @@ Evidence: `tests/scitex_sdk/ui/templatetags/test_scitex_project_picker.py`
 checks matching meta/picker context, default scoped opt-in, legacy URLs,
 and content-versioned assets. No transport or TypeScript change is needed;
 the existing HTTP transport retains the configured URL for GET and POST.
+
+Leaf manifests declare `scope_capabilities: {"user": true, "project": false}`
+independently of storage `scope`. `ScitexAppConfig.scope_capabilities`
+validates both literal booleans; omitted declarations make no support claim.
+Hosts may restrict this support, never enable undeclared operations.
+Optional `scope_capability_reasons` maps disabled kinds to explanatory text.
+The generated starter explicitly declares user-only support because its
+backend renders a user workspace and implements no project resource operations.
+A leaf adding project operations must change its own declaration and tests.

@@ -221,6 +221,9 @@ def _manifest_json(
         "context_builder": "",
         "ai_hint": desc,
         "capabilities": [],
+        # The generated starter renders a user workspace with no project
+        # resource operations. A leaf implementing those must opt in explicitly.
+        "scope_capabilities": {"user": True, "project": False},
         "allowed_extensions": [],
         "hidden_patterns": ["__pycache__", "node_modules", ".git", ".venv"],
         "privileges": [],
