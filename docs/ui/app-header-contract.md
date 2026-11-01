@@ -50,3 +50,13 @@ override or a stale bundled SDK stylesheet. Keep installed SDK sources,
 generated frontend bundles, and served static assets consistent. Use the
 existing `app_static` tag for directly linked assets so CSS changes receive
 a content-derived URL.
+
+### React apps
+
+`@scitex/sdk/ui/react/app/app-header` exports `AppHeader`. Pass `title`,
+`version`, and a React `projectSelector` (plus optional `actions`). The binding
+creates the existing TypeScript component and portals children into its slots;
+it does not define a second header template or stylesheet. Text updates preserve
+the mounted picker. React unmount destroys only the binding-owned row. A host
+that already owns a server-declared header should portal into that row instead
+of rendering another binding.
