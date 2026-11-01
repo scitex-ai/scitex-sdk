@@ -158,6 +158,11 @@ def scitex_project_provider_meta(context):
     url = host_project_provider_url(context.get("request"))
     if not url or context.get("request") is None or not _signed_in(context):
         return ""
+    if supports_scoped_capability(host_project_provider()):
+        return format_html(
+            '<meta name="{}" content="{}" data-scoped-protocol="true">',
+            PROJECT_PROVIDER_META_NAME, url,
+        )
     return format_html('<meta name="{}" content="{}">', PROJECT_PROVIDER_META_NAME, url)
 
 
