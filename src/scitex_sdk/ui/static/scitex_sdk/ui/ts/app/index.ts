@@ -95,3 +95,5 @@ export type {
   ProjectListing,
   ProjectProvider,
 } from "./project-selector";
+
+export { FilterField, mountFilterFields } from "./filter-field";

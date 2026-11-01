@@ -335,3 +335,60 @@ so ignored user data/media/cache trees are not inspected on each edit. An
 explicit editor target is still checked even if ignored. Committed generated
 Vite CSS is checked through its authored frontend source, not mistaken for a
 consumer copy of imported canonical SDK styles.
+
+
+### Keyword filter chrome
+
+Use an empty SDK mount; keep result filtering in the leaf's input handler:
+
+```html
+<div data-stx-filter-field data-filter-subject="agents" data-filter-id="agents-filter"></div>
+```
+
+The SDK renderer owns the icon, input geometry, placeholder, and keyboard hint.
+Do not hand-author `stx-filter-field*` children or override their styles. Only
+`ui/static/scitex_sdk/ui/css/app/filter-field.css` in the SDK owns these selectors.
+Recognizable local filter containers with keyboard hints also fork the
+contract. Ordinary search fields, content controls, and result-filtering logic
+remain leaf-owned. Dynamic DOM/style generation requires browser verification;
+the source scanner proves literal ownership, not every runtime cascade.
+
+Dev's existing project-audit dispatcher runs `PS-SDK-FILTER` at error severity:
+
+```bash
+scitex-dev ecosystem audit-project scitex-agent-container --path . --rule PS-SDK-FILTER
+```
+
+The existing SDK header pre-edit/post-shell descriptors run this check as well;
+there is no second native binding to install. `python -m scitex_dev.hooks.dispatch
+--provider scitex-sdk` consumes native event JSON on stdin. Proposed editor
+writes are checked before mutation; post-shell reports completed source changes.
+Missing scanners fail closed. Updating package source does not update an older
+isolated hook interpreter automatically: qualify/install the new SDK there,
+then test its saved command. Hermes loading/consent and its observation-only
+post-tool boundary remain as described above.
+
+
+### Shared viewport frame
+
+Leaf apps inherit the host frame width, outer margins, and background. Do not
+fork these properties on `.workspace-three-col`, `.workspace-layout`,
+`.workspace-content`, `#workspace-layout`, or `#workspace-three-col`.
+`PS-SDK-SHELL` enforces this through the same Dev project auditor and existing
+pre-edit/post-shell hook path, with no additional native binding:
+
+```bash
+scitex-dev ecosystem audit-project scitex-agent-container --path . --rule PS-SDK-SHELL
+```
+
+Only exact canonical SDK shell resource paths and the Hub's
+`static/shared/css/layouts/{site-content-frame,leaf-host-chrome,global-base,platform-backdrop}.css`
+plus `components/workspace-layout.css` and `components/workspace-chat-embed.css`
+may own these global frame declarations, with the owning distribution verified.
+Copying an owner's filename into a leaf does not grant ownership. App interior
+controls, their backgrounds/borders, and host brand bubbles remain independent.
+Do not recreate a thin painted top `::before`/`::after` stripe on the shared
+content/root wrapper: that prohibition also applies inside canonical stylesheets.
+The static detector recognizes literal wrapper selectors and thin top-painted
+pseudo-elements. Browser contract tests must verify dynamically generated styles
+and the actual host frame; source checks do not claim full cascade analysis.

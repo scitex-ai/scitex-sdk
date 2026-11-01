@@ -27,6 +27,7 @@ const entries = [
   ["app/dropdown/index", "app/dropdown"],
   ["app/empty/index", "app/empty"],
   ["app/file-tabs/index", "app/file-tabs"],
+  ["app/filter-field/auto-mount", "app/filter-field"],
   ["app/import-export/index", "app/import-export"],
   ["app/panes/auto-mount", "app/panes"],
   ["app/project-selector/auto-mount", "app/project-selector"],
