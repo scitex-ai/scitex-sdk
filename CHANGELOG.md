@@ -4,6 +4,19 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.17] - Unpublished preview
+
+- Expose request-local project view selections independently of remembered
+  preference; authorize project access with optional `remember=False`.
+- Expose public PDF page surfaces and viewport coordinate conversion, with
+  opt-in selectable text and link layers. Existing two-argument render
+  callbacks remain supported.
+- Add the shared DataTable, focus-aware filter fields, and source ownership
+  checks. Their public UI builds ship in the Python wheel.
+- This source version is a preview until the normal release workflow publishes
+  it. LivePaper 0.2.20 and Writer consumers requiring these APIs must follow
+  the SDK release; source installation is not evidence of public availability.
+
 - Normalize AppHeader and ProjectSelector typography independently of page root
   fonts, and limit Creator button styles to its action rows. Add Chromium
   regressions for both themes, phone/desktop layouts and scope availability.

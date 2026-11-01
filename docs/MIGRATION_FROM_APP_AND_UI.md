@@ -17,8 +17,8 @@ pip install 'scitex-sdk[gui]>=0.3.0'
 ```
 
 Add the `chat`, `mcp`, `cli` or `project` extras for those capabilities,
-or install `scitex-sdk[all]`. The `project` and `all` extras require
-`scitex-dev>=0.62.0`.
+or install `scitex-sdk[all]`. The `cli` and `project` extras, `all`, and contributor tooling require
+`scitex-dev>=0.62.6`, as declared in `pyproject.toml`.
 
 ## What moved where
 

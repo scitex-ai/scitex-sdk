@@ -20,7 +20,7 @@ export async function renderPageLayers(options: LayerOptions): Promise<() => voi
   if (options.text) {
     const { TextLayer } = options;
     const layer = document.createElement("div");
-    layer.className = "stx-pdf-text-layer";
+    layer.dataset.stxPdfLayer = "text";
     Object.assign(layer.style, {
       position: "absolute", inset: "0", overflow: "hidden", lineHeight: "1",
       textAlign: "initial", textSizeAdjust: "none", forcedColorAdjust: "none",
@@ -38,7 +38,7 @@ export async function renderPageLayers(options: LayerOptions): Promise<() => voi
   }
   if (options.links) {
     const layer = document.createElement("div");
-    layer.className = "stx-pdf-link-layer";
+    layer.dataset.stxPdfLayer = "links";
     Object.assign(layer.style, { position: "absolute", inset: "0", pointerEvents: "none", zIndex: "2" });
     element.append(layer);
     owned.push(layer);

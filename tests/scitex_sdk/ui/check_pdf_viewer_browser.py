@@ -83,22 +83,22 @@ viewer.setInteractive(false);await viewer.load('/fixture.pdf');window.ready=true
         assert page.locator("#viewer canvas").count() == 4
         assert (
             "SDK fixture searchable text"
-            in page.locator(".stx-pdf-text-layer").first.inner_text()
+            in page.locator("[data-stx-pdf-layer=text]").first.inner_text()
         )
         proof = page.evaluate("""() => {
 const s=surfaces[0],point=s.pdfToViewportPoint(80,680),back=s.viewportToPdfPoint(...point);
-const span=s.element.querySelector('.stx-pdf-text-layer span');let range=document.createRange();range.selectNodeContents(span);getSelection().removeAllRanges();getSelection().addRange(range);
+const span=s.element.querySelector('[data-stx-pdf-layer=text] span');let range=document.createRange();range.selectNodeContents(span);getSelection().removeAllRanges();getSelection().addRange(range);
 return {back,selected:getSelection().toString(),rotationWidth:renders[0].width,rotationHeight:renders[0].height,rect:s.pdfToViewportRect([60,620,240,655]),textRect:[span.getBoundingClientRect().width,span.getBoundingClientRect().height]};}""")
         assert proof["back"] == [80, 680], proof
         assert proof["rotationWidth"] == 1050 and proof["rotationHeight"] == 690, proof
         assert proof["selected"] == "SDK fixture searchable text", proof
         assert all(value > 0 for value in proof["textRect"]), proof
-        page.locator(".stx-pdf-link-layer a").click()
+        page.locator("[data-stx-pdf-layer=links] a").click()
         page.wait_for_function('document.querySelector("#viewer").scrollTop>0')
         old = page.evaluate_handle("window.surfaces[0].element")
         page.evaluate("window.viewer.setScale(2)")
         assert old.evaluate("(element)=>!element.isConnected")
-        assert page.locator(".stx-pdf-text-layer").count() == 2
+        assert page.locator("[data-stx-pdf-layer=text]").count() == 2
         page.evaluate("window.viewer.destroy()")
         assert (
             page.locator("#viewer").evaluate("(element)=>element.childElementCount")

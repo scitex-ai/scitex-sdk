@@ -29,8 +29,8 @@ the SDK, importing its provider module, and using the standalone UI walker do
 not acquire a new Dev dependency. Activating the provider with an older Dev
 fails with an actionable compatibility error instead of dropping its
 declaration. The optional `cli` and `project` extras and contributor `dev` group
-therefore require `scitex-dev>=0.62` (Dev 0.62.4 with the SPI is public); `all`
-includes both extras. The
+therefore require `scitex-dev>=0.62.6`, matching the active declarations in
+`pyproject.toml`; `all` includes both extras. The
 project primitive itself existed in Dev 0.62.0, but installing an older Dev for
 that API would also discover the SDK's incompatible linter provider. Every
 SDK tooling installation consequently selects the compatible engine.

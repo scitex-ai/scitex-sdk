@@ -13,7 +13,39 @@ retired App/UI distributions, and normal source/sdist/wheel/frontend identity.
 Persisted Django labels/FKs, `scitex_ui` tag libraries, template blocks, existing
 env names and local configuration/storage contracts remain unchanged.
 
-## Sequential publication proposal
+## Current 0.3.17 release procedure
+
+The source version is an unpublished preview until normal publication succeeds.
+`pyproject.toml` requires Dev>=0.62.6 for CLI/project tooling and `[all]`;
+old versions in the historical observations below are not current install floors.
+
+1. Qualify the exact combined source. Stacked pull requests whose base is a
+   feature branch do not trigger `frontend.yml` or `python-package.yml`: those
+   PR events target `main`/`develop` only. Dispatch both existing workflows at
+   the candidate branch, verify each run's `headSha`, or requalify after merging
+   into a covered branch. An empty checks list is not a pass.
+2. Review and merge the source in order, retaining the 0.3.17 Python/frontend
+   versions and published dependency requirements. Do not tag an earlier base
+   that omits the public PDF or request-local selection APIs.
+3. Push `v0.3.17` at the accepted commit using the repository's release process.
+   The tag triggers `pypi-publish-and-github-release-on-tag.yml`. Its manual
+   dispatch accepts an already-existing tag; it does not create one.
+4. Require the release's Python 3.11/3.12/3.13 tests, frontend gates, source/
+   sdist/wheel/frontend identity checks, and normal built-wheel `[all]` install
+   plus `pip check`. The ownership report explicitly distinguishes bootstrap
+   observation from strict dependency retirement.
+5. Publication uses the existing `pypi` environment and PyPI trusted publisher.
+   Keep the workflow filename and environment identity. The GitHub release is
+   created only after publication; verify the public distributions correspond
+   to the accepted source before releasing LivePaper 0.2.20 and its Writer
+   consumers. Retry an existing tag through the existing workflow only after
+   classifying its actual failure; do not bypass a failed release gate.
+
+The public dependency-retirement inventory remains a separate gate; SDK
+publication does not certify migrated downstream graphs. See the historical
+bootstrap observations and checker limitations below.
+
+## Historical sequential publication proposal
 
 1. (Done — Dev 0.62.4 is public.) Closed Dev's genuine project API and
    native release gates, then made the genuine Dev release 0.62
