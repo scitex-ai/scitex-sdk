@@ -27,8 +27,30 @@ def _source_changes(payload):
     if tool in {"Write", "write_file", "Edit", "MultiEdit", "patch"} and filename:
         path = Path(filename)
         path = (path if path.is_absolute() else cwd / path).resolve()
-        if not path.is_relative_to(root):
-            raise ValueError("Edited path is outside the tool repository")
+        if path.suffix.lower() not in {".css", ".html", ".htm", ".tsx", ".jsx"}:
+            return None
+        # Native clients can run from HOME while editing an absolute repo
+        # path. Resolve the edited project's scope, never walk all HOME.
+        directory = path.parent
+        while not directory.is_dir() and directory != directory.parent:
+            directory = directory.parent
+        project = subprocess.run(
+            ["git", "-C", str(directory), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if project.returncode == 0:
+            root = Path(project.stdout.strip())
+        else:
+            root = next(
+                (
+                    p
+                    for p in (directory, *directory.parents)
+                    if (p / "pyproject.toml").is_file()
+                ),
+                directory,
+            )
         if tool in {"Write", "write_file"}:
             text = data["content"]
         else:
@@ -46,9 +68,12 @@ def _source_changes(payload):
         targets.add(path)
     elif tool in {"Bash", "terminal", "apply_patch"}:
         if result.returncode:
-            raise ValueError("Cannot enumerate changed source outside a Git repository")
+            # Source hooks cover project changes. Host commands outside a repo
+            # have no source baseline; the project auditor/CI owns that boundary.
+            return None
         for args in (
-            ["diff", "--name-only", "--diff-filter=ACMR", "-z", "HEAD"],
+            ["diff", "--name-only", "--diff-filter=ACMR", "-z"],
+            ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
             ["ls-files", "--others", "--exclude-standard", "-z"],
         ):
             changed = subprocess.run(

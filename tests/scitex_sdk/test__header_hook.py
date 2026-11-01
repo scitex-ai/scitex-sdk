@@ -177,3 +177,49 @@ def test_published_canonical_dev_dispatcher_allows_safe_sdk_edit(tmp_path):
     findings = dispatch(payload, provider="scitex-sdk")
     # Assert
     assert findings == []
+
+
+def test_absolute_editor_path_resolves_target_repo_instead_of_home(tmp_path):
+    # Arrange
+    home = tmp_path / "home"
+    repo = home / "project"
+    repo.mkdir(parents=True)
+    (home / "unrelated.html").write_bytes(b"\xff")
+    subprocess.run(["git", "init", str(repo)], capture_output=True, check=True)
+    payload = {
+        "cwd": str(home),
+        "tool_name": "Write",
+        "tool_input": {"file_path": str(repo / "leaf.css"), "content": ".toolbar{}"},
+    }
+    # Act
+    findings = check_payload(payload)
+    # Assert
+    assert findings == []
+
+
+def test_host_shell_outside_repo_has_no_claimed_project_scope(tmp_path):
+    # Arrange
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Bash",
+        "tool_input": {"command": "pwd"},
+    }
+    # Act
+    findings = check_payload(payload)
+    # Assert
+    assert findings == []
+
+
+def test_unborn_git_repo_still_checks_new_source(tmp_path):
+    # Arrange
+    subprocess.run(["git", "init", str(tmp_path)], capture_output=True, check=True)
+    (tmp_path / "leaf.css").write_text(".stx-app-header{height:99px}")
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Bash",
+        "tool_input": {"command": "true"},
+    }
+    # Act
+    findings = check_payload(payload)
+    # Assert
+    assert len(findings) == 1
