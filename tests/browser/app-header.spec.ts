@@ -13,6 +13,7 @@ async function mount(page: Page, rootSize: number, theme: string,
       await route.fulfill({ contentType: "text/html", body: `<!doctype html>
         <html data-theme="${theme}"><head>
         <link rel="stylesheet" href="${ui}/css/shell/theme.css">
+        <link rel="stylesheet" href="${ui}/css/primitives/spacing.css">
         <link rel="stylesheet" href="${ui}/css/app/app-header.css">
         <link rel="stylesheet" href="${ui}/css/app/project-selector.css">
         <link rel="stylesheet" href="/creator/static/scitex_sdk_creator/wizard.css">
@@ -85,6 +86,8 @@ for (const theme of ["light", "dark"]) {
         const option = page.getByRole("option", { name: "All Projects", exact: true });
         await expect(option).toHaveCSS("font-size", "14px");
         await expect(option).toHaveCSS("font-family", metrics.title.font);
+        await expect(page.locator(".stx-app-project-selector__search")).toHaveCSS("margin", "4px");
+        await expect(page.locator(".stx-app-project-selector__list")).toHaveCSS("padding", "4px");
         if (width === 390) expect((await option.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       });
     }

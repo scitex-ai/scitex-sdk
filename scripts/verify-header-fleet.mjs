@@ -16,8 +16,18 @@ const out = resolve(process.env.SCITEX_HEADER_REPORT_DIR || "test-results/header
 await mkdir(out, { recursive: true, mode: 0o700 });
 const browser = await chromium.launch(process.env.SCITEX_TEST_CHROMIUM ? { executablePath: process.env.SCITEX_TEST_CHROMIUM } : {});
 const context = await browser.newContext({ storageState: process.env.SCITEX_HEADER_STORAGE_STATE || undefined });
+await context.addInitScript(() => {
+  window.__scitexHeaderThemeInitialized = false;
+  document.addEventListener("theme-changed", () => { window.__scitexHeaderThemeInitialized = true; }, { once: true });
+});
 const page = await context.newPage();
 const rows = [], failures = [];
+let themeSaveRequests = 0;
+page.on("request", request => {
+  if (request.method() === "POST" && new URL(request.url()).pathname === "/auth/api/save-theme/") themeSaveRequests++;
+});
+const themeEndpoint = new URL("/auth/api/get-theme/", base).href;
+const initialTheme = await (await context.request.get(themeEndpoint)).json();
 const fields = ["fontFamily", "fontSize", "fontWeight", "lineHeight", "height", "color", "backgroundColor", "padding", "margin", "borderRadius", "borderBottomWidth", "borderBottomColor"];
 try {
   for (const width of [1440, 390]) {
@@ -27,6 +37,11 @@ try {
       const url = new URL("apps/" + route, base.replace(/\/?$/, "/"));
       const row = { route, width, states: [] };
       try {
+        const newDocument = page.url().split("#")[0] !== url.href.split("#")[0];
+        const themeResponse = newDocument
+          ? page.waitForResponse(r => new URL(r.url()).pathname === "/auth/api/get-theme/", { timeout: 15000 })
+              .then(response => ({ response }), error => ({ error }))
+          : Promise.resolve({ response: null });
         const response = await page.goto(url.href, { waitUntil: "domcontentloaded", timeout: 45000 });
         if (response && response.status() !== 200) throw new Error(`HTTP ${response.status()}`);
         await page.locator(".stx-app-header .stx-app-project-selector__trigger").waitFor({ timeout: 15000 });
@@ -34,6 +49,13 @@ try {
         // Leaf modules can arrive after DOMContentLoaded. Wait for load rather
         // than network-idle: running apps legitimately poll APIs continuously.
         await page.waitForLoadState("load", { timeout: 15000 });
+        // The canonical controller applies the saved theme after an async GET.
+        // Wait for its real initialization event before our document-only themes.
+        const initialized = await themeResponse;
+        if (initialized.error) throw initialized.error;
+        if (initialized.response) await initialized.response.finished();
+        await page.waitForFunction(() => window.__scitexHeaderThemeInitialized === true, null, { timeout: 15000 });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await page.mouse.move(0, 0);
         for (const theme of ["light", "dark"]) {
           await page.evaluate(t => {
@@ -84,8 +106,12 @@ try {
       console.log(`${route} ${width}px checked`);
     }
   }
-} finally { await browser.close(); }
-await writeFile(resolve(out, "report.json"), JSON.stringify({ rows, failures, passed: !failures.length }, null, 2), { mode: 0o600 });
+} finally {
+  const finalTheme = await (await context.request.get(themeEndpoint)).json();
+  if (themeSaveRequests || finalTheme.theme !== initialTheme.theme) failures.push({ error: "Theme preference changed during the probe", themeSaveRequests });
+  await browser.close();
+}
+await writeFile(resolve(out, "report.json"), JSON.stringify({ rows, failures, themeSaveRequests, passed: !failures.length }, null, 2), { mode: 0o600 });
 if (failures.length) {
   console.error(`${failures.length} header differences or delivery failures; inspect ${resolve(out, "report.json")}`);
   process.exitCode = 1;
