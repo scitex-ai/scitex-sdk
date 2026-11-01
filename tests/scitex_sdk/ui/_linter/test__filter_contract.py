@@ -20,10 +20,10 @@ from scitex_sdk.ui._linter._filter_contract import scan_filters
     [
         '<div class="agents-filter"><input><kbd>Ctrl+K</kbd></div>',
         '<button className="stx-filter-field__hint">Esc</button>',
-        "<div data-stx-filter><input></div>",
-        "<div data-stx-filter>Filter agents</div>",
-        '<div class="agents-filter"><svg></svg><input></div>',
-        '<div data-stx-filter style="padding:20px"></div>',
+        "<div data-stx-filter-field><input></div>",
+        "<div data-stx-filter-field>Filter agents</div>",
+        '<div class="agents-filter"><svg class="stx-filter-field__icon"></svg><input></div>',
+        '<div data-stx-filter-field style="padding:20px"></div>',
     ],
 )
 def test_handwritten_chrome_is_rejected(tmp_path, source):
@@ -39,7 +39,7 @@ def test_handwritten_chrome_is_rejected(tmp_path, source):
     "source",
     [
         ".stx-filter-field__input {font-size:18px}",
-        "[data-stx-filter] {padding:22px}",
+        "[data-stx-filter-field] {padding:22px}",
         ".agents-filter kbd {color:red}",
         ".agents-filter__hint {color:red}",
     ],
@@ -56,7 +56,7 @@ def test_local_chrome_styles_are_rejected(tmp_path, source):
 def test_empty_mount_and_leaf_result_filtering_are_allowed(tmp_path):
     # Arrange
     (tmp_path / "view.html").write_text(
-        '<div data-stx-filter data-filter-subject="agents" data-filter-id="agents-filter"></div><input placeholder="Search DOI"><kbd>Ctrl+P</kbd>'
+        '<div data-stx-filter-field data-filter-subject="agents" data-filter-id="agents-filter"></div><input placeholder="Search DOI"><kbd>Ctrl+P</kbd>'
     )
     (tmp_path / "filter.js").write_text(
         'input.addEventListener("input", () => rows.filter(matches));'
@@ -128,7 +128,7 @@ def test_native_safe_edit_is_allowed(tmp_path):
         "tool_name": "Write",
         "tool_input": {
             "file_path": "view.html",
-            "content": "<div data-stx-filter></div>",
+            "content": "<div data-stx-filter-field></div>",
         },
     }
     # Act
@@ -166,7 +166,7 @@ def test_missing_filter_scanner_fails_closed(tmp_path):
         "tool_name": "Write",
         "tool_input": {
             "file_path": "view.html",
-            "content": "<div data-stx-filter></div>",
+            "content": "<div data-stx-filter-field></div>",
         },
     }
     # Act
@@ -210,3 +210,37 @@ def test_real_dev_native_bridge_refuses_filter_fork(tmp_path):
         2,
         True,
     )
+
+
+def test_named_filter_bindings_are_leaf_behavior_not_sdk_mounts(tmp_path):
+    # Arrange
+    (tmp_path / "view.html").write_text(
+        '<input data-stx-filter="q"><select data-stx-filter="status"><option>Open</option></select>'
+    )
+    # Act
+    findings = scan_filters(tmp_path)
+    # Assert
+    assert findings == []
+
+
+def test_django_state_filter_expression_does_not_create_filter_container(tmp_path):
+    # Arrange
+    (tmp_path / "view.html").write_text(
+        '<div class="issues-tab {% if state_filter == "open" %}active{% endif %}"><svg><path/></svg>Open</div>'
+    )
+    # Act
+    findings = scan_filters(tmp_path)
+    # Assert
+    assert findings == []
+
+
+def test_internal_project_picker_search_icon_is_not_keyword_filter_chrome(tmp_path):
+    # Arrange
+    (tmp_path / "view.html").write_text(
+        '<div class="sidebar-project-filter"><i class="sidebar-project-filter-icon"></i><input placeholder="Find project..."></div>'
+    )
+    (tmp_path / "view.css").write_text(".sidebar-project-filter-icon {font-size:12px}")
+    # Act
+    findings = scan_filters(tmp_path)
+    # Assert
+    assert findings == []

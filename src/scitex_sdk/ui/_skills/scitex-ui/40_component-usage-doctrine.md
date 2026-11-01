@@ -342,13 +342,13 @@ consumer copy of imported canonical SDK styles.
 Use an empty SDK mount; keep result filtering in the leaf's input handler:
 
 ```html
-<div data-stx-filter data-filter-subject="agents" data-filter-id="agents-filter"></div>
+<div data-stx-filter-field data-filter-subject="agents" data-filter-id="agents-filter"></div>
 ```
 
 The SDK renderer owns the icon, input geometry, placeholder, and keyboard hint.
 Do not hand-author `stx-filter-field*` children or override their styles. Only
 `ui/static/scitex_sdk/ui/css/app/filter-field.css` in the SDK owns these selectors.
-Recognizable local filter containers with keyboard hints or icons also fork the
+Recognizable local filter containers with keyboard hints also fork the
 contract. Ordinary search fields, content controls, and result-filtering logic
 remain leaf-owned. Dynamic DOM/style generation requires browser verification;
 the source scanner proves literal ownership, not every runtime cascade.

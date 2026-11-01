@@ -16,10 +16,10 @@ from ._header_contract import (
 )
 
 _SHARED = re.compile(
-    r"\.stx-filter-field(?:__[\w-]+|--[\w-]+)?(?![\w-])|\[data-stx-filter(?:[=\]\s])"
+    r"\.stx-filter-field(?:__[\w-]+|--[\w-]+)?(?![\w-])|\[data-stx-filter-field(?:[=\]\s])"
 )
 _LOCAL_HINT = re.compile(
-    r"\.[\w-]*filter[\w-]*(?:[\s>]+(?:kbd|\.[\w-]*(?:hint|shortcut|kbd|icon)[\w-]*)|(?:__|--|-)(?:hint|shortcut|kbd|icon)[\w-]*)\b",
+    r"\.[\w-]*filter[\w-]*(?:[\s>]+(?:kbd|\.[\w-]*(?:hint|shortcut|kbd)[\w-]*)|(?:__|--|-)(?:hint|shortcut|kbd)[\w-]*)\b",
     re.IGNORECASE,
 )
 
@@ -32,9 +32,16 @@ class _Markup(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
-        classes = (attrs.get("class") or attrs.get("classname") or "").split()
+        classes = re.sub(
+            r"\{%.*?%\}|\{\{.*?\}\}",
+            "",
+            attrs.get("class") or attrs.get("classname") or "",
+        ).split()
         shared = any(c.startswith("stx-filter-field") for c in classes)
-        mount = "data-stx-filter" in attrs
+        mount = "data-stx-filter-field" in attrs and attrs["data-stx-filter-field"] in {
+            None,
+            "",
+        }
         scope = (
             mount
             or shared
@@ -49,25 +56,25 @@ class _Markup(HTMLParser):
             self.findings.append(
                 (
                     self.getpos()[0],
-                    "Filter chrome belongs to the SDK renderer; use an empty data-stx-filter mount.",
+                    "Filter chrome belongs to the SDK renderer; use an empty data-stx-filter-field mount.",
                 )
             )
         if self.stack and any(item[1] for item in self.stack):
-            if tag in {"kbd", "svg"} or any(
-                re.search(r"(?:hint|shortcut|keyboard|icon)", c, re.IGNORECASE)
+            if tag == "kbd" or any(
+                re.search(r"(?:hint|shortcut|keyboard)", c, re.IGNORECASE)
                 for c in classes
             ):
                 self.findings.append(
                     (
                         self.getpos()[0],
-                        "Handwritten filter icons or keyboard hints fork the SDK FilterField contract.",
+                        "Handwritten filter keyboard hints fork the SDK FilterField contract.",
                     )
                 )
             if any(item[2] for item in self.stack):
                 self.findings.append(
                     (
                         self.getpos()[0],
-                        "The data-stx-filter mount must be empty; SDK owns its children.",
+                        "The data-stx-filter-field mount must be empty; SDK owns its children.",
                     )
                 )
         if tag not in {"input", "img", "br", "hr", "meta", "link", "source", "wbr"}:
@@ -76,7 +83,7 @@ class _Markup(HTMLParser):
     def handle_data(self, data):
         if data.strip() and any(item[2] for item in self.stack):
             self.findings.append(
-                (self.getpos()[0], "The data-stx-filter mount must be empty.")
+                (self.getpos()[0], "The data-stx-filter-field mount must be empty.")
             )
 
     def handle_endtag(self, tag):
@@ -133,7 +140,14 @@ def scan_filters(root, *, overlays=None, targets=None):
         )
         if path.suffix.lower() != ".css":
             parser = _Markup()
-            parser.feed(text)
+            parser.feed(
+                re.sub(
+                    r"\{%.*?%\}|\{\{.*?\}\}",
+                    lambda m: "\n" * m[0].count("\n"),
+                    text,
+                    flags=re.S,
+                )
+            )
             out.extend(
                 HeaderFinding(str(path), line, detail)
                 for line, detail in parser.findings
