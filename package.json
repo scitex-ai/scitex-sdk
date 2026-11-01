@@ -8,12 +8,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "build:ui": "node scripts/build-ui.mjs"
+    "build:ui": "node scripts/build-ui.mjs",
+    "test:headers": "playwright test --config=playwright.header.config.ts"
   },
   "dependencies": {
     "@scitex/sdk": "file:./src/scitex_sdk"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "esbuild": "^0.21.5",

@@ -126,3 +126,37 @@ jobs:
         run: bash scripts/setup-node-owned.sh
       - run: npm ci --no-audit --no-fund
       - run: npm test
+
+  header-browser:
+    name: header-browser
+    runs-on: [self-hosted, Linux, X64, scitex-ci]
+    timeout-minutes: 15
+    steps:
+      # Preserve the UI fork boundary before checkout or npm lifecycle scripts.
+      - name: Refuse to run fork-authored code on self-hosted infrastructure
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "::error::Fork-authored code is not run on self-hosted infrastructure."
+          exit 1
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - name: Use a job-owned npm cache and temporary directory
+        run: |
+          npm_cache="$RUNNER_TEMP/scitex-sdk-npm-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$npm_cache"
+          printf '%s\n' "NPM_CONFIG_CACHE=$npm_cache" \
+            "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Set up checksum-verified Node in the job directory
+        run: bash scripts/setup-node-owned.sh
+      - run: npm ci --no-audit --no-fund
+      - name: Install job-owned Chromium
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/sdk-header-browsers
+        run: npx playwright install chromium
+      - name: Verify canonical header and scope contracts in Chromium
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/sdk-header-browsers
+        run: npm run test:headers

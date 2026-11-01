@@ -4,6 +4,10 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Normalize AppHeader and ProjectSelector typography independently of page root
+  fonts, and limit Creator button styles to its action rows. Add Chromium
+  regressions for both themes, phone/desktop layouts and scope availability.
+
 - Add opt-in main-details panes layout with a shared 320px Details default,
   responsive bounds and phone width, and collapse behavior preserving host
   restored inline sizes. See docs/ui/main-details-panes.md; source preview only.
