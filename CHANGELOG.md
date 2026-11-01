@@ -4,7 +4,9 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
-(none yet)
+- AppHeader auto-mount immediately places an existing direct SDK project picker
+  in its canonical slot, preserving the control and avoiding a second header row
+  while leaf viewer modules load.
 
 ## [0.3.16] - 2026-10-31
 

@@ -62,6 +62,57 @@ const USER_PROPS = {
 };
 
 describe("AppHeader — the canonical row", () => {
+  it("auto-mount adopts the existing SDK picker without recreating its state", () => {
+    const container = root();
+    container.setAttribute(HEADER_ATTRIBUTE, "");
+    container.innerHTML = `<script type="application/json">{}</script>
+      <div class="stx-app-project-selector" data-stx-project-picker>
+        <button aria-expanded="true">Current project</button>
+      </div><aside><div class="stx-app-project-selector" data-stx-project-picker></div></aside>`;
+    const picker = container.querySelector<HTMLElement>(".stx-app-project-selector")!;
+    const button = picker.querySelector("button")!;
+    const catalog = container.querySelector("script")!;
+    const nested = container.querySelector("aside > div")!;
+    let clicks = 0;
+    button.addEventListener("click", () => clicks++);
+
+    const [header] = mountAppHeader(document);
+
+    expect(header.projectSlot?.firstElementChild).toBe(picker);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    button.click();
+    expect(clicks).toBe(1);
+    expect(catalog.parentElement).toBe(container);
+    expect(nested.parentElement?.tagName).toBe("ASIDE");
+    expect(mountAppHeader(document)).toEqual([]);
+    expect(header.projectSlot?.children.length).toBe(1);
+  });
+
+  it("keeps a user-scoped picker outside the absent project slot", () => {
+    withShellProps(USER_PROPS);
+    const container = root();
+    container.setAttribute(HEADER_ATTRIBUTE, "");
+    container.innerHTML = '<div class="stx-app-project-selector" data-stx-project-picker></div>';
+    const picker = container.firstElementChild;
+
+    const [header] = mountAppHeader(document);
+
+    expect(header.projectSlot).toBeNull();
+    expect(picker?.parentElement).toBe(container);
+  });
+
+  it("does not choose between multiple direct SDK pickers", () => {
+    const container = root();
+    container.setAttribute(HEADER_ATTRIBUTE, "");
+    container.innerHTML = '<div class="stx-app-project-selector" data-stx-project-picker></div>'.repeat(2);
+    const pickers = Array.from(container.children);
+
+    const [header] = mountAppHeader(document);
+
+    expect(header.projectSlot?.children.length).toBe(0);
+    expect(pickers.every((picker) => picker.parentElement === container)).toBe(true);
+  });
+
   it("renders the four slots in the canonical order", () => {
     // Arrange
     const container = root();
