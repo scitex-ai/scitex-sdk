@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """scitex-sdk's declared agent guardrails (federation leaf).
 
 Registered under the ``scitex_dev.hooks`` entry-point group in
@@ -24,7 +22,30 @@ def provide() -> list:
     """Return scitex-sdk's declared guardrails."""
     if HookRule is None:
         return []
+    header = {
+        "rule": "Use the SDK AppHeader and project dropdown without local markup/style forks.",
+        "reason": "App headers share typography and dropdown geometry across installed apps.",
+        "severity": "deny",
+        "provider": "scitex-sdk",
+        "owner_module": "scitex_sdk",
+        "check": "scitex_sdk._header_hook:check_payload",
+        "doctrine": "ui/_skills/scitex-ui/40_component-usage-doctrine.md",
+    }
     return [
+        HookRule(
+            id="sdk.header-contract",
+            event="pre-tool-use",
+            matches=("Edit", "Write", "MultiEdit", "write_file", "patch"),
+            script="hooks/enforce_header.sh",
+            **header,
+        ),
+        HookRule(
+            id="sdk.header-contract-after-shell",
+            event="post-tool-use",
+            matches=("Bash", "terminal", "apply_patch"),
+            script="hooks/enforce_header_after.sh",
+            **header,
+        ),
         HookRule(
             id="sdk.no-unthemed-scrollbar",
             rule="Do not ship scrollbar colours outside the shared "
@@ -42,7 +63,7 @@ def provide() -> list:
             severity="warn",
             matches=("Edit", "Write"),
             provider="scitex-sdk",
-            check="scitex_sdk.ui._linter._checker:scan_path",
+            check="scitex_sdk._header_hook:check_scrollbar_payload",
             doctrine="src/scitex_sdk/ui/_skills/scitex-ui/40_component-usage-doctrine.md",
         ),
     ]

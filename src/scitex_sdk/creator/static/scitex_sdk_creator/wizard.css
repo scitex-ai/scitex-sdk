@@ -135,7 +135,7 @@
   flex-wrap: wrap;
 }
 
-.stx-creator button {
+.stx-actions > button {
   font: inherit;
   padding: 8px 16px;
   border-radius: 8px;
@@ -145,18 +145,18 @@
   cursor: pointer;
 }
 
-.stx-creator button:hover {
+.stx-actions > button:hover {
   border-color: color-mix(in srgb, currentcolor 45%, transparent);
 }
 
-.stx-creator button.stx-primary {
+.stx-actions > button.stx-primary {
   background: var(--role-primary-bg);
   border-color: var(--role-primary-bg);
   color: var(--role-primary-text);
   font-weight: 600;
 }
 
-.stx-creator button.stx-primary:hover {
+.stx-actions > button.stx-primary:hover {
   background: var(--role-primary-hover-bg);
   border-color: var(--role-primary-hover-bg);
 }

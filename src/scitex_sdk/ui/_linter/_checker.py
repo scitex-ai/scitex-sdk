@@ -420,22 +420,6 @@ def _scan_css(path: Path, lines: Sequence[str], rules) -> Iterator[UIViolation]:
                 source_line=line.rstrip("\n"),
             )
 
-    # UI-113 — consumer restyle of the shared AppHeader row. Row height,
-    # placement and font size come from the SDK alone; any leaf restyle
-    # is a fork. Commented-out code is not a restyle.
-    for lineno, line in enumerate(lines, start=1):
-        if _is_comment_line(line):
-            continue
-        m = _APPHEADER_SELECTOR_RE.search(line)
-        if m and not _in_comment(lineno, m.start()):
-            yield UIViolation(
-                rule=rules["STX-UI113"],
-                path=str(path),
-                line=lineno,
-                col=m.start(),
-                source_line=line.rstrip("\n"),
-            )
-
     # UI-114 — leaf-local button base: a parallel button system next to
     # the shared `.stx-button` primitive. Variants keyed off the base
     # (`.btn-primary`, `.btn:hover`) are not flagged on their own.
@@ -848,6 +832,13 @@ def scan_path(
             violations.extend(_scan_tsx_html(path, lines, rules))
         elif kind == "json":
             violations.extend(_scan_json(path, text, rules))
+    if treat_as_consumer:
+        from ._header_contract import scan_headers
+        root = target_path if target_path.is_dir() else target_path.parent
+        targets = None if target_path.is_dir() else {target_path.resolve()}
+        for finding in scan_headers(root, targets=targets):
+            violations.append(UIViolation(rule=rules["STX-UI113"], path=finding.path,
+                                          line=finding.line, col=0, source_line=finding.detail))
     return violations
 
 

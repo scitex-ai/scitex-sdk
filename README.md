@@ -15,6 +15,9 @@ standalone or as a plugin. Hub mounts apps generically and supplies authorized
 capabilities. See the [app/UI contract](src/scitex_sdk/_docs/APP_DEVELOPER_GUIDE.md)
 and [workflow skill](src/scitex_sdk/_skills/scitex-sdk/SKILL.md).
 
+In-app headers use one shared appearance across apps. See the
+[header contract and browser checks](docs/ui/app-header-contract.md).
+
 ```bash
 # Install the GUI runtime for SDK 0.3.0 or newer.
 pip install 'scitex-sdk[gui]>=0.3.0'
@@ -25,7 +28,7 @@ scitex-sdk gui serve
 
 Add the `chat`, `mcp`, `cli` or `project` extras for those capabilities, or
 install `scitex-sdk[all]`. The `project` and `cli` extras, `all`, and contributor
-tooling require scitex-dev>=0.62.4
+tooling require scitex-dev>=0.62.6
 for the declared UI provider replacement SPI. SDK publication verifies a normal built-wheel `[all]`
 installation and `pip check` against published dependencies before uploading.
 Contributor dependencies use `pip install -e . --group dev`.

@@ -771,3 +771,90 @@ describe("disabled availability rows", () => {
     expect(f.selector.commands.run(f.selector.selectCommandId, { via: "agent" }, { scope: "user", id: null })).toBe(false);
   });
 });
+
+
+describe("unsupported saved choices", () => {
+  it("does not display an explicit disabled project over an unselected listing", async () => {
+    // Arrange
+    const persisted: unknown[] = [];
+    const provider: ProjectProvider = {
+      listProjects: async () => ({ projects: [{ id: "example", name: "Example", disabled: true, disabledReason: "Project filtering is unavailable" }], current: null, allow_user_scope: true }),
+      rememberScope: async (selection) => { persisted.push(selection); },
+    };
+    const f = fixture({ current: "example", provider, allowUserScope: true });
+    // Act
+    await f.selector.ready;
+    // Assert
+    expect([f.selector.getSelection(), f.container.querySelector(".stx-app-project-selector__placeholder")?.textContent, persisted, f.events]).toEqual([null, "Select project", [], []]);
+  });
+
+  it("does not display a saved All choice when that operation is disabled", async () => {
+    // Arrange
+    const persisted: unknown[] = [];
+    const provider: ProjectProvider = {
+      listProjects: async () => ({ projects, current: null, allow_user_scope: true, user_scope_disabled_reason: "One project is required" }),
+      rememberScope: async (selection) => { persisted.push(selection); },
+    };
+    const f = fixture({ currentScope: "user", provider, allowUserScope: true });
+    // Act
+    await f.selector.ready;
+    // Assert
+    expect([f.selector.getSelection(), f.container.querySelector(".stx-app-project-selector__placeholder")?.textContent, persisted, f.events]).toEqual([null, "Select project", [], []]);
+  });
+
+  it("preserves an explicit allowed project over an empty listing projection", async () => {
+    // Arrange
+    const provider: ProjectProvider = { listProjects: async () => ({ projects, current: null }), rememberScope: async () => {} };
+    const f = fixture({ current: "a", provider });
+    // Act
+    await f.selector.ready;
+    // Assert
+    expect(f.selector.getSelection()).toEqual({ scope: "project", id: "a" });
+  });
+});
+
+
+describe("host advertised scoped protocol", () => {
+  it.each([[true, true], [true, false], [false, true], [false, false]])("preserves disabled choices through real meta and HTTP (%s,%s)", async (user, project) => {
+    // Arrange
+    const server = await projectHttpServer({ projects: [{ id: "a", name: "Authorized A", ...(!project ? { disabled: true, disabled_reason: "No project operations" } : {}) }], current: null, allow_user_scope: true, ...(!user ? { user_scope_disabled_reason: "No aggregate view" } : {}) });
+    const meta = document.createElement("meta");
+    meta.name = "stx-project-provider"; meta.content = server.url;
+    meta.setAttribute("data-scoped-protocol", "true"); document.head.append(meta);
+    const container = document.createElement("div"); document.body.append(container);
+    // Act
+    const selector = mountProjectSelectorByScope({ container, scope: "project" })!;
+    instances.push(selector); await selector.ready;
+    const f = { container, selector };
+    const rows = [...f.container.querySelectorAll('[role="option"]')];
+    const snapshot = rows.map((row) => [row.textContent, row.getAttribute("aria-disabled") === "true", row.getAttribute("title")]);
+    meta.remove();
+    // Assert
+    expect([snapshot, server.posts, f.selector.getSelection()]).toEqual([[["All Projects", !user, user ? null : "No aggregate view"], ["Authorized A", !project, project ? null : "No project operations"]], [], null]);
+  });
+});
+
+
+it("retains explicit legacy opt-out despite scoped host metadata", async () => {
+  // Arrange
+  const server = await projectHttpServer({ projects, current: "a", allow_user_scope: true, current_scope: "project" });
+  const meta = document.createElement("meta"); meta.name = "stx-project-provider";
+  meta.content = server.url; meta.setAttribute("data-scoped-protocol", "true"); document.head.append(meta);
+  const container = document.createElement("div"); document.body.append(container);
+  // Act
+  const selector = mountProjectSelectorByScope({ container, scope: "project", allowUserScope: false })!;
+  instances.push(selector); await selector.ready; meta.remove();
+  // Assert
+  expect([options(container), selector.getSelection(), server.posts]).toEqual([["Authorized A", "Authorized B"], { scope: "project", id: "a" }, []]);
+});
+
+it("keeps user-only app mounting explicitly gated despite scoped host metadata", async () => {
+  // Arrange
+  const meta = document.createElement("meta"); meta.name = "stx-project-provider";
+  meta.content = "/not-requested"; meta.setAttribute("data-scoped-protocol", "true"); document.head.append(meta);
+  const container = document.createElement("div"); document.body.append(container);
+  // Act
+  const selector = mountProjectSelectorByScope({ container, scope: "user" }); meta.remove();
+  // Assert
+  expect([selector, container.innerHTML]).toEqual([null, ""]);
+});

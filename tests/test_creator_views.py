@@ -33,7 +33,7 @@ if not settings.configured:
         INSTALLED_APPS=_apps,
         TEMPLATES=[
             {
-                "BACKEND": "django.template.backends.DjangoTemplates",
+                "BACKEND": "django.template.backends.django.DjangoTemplates",
                 "APP_DIRS": True,
             }
         ],

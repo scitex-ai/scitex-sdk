@@ -297,3 +297,81 @@ def test_direct_picker_helper_keeps_standalone_rendering_without_active_template
 
 
 # EOF
+
+
+class AppContextProvider:
+    """Real host protocol implementation with an optional contextual URL hook."""
+
+    def list_projects(self, request):
+        return []
+
+    def last_visited(self, request):
+        return None
+
+    def remember(self, request, project_id):
+        raise ValueError("no projects")
+
+    def current_scope(self, request):
+        return None
+
+    def remember_scope(self, request, selection):
+        raise ValueError("no selection")
+
+    def project_provider_url(self, request, base_url):
+        return base_url + "?app=" + request.path_info.split("/")[2]
+
+
+def test_host_context_reaches_explicit_picker_and_canonical_meta():
+    # Arrange
+    from django.test import RequestFactory, override_settings
+    request = RequestFactory().get("/apps/writer/")
+    from types import SimpleNamespace
+    request.user = SimpleNamespace(is_authenticated=True)
+    source = ("{% load scitex_project_picker %}{% scitex_project_provider_meta %}"
+              '{% scitex_project_picker scope="project" provider_url="/host/projects/" %}')
+    # Act
+    with override_settings(SCITEX_PROJECT_PROVIDER_URL="/host/projects/",
+                           SCITEX_PROJECT_PROVIDER=f"{__name__}.AppContextProvider"):
+        html = _render_source(source, {"request": request})
+    # Assert
+    assert ('content="/host/projects/?app=writer"' in html
+            and 'data-provider-url="/host/projects/?app=writer"' in html
+            and 'data-allow-user-scope="true"' in html
+            and 'data-scoped-protocol="true"' in html)
+
+
+def test_provider_url_without_request_remains_legacy_compatible():
+    # Arrange
+    from django.test import override_settings
+    from scitex_sdk.ui.project_scope import host_project_provider_url
+    # Act
+    with override_settings(SCITEX_PROJECT_PROVIDER_URL="/host/projects/",
+                           SCITEX_PROJECT_PROVIDER=f"{__name__}.AppContextProvider"):
+        url = host_project_provider_url()
+    # Assert
+    assert url == "/host/projects/"
+
+
+def test_picker_assets_have_content_versions():
+    # Arrange
+    import re
+    # Act
+    html = _render({"app_scope": "project"})
+    # Assert
+    assert all(re.search(r"project-selector\." + ext + r"\?v=[a-f0-9]+", html)
+               for ext in ("css", "js"))
+
+
+def test_one_provider_authority_is_emitted_per_document():
+    # Arrange
+    from django.test import RequestFactory, override_settings
+    from types import SimpleNamespace
+    request = RequestFactory().get("/apps/writer/")
+    request.user = SimpleNamespace(is_authenticated=True)
+    source = "{% load scitex_project_picker %}{% scitex_project_provider_meta %}{% scitex_project_provider_meta %}"
+    # Act
+    with override_settings(SCITEX_PROJECT_PROVIDER_URL="/host/projects/",
+                           SCITEX_PROJECT_PROVIDER=f"{__name__}.AppContextProvider"):
+        html = _render_source(source, {"request": request})
+    # Assert
+    assert html.count('name="stx-project-provider"') == 1

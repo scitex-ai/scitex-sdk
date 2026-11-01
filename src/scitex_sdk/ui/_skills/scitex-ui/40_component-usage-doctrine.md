@@ -3,17 +3,17 @@ description: |
   [TOPIC] SciTeX-UI component-usage doctrine
   [DETAILS] Adoption rules every app-builder agent follows: use scitex-ui
   components, never hand-roll vanilla &lt;select&gt; / native scrollbars /
-  raw-hex CSS / shell-CSS edits. Maps directly onto the UI-101..107 lint
-  rules shipped by `scitex-ui._linter_plugin`.
+  raw-hex CSS / shell-CSS edits. Maps directly onto the UI-101..116 lint
+  rules shipped by `scitex_sdk.ui._linter_plugin`.
 tags: [scitex-ui-component-usage-doctrine, lint]
 ---
 
 # SciTeX-UI Component-Usage Doctrine
 
 How an app-builder agent (or human) writes scitex-ui-consuming UI without
-violating the shared foundation. Mirrors what `scitex-sdk ui lint` and the
-`scitex_dev.linter.plugins` entry-point check, so the wording here IS the
-violation message you'll see.
+violating the shared foundation. `scitex-sdk ui lint` executes the CSS/HTML/TSX source walker. The
+`scitex_dev.linter.plugins` entry point catalogs its rules; the generic
+Python AST linter does not execute that frontend walker.
 
 Reference inventory: see `32_frontend-components.md` (per-component
 quick-start) and `34_frontend-components-theme.md` (theme tokens).
@@ -39,17 +39,16 @@ This file is the **rule list** — what NOT to do, and what to do instead.
 4. **Don't copy scitex-sdk ui CSS into your `static/<app>/`** — import the
    stylesheets via `<link>` / `@import` instead. Copies drift; imports
    stay synced.
-5. **Scrollbar styling**: scitex-sdk ui deliberately does NOT export
-   `--scrollbar-*` tokens (chrome quirks vary by browser/OS). Consumers
-   define their OWN scrollbar custom-properties LOCALLY and back them
-   with workspace-border tokens. Raw hex inside scrollbar rules is a
-   violation.
+5. **Scrollbar styling**: import the SDK's shared `shell/scrollbars.css`
+   surface (also included by the shell bundle). Consumer-local colour
+   rules fork theme behavior even when they reference tokens; UI-115
+   catches these independently of UI-105's raw-colour check.
 
 ---
 
 ## Rule reference
 
-The lint plugin ships these 5 rules via the
+The lint plugin catalogs UI-101 through UI-116 via the
 `scitex_dev.linter.plugins` entry-point. `scitex-sdk ui lint <path>` walks
 `*.css`, `*.html`, and `*.tsx` files under the given path and emits a
 violation per match.
@@ -112,19 +111,9 @@ A `::-webkit-scrollbar-*` rule or `scrollbar-color: …` declaration in a
 consumer `*.css` uses a raw hex / `rgb(...)` literal instead of a
 `var(...)` reference.
 
-**Fix**: define consumer-local scrollbar vars backed by
-workspace-border tokens, then use them:
-```css
-:root {
-  --scrollbar-thumb: var(--workspace-border-default);
-  --scrollbar-track: var(--workspace-bg-secondary);
-}
-.my-app, .my-app * {
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-}
-.my-app ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
-.my-app ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-```
+**Fix**: import the SDK's shared `shell/scrollbars.css` surface and
+remove local thumb/track colour rules. Tokenizing local colours alone
+still violates UI-115.
 
 ### UI-106 — `long-native-select-no-filter` (WARN)
 
@@ -255,7 +244,7 @@ passing the tile label render identically.
 
 ## How the linter is wired
 
-`scitex-ui` registers the 15 rules above with scitex-dev's linter via
+`scitex-sdk` registers the 16 rules above with scitex-dev's linter via
 the canonical entry-point:
 
 ```toml
@@ -264,7 +253,7 @@ the canonical entry-point:
 ui = "scitex_sdk.ui._linter_plugin:get_plugin"
 ```
 
-So they appear in `scitex-linter list-rules` once `scitex-ui` is
+So they appear in `scitex-linter list-rules` once `scitex-sdk` is
 pip-installed alongside `scitex-dev`. Active scanning of `*.css`,
 `*.html`, `*.tsx` is provided by `scitex-sdk ui lint <path>` (see
 `13_cli.md`).
@@ -284,3 +273,65 @@ looks different from the rest of the app"*, that's a UI-1xx
 violation. Use the scitex-sdk ui component, theme through tokens, and
 keep shared foundation CSS untouched. The lint rules above are the
 shape of that paragraph.
+
+
+## Mandatory app-header ownership enforcement
+
+The SDK owns the in-app title/version typography and project dropdown.
+Apps supply labels, versions, and scope availability through the shared
+component; disabled scope options remain visible. Do not restyle SDK header
+or dropdown selectors, add inline styles to them, or copy a local app header.
+Narrow app button styles to content controls, so generic ancestor button
+rules cannot reach the shared dropdown.
+
+Installing the SDK registers `scitex_sdk._audit_plugin:get_plugin` through
+`scitex_dev.audit.project`. The normal Dev project auditor runs
+`PS-SDK-HEADER` at error severity. The SDK's `sdk.header-contract` pre-edit
+hook refuses violating writes. Its `sdk.header-contract-after-shell` hook
+reports source violations after shell commands; it cannot undo a completed
+command. Both use the same detector, with the project auditor providing the
+error gate. Hosts must bind the discovered hooks to their agent
+events; an entry-point declaration alone does not activate agent interception.
+The existing scrollbar warning hook remains registered. Missing scanner
+imports and unreadable source fail enforcement rather than passing silently.
+
+The detector checks literal CSS selectors, inline header styles, recognizable
+local app-header markup, and generic button rules scoped to a known literal
+header ancestor. It allows SDK mount markup and unrelated toolbar controls.
+Handwritten canonical header classes do not establish ownership; use the
+SDK renderer or its React binding. Tests/examples, documentation artifacts, and build directories are excluded.
+Vite-manifest-declared CSS outputs are excluded only when authored frontend
+source is present; imported canonical SDK CSS in a bundle is not a local fork. Dynamic
+DOM/style generation, inherited browser defaults, and complex selector
+cascades require the SDK's real browser contract suite (`npm run test:headers`)
+and host integration checks; static source auditing does not prove computed
+style equality. Only the two canonical SDK CSS resources own these selectors.
+
+
+Native interception uses the canonical Dev 0.62.6 bridge:
+
+```bash
+scitex-dev hooks install --provider scitex-sdk --config .claude/settings.json --harness claude --dry-run
+```
+
+Remove `--dry-run` to merge bindings, then verify an actual native refusal.
+The SDK `cli`/`project` extras require Dev>=0.62.6. The header and existing
+scrollbar checks both accept native payload dictionaries and return violation
+strings. Hermes requires native command consent and config/plugin loading;
+its post-tool event observes changes and cannot veto them. Installing or
+listing rules alone does not prove that a running agent loaded its settings.
+
+
+Editor hooks resolve the actual target repository even when the client cwd is
+HOME. Post-shell source checks inspect staged, unstaged, and untracked files
+in the active Git repository, including repositories without a first commit.
+Shell calls outside a repository have no claimed project-source scope; they
+are not blocked as if they were failed header inspections. Project auditing
+and CI provide repository-wide coverage independently of client cwd.
+
+
+Repository header context comes from Git-tracked and nonignored source inputs,
+so ignored user data/media/cache trees are not inspected on each edit. An
+explicit editor target is still checked even if ignored. Committed generated
+Vite CSS is checked through its authored frontend source, not mistaken for a
+consumer copy of imported canonical SDK styles.

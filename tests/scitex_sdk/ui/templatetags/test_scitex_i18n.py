@@ -108,6 +108,7 @@ def _document_engine(templates=None):
         libraries={
             "scitex_i18n": "scitex_sdk.ui.templatetags.scitex_i18n",
             "scitex_project_picker": "scitex_sdk.ui.templatetags.scitex_project_picker",
+            "scitex_static": "scitex_sdk.ui.templatetags.scitex_static",
             "static": "django.templatetags.static",
             "i18n": "django.templatetags.i18n",
         },

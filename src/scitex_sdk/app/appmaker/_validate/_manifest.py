@@ -121,6 +121,14 @@ def validate_manifest(app_dir: str | Path) -> list[str]:
         except ValueError as exc:
             errors.append(f"manifest.json {exc}")
 
+    if "scope_capabilities" in data:
+        from ..._app_scope import normalize_scope_capabilities
+
+        try:
+            normalize_scope_capabilities(data["scope_capabilities"])
+        except ValueError as exc:
+            errors.append(str(exc))
+
     # 'mobile_layout' is OPTIONAL and TRISTATE (ADR: mobile-layout card).
     # Semantics (hub-decided 2026-09-14): absent (None) = no claim — the hub
     # keeps its existing desktop-only metadata as the fallback; False =

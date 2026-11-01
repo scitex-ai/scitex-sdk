@@ -1,3 +1,6 @@
+export { AppHeader } from "./app-header";
+export type { AppHeaderProps } from "./app-header";
+
 // App components (React)
 export { AlertBanner } from "./alert-banner";
 export type { AlertBannerProps, AlertBannerType } from "./alert-banner";

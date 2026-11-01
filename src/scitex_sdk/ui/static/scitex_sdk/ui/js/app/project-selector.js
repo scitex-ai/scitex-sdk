@@ -364,9 +364,9 @@ var ProjectSelector = class extends BaseComponent {
     return projects;
   }
   choice(id, scope) {
-    if (scope === "user") return this.allowUserScope ? this.choices()[0] : null;
+    if (scope === "user") return this.allowUserScope && this.userScopeDisabledReason === null ? this.choices()[0] : null;
     if (scope !== void 0 && scope !== "project") return null;
-    return this.choices().find((p) => p.scope === "project" && p.id === id) ?? null;
+    return this.choices().find((p) => p.scope === "project" && p.id === id && p.disabled !== true) ?? null;
   }
   /** Replace the project list, keeping the selection when it is still present. */
   setProjects(projects, currentId, currentScope, userScopeDisabledReason) {
@@ -648,8 +648,10 @@ function usesScopedHttpTransport(provider) {
   return provider !== void 0 && Reflect.get(provider, SCOPED_HTTP_TRANSPORT) === true;
 }
 function hostProjectProvider(doc = document, options = {}) {
-  const url = doc.querySelector(`meta[name="${PROJECT_PROVIDER_META_NAME}"]`)?.getAttribute("content");
-  return url ? httpProjectProvider(url, options) : null;
+  const meta = doc.querySelector(`meta[name="${PROJECT_PROVIDER_META_NAME}"]`);
+  const url = meta?.getAttribute("content");
+  const allowUserScope = options.allowUserScope ?? meta?.getAttribute("data-scoped-protocol") === "true";
+  return url ? httpProjectProvider(url, { ...options, allowUserScope }) : null;
 }
 function httpProjectProvider(url, options = {}) {
   const scoped = options.allowUserScope === true;
@@ -668,6 +670,10 @@ function httpProjectProvider(url, options = {}) {
       });
       if (!response.ok) throw new Error(`project listing failed: HTTP ${response.status}`);
       const body = await response.json();
+      if (Array.isArray(body.projects)) body.projects = body.projects.map((project) => {
+        const reason = project?.disabled_reason;
+        return typeof reason === "string" && reason ? { ...project, disabledReason: project.disabledReason || reason } : project;
+      });
       if (!scoped) return { projects: body.projects ?? [], current: body.current ?? null };
       if (body.allow_user_scope !== true || !Array.isArray(body.projects)) {
         throw new Error("scoped project provider is not enabled");
