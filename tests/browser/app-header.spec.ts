@@ -6,7 +6,7 @@ const source = resolve("src/scitex_sdk");
 const ui = "/ui/static/scitex_sdk/ui";
 
 async function mount(page: Page, rootSize: number, theme: string,
-  userAllowed = true, projectAllowed = true) {
+  userAllowed = true, projectAllowed = true, wrapped = false) {
   await page.route("http://sdk.test/**", async route => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname === "/") {
@@ -17,18 +17,24 @@ async function mount(page: Page, rootSize: number, theme: string,
         <link rel="stylesheet" href="${ui}/css/app/app-header.css">
         <link rel="stylesheet" href="${ui}/css/app/project-selector.css">
         <link rel="stylesheet" href="/creator/static/scitex_sdk_creator/wizard.css">
-        <style>html{font-size:${rootSize}px}body{margin:0;font-family:Georgia;line-height:1.95}</style>
+        <style>html{font-size:${rootSize}px}body{margin:0;font-family:Georgia;line-height:1.95}.framework-project-wrapper{max-width:260px}</style>
         </head><body><div class="stx-creator"><div id="mount"></div></div>
         <script type="module">
           import {AppHeader} from '${ui}/js/app/app-header.js';
           import {ProjectSelector} from '${ui}/js/app/project-selector.js';
           window.commits=[];
           const header=new AppHeader({container:'#mount',title:'Example App',version:'1.2.3'});
+          let pickerContainer=header.projectSlot;
+          if (${wrapped}) {
+            const wrapper=document.createElement('div');wrapper.className='framework-project-wrapper';
+            const inner=document.createElement('div');wrapper.append(inner);header.projectSlot.append(wrapper);
+            pickerContainer=inner;
+          }
           const provider={
             async listProjects(){return {projects:[{id:'example',name:'Example',detail:'Owner',disabled:${!projectAllowed},disabledReason:${JSON.stringify(projectAllowed ? "" : "Project unavailable")}}],current:'example',current_scope:'project',allow_user_scope:true,user_scope_disabled_reason:${JSON.stringify(userAllowed ? "" : "All Projects unavailable")}};},
             async rememberScope(scope){window.commits.push(scope);}
           };
-          new ProjectSelector({container:header.projectSlot,provider,allowUserScope:true});
+          new ProjectSelector({container:pickerContainer,provider,allowUserScope:true});
           window.headerReady=true;
         </script></body></html>` });
       return;
@@ -51,6 +57,20 @@ async function mount(page: Page, rootSize: number, theme: string,
 }
 
 for (const theme of ["light", "dark"]) {
+  for (const rootSize of [14, 16]) {
+    test(`framework wrappers fill phone slot: ${theme}, root ${rootSize}`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await mount(page, rootSize, theme, true, true, true);
+      const slot = await page.locator(".stx-app-header__slot--project-selector").boundingBox();
+      const trigger = page.locator(".stx-app-project-selector__trigger");
+      expect(Math.abs((await trigger.boundingBox())!.width - slot!.width)).toBeLessThan(1);
+      await trigger.click();
+      const panel = await page.locator(".stx-app-project-selector__panel").boundingBox();
+      expect(Math.abs(panel!.width - slot!.width)).toBeLessThan(1);
+      expect(panel!.x).toBeGreaterThanOrEqual(0);
+      expect(panel!.x + panel!.width).toBeLessThanOrEqual(390);
+    });
+  }
   for (const rootSize of [14, 16]) {
     for (const width of [1440, 390]) {
       test(`identical header metrics: ${theme}, root ${rootSize}, width ${width}`, async ({ page }) => {

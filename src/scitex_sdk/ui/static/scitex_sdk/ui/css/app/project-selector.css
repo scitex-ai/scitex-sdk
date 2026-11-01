@@ -270,4 +270,12 @@
   .stx-app-header__slot--project-selector .stx-app-project-selector {
     width: 100%;
   }
+  /* Framework bindings can add wrappers between the slot and the picker.
+     Grow the slot's child too, instead of letting inline-flex shrink that
+     wrapper to the current label and truncate the entire dropdown. */
+  .stx-app-header .stx-app-header__slot--project-selector > * {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
 }
