@@ -1,5 +1,6 @@
 /* AUTO-GENERATED from ts/app/app-header/auto-mount.ts via esbuild — do not edit by hand. Rebuild: npx esbuild ts/app/app-header/auto-mount.ts --bundle --format=esm --outfile=js/app/app-header.js */
-// src/scitex_ui/static/scitex_ui/ts/_base/BaseComponent.ts
+
+// src/scitex_sdk/ui/static/scitex_sdk/ui/ts/_base/BaseComponent.ts
 var BaseComponent = class {
   container;
   config;
@@ -25,7 +26,7 @@ var BaseComponent = class {
   }
 };
 
-// src/scitex_ui/static/scitex_ui/ts/app/app-header/types.ts
+// src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/app-header/types.ts
 var APP_VERSION_ATTRIBUTE = "data-app-version";
 var HEADER_ATTRIBUTE = "data-stx-app-header";
 var APP_TITLE_ATTRIBUTE = "data-app-title";
@@ -80,7 +81,7 @@ function orderedActions(actions = []) {
   }).map((entry) => entry.action);
 }
 
-// src/scitex_ui/static/scitex_ui/ts/app/app-header/_AppHeader.ts
+// src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/app-header/_AppHeader.ts
 var CLS = "stx-app-header";
 var APP_HEADER_COMMAND = "stx-app-header:command";
 var AppHeader = class extends BaseComponent {
@@ -198,7 +199,7 @@ var AppHeader = class extends BaseComponent {
   }
 };
 
-// src/scitex_ui/static/scitex_ui/ts/app/app-header/mount.ts
+// src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/app-header/mount.ts
 var MOUNTED_ATTRIBUTE = "data-stx-app-header-mounted";
 var instances = [];
 function mountAppHeader(root = document, options = {}) {
@@ -209,6 +210,12 @@ function mountAppHeader(root = document, options = {}) {
     if (element.hasAttribute(MOUNTED_ATTRIBUTE)) continue;
     element.setAttribute(MOUNTED_ATTRIBUTE, "");
     const header = new AppHeader({ ...options, container: element });
+    const pickers = element.querySelectorAll(
+      ":scope > .stx-app-project-selector[data-stx-project-picker]"
+    );
+    if (header.projectSlot && pickers.length === 1) {
+      header.projectSlot.appendChild(pickers[0]);
+    }
     instances.push(header);
     mounted.push(header);
   }
@@ -222,7 +229,7 @@ var stxAppHeader = {
   get: getAppHeader
 };
 
-// src/scitex_ui/static/scitex_ui/ts/app/app-header/auto-mount.ts
+// src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/app-header/auto-mount.ts
 window.stxAppHeader = stxAppHeader;
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => mountAppHeader());

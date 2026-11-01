@@ -4,7 +4,16 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
-(none yet)
+- Add opt-in main-details panes layout with a shared 320px Details default,
+  responsive bounds and phone width, and collapse behavior preserving host
+  restored inline sizes. See docs/ui/main-details-panes.md; source preview only.
+
+- Creator starter choices and primary buttons use the semantic navy/gold primary-action roles; the
+  in-app header reads SciTeX SDK while launcher labels remain SDK.
+
+- AppHeader auto-mount immediately places an existing direct SDK project picker
+  in its canonical slot, preserving the control and avoiding a second header row
+  while leaf viewer modules load.
 
 ## [0.3.16] - 2026-10-31
 
