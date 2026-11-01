@@ -61,11 +61,14 @@ class _Markup(HTMLParser):
             for c in classes
         )
         if shared:
-            if tag == "header" or any(c.startswith("stx-app-header") for c in classes):
+            if tag == "header" or any(
+                c.startswith(("stx-app-header", "stx-app-project-selector__"))
+                for c in classes
+            ):
                 self.findings.append(
                     (
                         self.getpos()[0],
-                        "Handwritten AppHeader markup forks the SDK renderer; use its mount or React binding.",
+                        "Handwritten header/dropdown child markup forks the SDK renderer; use its mount or React binding.",
                     )
                 )
             self.scopes.update(c for _, group in self.stack for c in group)

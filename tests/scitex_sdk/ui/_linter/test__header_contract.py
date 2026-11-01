@@ -181,3 +181,21 @@ def test_leaf_slot_visibility_is_allowed_without_style_ownership(
     findings = scan_headers(tmp_path)
     # Assert
     assert len(findings) == expected
+
+
+@pytest.mark.parametrize(
+    "source, expected",
+    [
+        ('<button class="stx-app-project-selector__trigger">Pick</button>', 1),
+        ('<button className="stx-app-project-selector__option">All</button>', 1),
+        ('<input class="stx-app-project-selector__search" />', 1),
+        ('<div class="stx-app-project-selector" data-stx-project-picker></div>', 0),
+    ],
+)
+def test_project_picker_children_are_owned_by_sdk_renderer(tmp_path, source, expected):
+    # Arrange
+    (tmp_path / "page.html").write_text(source)
+    # Act
+    findings = scan_headers(tmp_path)
+    # Assert
+    assert len(findings) == expected
