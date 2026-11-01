@@ -367,3 +367,28 @@ Missing scanners fail closed. Updating package source does not update an older
 isolated hook interpreter automatically: qualify/install the new SDK there,
 then test its saved command. Hermes loading/consent and its observation-only
 post-tool boundary remain as described above.
+
+
+### Shared viewport frame
+
+Leaf apps inherit the host frame width, outer margins, and background. Do not
+fork these properties on `.workspace-three-col`, `.workspace-layout`,
+`.workspace-content`, `#workspace-layout`, or `#workspace-three-col`.
+`PS-SDK-SHELL` enforces this through the same Dev project auditor and existing
+pre-edit/post-shell hook path, with no additional native binding:
+
+```bash
+scitex-dev ecosystem audit-project scitex-agent-container --path . --rule PS-SDK-SHELL
+```
+
+Only exact canonical SDK shell resource paths and the Hub's
+`static/shared/css/layouts/{site-content-frame,leaf-host-chrome,global-base,platform-backdrop}.css`
+plus `components/workspace-layout.css` and `components/workspace-chat-embed.css`
+may own these global frame declarations, with the owning distribution verified.
+Copying an owner's filename into a leaf does not grant ownership. App interior
+controls, their backgrounds/borders, and host brand bubbles remain independent.
+Do not recreate a thin painted top `::before`/`::after` stripe on the shared
+content/root wrapper: that prohibition also applies inside canonical stylesheets.
+The static detector recognizes literal wrapper selectors and thin top-painted
+pseudo-elements. Browser contract tests must verify dynamically generated styles
+and the actual host frame; source checks do not claim full cascade analysis.
