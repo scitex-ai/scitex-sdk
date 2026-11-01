@@ -39,3 +39,9 @@ through the shared HTTP transport, so manual SDK consumers receive disabled
 All/project options too. An explicit `allowUserScope: false` still opts out;
 metadata alone does not force a picker into a user-only app. The server GET
 remains authoritative about protocol availability and disabled reasons.
+
+Host shells must delegate provider metadata to the SDK tag, including mounted
+app context and protocol advertisement. Repeated identical declarations in
+a composed host/leaf document emit once; conflicting authorities raise.
+Deduplication lasts for one outer Django template render, never a request
+or later document.
