@@ -9,7 +9,7 @@
      own ch caps below; the root must not impose one. */
   max-width: none;
   margin: 0;
-  padding: 8px 20px 48px;
+  padding: 0;
   font-size: 14px;
   line-height: 1.55;
 }
