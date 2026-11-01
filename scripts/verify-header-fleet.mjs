@@ -18,7 +18,7 @@ const browser = await chromium.launch(process.env.SCITEX_TEST_CHROMIUM ? { execu
 const context = await browser.newContext({ storageState: process.env.SCITEX_HEADER_STORAGE_STATE || undefined });
 const page = await context.newPage();
 const rows = [], failures = [];
-const fields = ["fontFamily", "fontSize", "fontWeight", "lineHeight", "color", "backgroundColor", "padding", "margin", "borderRadius", "borderBottomWidth", "borderBottomColor"];
+const fields = ["fontFamily", "fontSize", "fontWeight", "lineHeight", "height", "color", "backgroundColor", "padding", "margin", "borderRadius", "borderBottomWidth", "borderBottomColor"];
 try {
   for (const width of [1440, 390]) {
     const references = new Map();
@@ -44,6 +44,7 @@ try {
           }, theme);
           await page.waitForTimeout(250);
           await page.locator(".stx-app-header .stx-app-project-selector__trigger").click();
+          await page.locator(".stx-app-header .stx-app-project-selector__option").first().waitFor({ timeout: 10000 });
           await page.mouse.move(0, 0);
           await page.waitForTimeout(250);
           const styles = await page.evaluate(keys => {
