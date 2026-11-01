@@ -287,8 +287,10 @@ rules cannot reach the shared dropdown.
 Installing the SDK registers `scitex_sdk._audit_plugin:get_plugin` through
 `scitex_dev.audit.project`. The normal Dev project auditor runs
 `PS-SDK-HEADER` at error severity. The SDK's `sdk.header-contract` pre-edit
-and `sdk.header-contract-after-shell` post-tool hooks use the same detector
-and deny violations. Hosts must bind the discovered hooks to their agent
+hook refuses violating writes. Its `sdk.header-contract-after-shell` hook
+reports source violations after shell commands; it cannot undo a completed
+command. Both use the same detector, with the project auditor providing the
+error gate. Hosts must bind the discovered hooks to their agent
 events; an entry-point declaration alone does not activate agent interception.
 The existing scrollbar warning hook remains registered. Missing scanner
 imports and unreadable source fail enforcement rather than passing silently.
