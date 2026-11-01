@@ -69,6 +69,30 @@ try {
           await page.locator(".stx-app-header .stx-app-project-selector__option").first().waitFor({ timeout: 10000 });
           await page.mouse.move(0, 0);
           await page.waitForTimeout(250);
+          const providerUrl = await page.locator('meta[name="stx-project-provider"]').first().getAttribute("content");
+          if (!providerUrl) throw new Error("Host project provider metadata is missing");
+          const listingResponse = await context.request.get(new URL(providerUrl, page.url()).href);
+          if (!listingResponse.ok()) throw new Error(`Project listing HTTP ${listingResponse.status()}`);
+          const listing = await listingResponse.json();
+          const choices = await page.locator(".stx-app-header .stx-app-project-selector__option").evaluateAll(es => es.map(e => ({ disabled: e.disabled, reason: e.title })));
+          if (listing.allow_user_scope === true) {
+            if (choices.length !== listing.projects.length + 1) throw new Error("Scoped picker must include visible All Projects alongside the project rows");
+            if (choices[0].disabled !== Boolean(listing.user_scope_disabled_reason)) throw new Error("All Projects availability differs from the host policy");
+            if (choices[0].disabled && choices[0].reason !== listing.user_scope_disabled_reason) throw new Error("All Projects disabled reason is missing");
+            listing.projects.forEach((project, index) => {
+              const choice = choices[index + 1];
+              if (choice.disabled !== (project.disabled === true)) throw new Error("Project availability differs from host policy");
+              if (project.disabled && choice.reason !== (project.disabled_reason || project.disabledReason || "")) throw new Error("Project disabled reason is missing");
+            });
+          }
+          if (width === 390) {
+            const geometry = await page.locator(".stx-app-header__slot--project-selector").evaluate(e => {
+              const width = e.getBoundingClientRect().width;
+              return { slot: width, trigger: e.querySelector('.stx-app-project-selector__trigger').getBoundingClientRect().width,
+                panel: e.querySelector('.stx-app-project-selector__panel').getBoundingClientRect().width };
+            });
+            if (Math.abs(geometry.trigger - geometry.slot) >= 1 || Math.abs(geometry.panel - geometry.slot) >= 1) throw new Error("Phone picker and dropdown must fill the shared slot");
+          }
           const styles = await page.evaluate(keys => {
             const pick = selector => {
               const e = document.querySelector(selector);
