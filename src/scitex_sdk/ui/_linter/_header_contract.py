@@ -6,6 +6,7 @@ covered by the SDK browser contract suite, not guessed by this scanner.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from dataclasses import dataclass
@@ -22,6 +23,8 @@ _SKIP = {
     ".worktrees",
     "tests",
     "examples",
+    "docs",
+    "_docs",
 }
 _SHARED = re.compile(
     r"\.stx-app-(?:header|project-selector)(?:__[\w-]+|--[\w-]+)?(?![\w-])|\[data-stx-app-header(?:[=\]\s])"
@@ -58,6 +61,13 @@ class _Markup(HTMLParser):
             for c in classes
         )
         if shared:
+            if tag == "header" or any(c.startswith("stx-app-header") for c in classes):
+                self.findings.append(
+                    (
+                        self.getpos()[0],
+                        "Handwritten AppHeader markup forks the SDK renderer; use its mount or React binding.",
+                    )
+                )
             self.scopes.update(c for _, group in self.stack for c in group)
             if "style" in attrs:
                 self.findings.append(
@@ -103,6 +113,34 @@ def _owner(path: Path, root: Path) -> bool:
     )
 
 
+def _generated_css(root: Path) -> set[Path]:
+    """Skip Vite-declared outputs only when authored frontend source is present.
+
+    Bundles include unmodified SDK CSS, so auditing them as consumer overrides
+    would reject legitimate imports. The source remains mandatory to inspect.
+    """
+    generated = set()
+    for directory, dirs, files in os.walk(root):
+        dirs[:] = [name for name in dirs if name not in _SKIP]
+        manifest = Path(directory) / "manifest.json"
+        if Path(directory).name != ".vite" or "manifest.json" not in files:
+            continue
+        base = manifest.parent.parent
+        if not any(
+            (parent / "frontend/src").is_dir()
+            for parent in base.parents
+            if parent.is_relative_to(root)
+        ):
+            continue
+        content = json.loads(manifest.read_text(encoding="utf-8"))
+        for entry in content.values():
+            for relative in [entry.get("file", ""), *entry.get("css", [])]:
+                path = (base / relative).resolve()
+                if path.suffix == ".css" and path.is_relative_to(base.resolve()):
+                    generated.add(path)
+    return generated
+
+
 def scan_headers(
     root: Path | str,
     *,
@@ -118,6 +156,7 @@ def scan_headers(
     root = Path(root).resolve()
     overlays = {Path(p).resolve(): text for p, text in (overlays or {}).items()}
     targets = None if targets is None else {Path(p).resolve() for p in targets}
+    generated = _generated_css(root)
     paths = set(overlays)
     for directory, dirs, files in os.walk(root):
         dirs[:] = [name for name in dirs if name not in _SKIP]
@@ -126,6 +165,8 @@ def scan_headers(
     scopes = set()
     out = []
     for path in sorted(paths):
+        if path.resolve() in generated:
+            continue
         if path.suffix.lower() not in _SUFFIXES or not path.is_relative_to(root):
             continue
         if set(path.relative_to(root).parts) & _SKIP:

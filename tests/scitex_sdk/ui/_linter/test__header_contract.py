@@ -23,10 +23,10 @@ def test_direct_override_is_blocked(tmp_path, source):
     assert len(scan_headers(tmp_path)) == 1
 
 
-def test_canonical_markup_is_allowed(tmp_path):
+def test_sdk_mount_markup_is_allowed(tmp_path):
     # Arrange
     (tmp_path / "page.html").write_text(
-        '<header class="stx-app-header"><span class="stx-app-header__title">Stats</span></header>'
+        '<div data-stx-app-header data-app-title="Stats"></div>'
     )
     # Act
     # Assert
@@ -120,6 +120,45 @@ def test_consumer_cannot_claim_owner_by_copying_sdk_paths(tmp_path):
     path.parent.mkdir(parents=True)
     path.write_text(".stx-app-header {font-size:80px}")
     (tmp_path / "pyproject.toml").write_text('[project]\nname = "consumer"\n')
+    # Act
+    findings = scan_headers(tmp_path)
+    # Assert
+    assert len(findings) == 1
+
+
+@pytest.mark.parametrize("has_source, expected", [(False, 1), (True, 0)])
+def test_vite_outputs_require_present_authored_sources(tmp_path, has_source, expected):
+    # Arrange
+    base = tmp_path / "src/app/static/app"
+    (base / ".vite").mkdir(parents=True)
+    (base / "assets").mkdir()
+    (base / ".vite/manifest.json").write_text(
+        '{"style.css":{"file":"assets/index.css"}}'
+    )
+    (base / "assets/index.css").write_text(".stx-app-header{height:40px}")
+    if has_source:
+        (tmp_path / "src/app/frontend/src").mkdir(parents=True)
+        (tmp_path / "src/app/frontend/src/leaf.css").write_text(".toolbar{height:40px}")
+    # Act
+    findings = scan_headers(tmp_path)
+    # Assert
+    assert len(findings) == expected
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        '<header class="stx-app-header">Stats</header>',
+        '<header className="stx-app-header">Stats</header>',
+        "<header data-stx-app-header>Stats</header>",
+        '<div className="stx-app-header__title">Stats</div>',
+    ],
+)
+def test_handwritten_canonical_classes_do_not_bypass_renderer_ownership(
+    tmp_path, source
+):
+    # Arrange
+    (tmp_path / "page.html").write_text(source)
     # Act
     findings = scan_headers(tmp_path)
     # Assert
