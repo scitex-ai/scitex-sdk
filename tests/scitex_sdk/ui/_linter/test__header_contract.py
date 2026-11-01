@@ -126,23 +126,36 @@ def test_consumer_cannot_claim_owner_by_copying_sdk_paths(tmp_path):
     assert len(findings) == 1
 
 
-@pytest.mark.parametrize("has_source, expected", [(False, 1), (True, 0)])
-def test_vite_outputs_require_present_authored_sources(tmp_path, has_source, expected):
-    # Arrange
-    base = tmp_path / "src/app/static/app"
+def _write_vite_output(root):
+    """Create actual imported SDK CSS output and its Vite manifest."""
+    base = root / "src/app/static/app"
     (base / ".vite").mkdir(parents=True)
     (base / "assets").mkdir()
     (base / ".vite/manifest.json").write_text(
         '{"style.css":{"file":"assets/index.css"}}'
     )
     (base / "assets/index.css").write_text(".stx-app-header{height:40px}")
-    if has_source:
-        (tmp_path / "src/app/frontend/src").mkdir(parents=True)
-        (tmp_path / "src/app/frontend/src/leaf.css").write_text(".toolbar{height:40px}")
+
+
+def test_vite_output_without_authored_inputs_is_still_inspected(tmp_path):
+    # Arrange
+    _write_vite_output(tmp_path)
     # Act
     findings = scan_headers(tmp_path)
     # Assert
-    assert len(findings) == expected
+    assert len(findings) == 1
+
+
+def test_vite_output_with_authored_inputs_defers_to_actual_source(tmp_path):
+    # Arrange
+    _write_vite_output(tmp_path)
+    source = tmp_path / "src/app/frontend/src/leaf.css"
+    source.parent.mkdir(parents=True)
+    source.write_text(".toolbar{height:40px}")
+    # Act
+    findings = scan_headers(tmp_path)
+    # Assert
+    assert findings == []
 
 
 @pytest.mark.parametrize(
