@@ -26,21 +26,23 @@ See [CLA.md](CLA.md) for full details.
 ```bash
 git clone git@github.com:scitex-ai/scitex-sdk.git
 cd scitex-sdk
-pip install -e ".[dev]"
+python -m pip install --upgrade 'pip>=25.1'
+python -m pip install -e ".[gui,chat,mcp,cli]" --group dev
 ```
 
 ## Branch Workflow
 
 - `main` — stable releases only. Do not push directly.
-- Feature branches — create from `main`, name as `feature/<description>`
+- `develop` — integration branch; feature pull requests target it.
+- Feature branches — create from `develop`, name as `feature/<description>`
   or `fix/<description>`.
 
 ```bash
-git checkout main
+git checkout develop
 git checkout -b fix/my-change
 # ... make changes ...
 git push origin fix/my-change
-# Open PR targeting main
+# Open PR targeting develop
 ```
 
 ## Code Style
@@ -57,10 +59,13 @@ pytest tests/ -x -q
 
 ## Pull Request Process
 
-1. Ensure your branch is up to date with `main`.
+1. Ensure your branch is up to date with `develop`.
 2. Write tests for new functionality.
 3. Run the test suite and confirm all tests pass.
-4. Open a PR targeting `main` with a clear description.
+4. Open a PR targeting `develop` with a clear description.
+   Accepted releases use a normal `develop` to `main` pull request; qualify
+   that merged release commit before tagging it. See
+   [the release procedure](docs/RELEASE_BOOTSTRAP.md).
 5. The CLA bot will check your CLA status on your first PR.
 
 ## License

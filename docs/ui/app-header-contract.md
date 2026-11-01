@@ -90,3 +90,20 @@ It must not override the host's `.workspace-layout` / `.workspace-three-col`
 width, margins, or background. On Hub, `--site-content-max-width` matches app
 and global-header widths; surrounding space uses Hub's theme-aware backdrop.
 SDK project audits and native hooks enforce ownership of these shell surfaces.
+
+## Read-only page scope
+
+A page may intentionally start at All Projects while the user's shared profile
+remembers a project. Pass `viewSelection: {scope: "user", id: null}` to the
+picker, or `view_scope="user"` to `scitex_project_picker`, to label that initial
+page view. This explicit pair is separate from the remembered scope; loading it
+makes no profile write. A user choice supersedes it through the normal provider.
+Availability and disabled reasons still come from the host; an unknown or
+disabled page project cannot become selected. For a project page, use
+`view_scope="project" view_project=authorized_project_id`.
+
+Resolve explicit server-side project views with
+`resolve_project(request, provider, explicit=selector, remember=False)` to retain
+access checks without changing a global preference during a GET. Apps with
+multiple scope modes should handle the picker's change event and navigate their
+own view (`navigate=""` disables the default project-only navigation).

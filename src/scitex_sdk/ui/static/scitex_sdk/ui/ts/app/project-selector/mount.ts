@@ -32,6 +32,14 @@ export function mountProjectPickers(
     const providerUrl = element.getAttribute("data-provider-url");
     if (!providerUrl) continue;
     const scope = element.getAttribute("data-current-scope");
+    const viewScope = element.getAttribute("data-view-scope");
+    const viewId = element.getAttribute("data-view-project");
+    if (viewScope !== null && (viewScope !== "user" && viewScope !== "project" ||
+      (viewScope === "user" ? viewId !== "" : !viewId?.trim()))) {
+      throw new Error("Invalid project picker view selection");
+    }
+    const viewSelection = viewScope === "user" ? { scope: "user" as const, id: null }
+      : viewScope === "project" ? { scope: "project" as const, id: viewId! } : undefined;
     const provider = providerFor(providerUrl, element);
     // In scoped HTTP mode the accepted server pair is authoritative; stale
     // page attributes must not revive a project after an All selection.
@@ -39,6 +47,7 @@ export function mountProjectPickers(
     const selector = new ProjectSelector({
       container: element,
       provider,
+      viewSelection,
       current: scopedHttp ? undefined : element.getAttribute("data-current") || null,
       placeholder: element.getAttribute("data-placeholder") || undefined,
       allowUserScope: element.getAttribute("data-allow-user-scope") === "true",

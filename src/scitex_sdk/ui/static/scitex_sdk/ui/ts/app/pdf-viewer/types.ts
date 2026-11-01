@@ -64,12 +64,23 @@ export interface PdfViewport {
   scale: number;
 }
 
+/** Public extension surface for one rendered page. Coordinates are PDF units,
+ * bottom-left origin, before viewport rotation/crop/scale. Use these converters
+ * rather than manually flipping page height. The element is replaced on zoom.
+ */
+export interface PdfPageSurface {
+  element: HTMLElement;
+  pdfToViewportPoint(x: number, y: number): number[];
+  pdfToViewportRect(rect: number[]): number[];
+  viewportToPdfPoint(x: number, y: number): number[];
+}
+
 /**
  * L1 → consumer callbacks. All optional; L1 stays inert until wired.
  * The consumer owns the feed and echoes marks back via `setMarks`.
  */
 export interface PdfViewerHooks {
-  onPageRender?: (page: number, viewport: PdfViewport) => void;
+  onPageRender?: (page: number, viewport: PdfViewport, surface: PdfPageSurface) => void;
   onRegionSelect?: (region: PdfRect) => void;
   onPenInput?: (input: PenInput) => void;
   onMarksChange?: (marks: Mark[]) => void;
@@ -91,6 +102,12 @@ export interface PdfViewerOptions {
    * modern bundlers (Vite) handle. Set explicitly for other setups.
    */
   workerSrc?: string;
+  /** Optional already-loaded PDF.js runtime for direct browser-module consumers. */
+  pdfjs?: typeof import("pdfjs-dist");
+  /** Selectable/searchable PDF.js text layer. Default false preserves existing pen-only users. */
+  textLayer?: boolean;
+  /** Safe external links and internal destination navigation. Default false. */
+  linkLayer?: boolean;
 }
 
 /**

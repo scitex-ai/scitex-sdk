@@ -375,3 +375,24 @@ def test_one_provider_authority_is_emitted_per_document():
         html = _render_source(source, {"request": request})
     # Assert
     assert html.count('name="stx-project-provider"') == 1
+
+
+def test_explicit_page_view_is_separate_from_remembered_scope():
+    # Arrange
+    source = ('{% load scitex_project_picker %}'
+              '{% scitex_project_picker provider_url="/api/projects/" scope="project" view_scope="user" %}')
+    # Act
+    html = _render_source(source, {})
+    # Assert
+    assert 'data-view-scope="user" data-view-project=""' in html
+
+
+@pytest.mark.parametrize("scope_value,project", [("user", "alpha"), ("project", ""), ("unknown", "")])
+def test_malformed_page_view_pair_is_rejected(scope_value, project):
+    # Arrange
+    source = ('{% load scitex_project_picker %}'
+              '{% scitex_project_picker provider_url="/api/projects/" scope="project" view_scope=view_scope view_project=view_project %}')
+    # Act
+    # Assert
+    with pytest.raises(ValueError):
+        _render_source(source, {"view_scope": scope_value, "view_project": project})

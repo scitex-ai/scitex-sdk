@@ -858,3 +858,42 @@ it("keeps user-only app mounting explicitly gated despite scoped host metadata",
   // Assert
   expect([selector, container.innerHTML]).toEqual([null, ""]);
 });
+
+describe("request-local page selection", () => {
+  it("can show All without changing a remembered project", async () => {
+    const f = fixture({ allowUserScope: true, viewSelection: { scope: "user", id: null } });
+    await f.selector.ready;
+    expect([f.container.querySelector('button')?.textContent, f.saved, f.events]).toEqual(["All Projects", [], []]);
+  });
+
+  it("an explicit user choice supersedes the read-only initial view", async () => {
+    const f = fixture({ allowUserScope: true, viewSelection: { scope: "user", id: null } });
+    await f.selector.ready;
+    f.selector.commands.run(f.selector.selectCommandId, { via: "user" }, { scope: "project", id: "b" });
+    await settle();
+    expect([f.container.querySelector('button')?.textContent, f.saved]).toEqual(["Authorized B", [{ scope: "project", id: "b" }]]);
+  });
+
+  it("an unknown page project never becomes selected or persisted", async () => {
+    const f = fixture({ allowUserScope: true, viewSelection: { scope: "project", id: "foreign" } });
+    await f.selector.ready;
+    expect([f.container.querySelector('button')?.textContent, f.saved]).toEqual(["Select project", []]);
+  });
+
+  for (const userAllowed of [true, false]) for (const projectAllowed of [true, false]) {
+    it(`preserves capability limits for page views: user=${userAllowed}, project=${projectAllowed}`, async () => {
+      const saved: unknown[] = [];
+      const provider = {
+        listProjects: async () => ({ projects: projects.map(p => ({ ...p, disabled: !projectAllowed })),
+          current: "a", current_scope: "project" as const, allow_user_scope: true,
+          user_scope_disabled_reason: userAllowed ? undefined : "User scope unavailable" }),
+        rememberScope: async (choice: unknown) => { saved.push(choice); },
+      };
+      const user = fixture({ provider, allowUserScope: true, viewSelection: { scope: "user", id: null } });
+      const project = fixture({ provider, allowUserScope: true, viewSelection: { scope: "project", id: "b" } });
+      await Promise.all([user.selector.ready, project.selector.ready]);
+      expect([user.container.querySelector('button')?.textContent, project.container.querySelector('button')?.textContent, saved])
+        .toEqual([userAllowed ? "All Projects" : "Select project", projectAllowed ? "Authorized B" : "Select project", []]);
+    });
+  }
+});

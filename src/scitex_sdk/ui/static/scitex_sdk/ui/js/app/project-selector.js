@@ -230,8 +230,14 @@ var ProjectSelector = class extends BaseComponent {
   compositionActive = false;
   outsideClickHandler;
   keyHandler;
+  viewSelection;
   constructor(config) {
     super(config);
+    const view = config.viewSelection;
+    if (view && (view.scope !== "user" && view.scope !== "project" || (view.scope === "user" ? view.id !== null : typeof view.id !== "string" || !view.id.trim()))) {
+      throw new Error("Invalid page view selection");
+    }
+    this.viewSelection = view;
     this.commands = config.commands ?? new CommandRegistry();
     this.selectCommandId = config.selectCommandId ?? PROJECT_SELECTOR_SELECT;
     if (!this.selectCommandId || this.commands.has(this.selectCommandId)) {
@@ -256,7 +262,7 @@ var ProjectSelector = class extends BaseComponent {
     this.projects = this.validProjects(config.projects ?? []);
     this.legacyPersistenceExpected = config.provider?.rememberProject !== void 0;
     this.allowUserScope = config.allowUserScope === true && typeof config.provider?.rememberScope === "function";
-    this.current = this.choice(config.current, config.currentScope);
+    this.current = this.choice(this.viewSelection ? this.viewSelection.id : config.current, this.viewSelection?.scope ?? config.currentScope);
     this.commands.set(this.selectCommand);
     if (this.openCommand) this.commands.set(this.openCommand);
     this.container.className = CLS;
@@ -398,7 +404,13 @@ var ProjectSelector = class extends BaseComponent {
       this.userScopeDisabledReason = typeof listing.user_scope_disabled_reason === "string" && listing.user_scope_disabled_reason ? listing.user_scope_disabled_reason : null;
       if (this.allowUserScope && !this.selectionError.parentNode) this.container.appendChild(this.selectionError);
       this.status = "ready";
-      this.setProjects(projects, this.config.current ?? listing.current ?? null, this.config.currentScope ?? listing.current_scope, this.userScopeDisabledReason);
+      const view = this.viewSelection;
+      this.setProjects(
+        projects,
+        view ? view.id : this.config.current ?? listing.current ?? null,
+        view?.scope ?? this.config.currentScope ?? listing.current_scope,
+        this.userScopeDisabledReason
+      );
     } catch {
       if (this.destroyed || generation !== this.generation) return;
       this.status = "error";
@@ -614,6 +626,7 @@ var ProjectSelector = class extends BaseComponent {
     }
   }
   applyChoice(project) {
+    this.viewSelection = void 0;
     this.current = project;
     this.renderLabel();
     this.renderList();
@@ -753,11 +766,18 @@ function mountProjectPickers(root = document, providerFor = (url, element) => ht
     const providerUrl = element.getAttribute("data-provider-url");
     if (!providerUrl) continue;
     const scope = element.getAttribute("data-current-scope");
+    const viewScope = element.getAttribute("data-view-scope");
+    const viewId = element.getAttribute("data-view-project");
+    if (viewScope !== null && (viewScope !== "user" && viewScope !== "project" || (viewScope === "user" ? viewId !== "" : !viewId?.trim()))) {
+      throw new Error("Invalid project picker view selection");
+    }
+    const viewSelection = viewScope === "user" ? { scope: "user", id: null } : viewScope === "project" ? { scope: "project", id: viewId } : void 0;
     const provider = providerFor(providerUrl, element);
     const scopedHttp = usesScopedHttpTransport(provider);
     const selector = new ProjectSelector({
       container: element,
       provider,
+      viewSelection,
       current: scopedHttp ? void 0 : element.getAttribute("data-current") || null,
       placeholder: element.getAttribute("data-placeholder") || void 0,
       allowUserScope: element.getAttribute("data-allow-user-scope") === "true",
