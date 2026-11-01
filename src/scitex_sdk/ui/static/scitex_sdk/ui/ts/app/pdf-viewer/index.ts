@@ -36,25 +36,11 @@ export function createPdfViewer(options: PdfViewerOptions): PdfViewerApi {
   return new PdfViewer(options);
 }
 
-// pdfjs is dynamically imported; type its surface loosely at the boundary to
-// avoid coupling this file's typecheck to pdfjs-dist's exact type exports.
-interface PdfjsViewport {
-  width: number;
-  height: number;
-  convertToViewportPoint(x: number, y: number): number[];
-  convertToPdfPoint(x: number, y: number): number[];
-}
-interface PdfjsPage {
-  getViewport(params: { scale: number }): PdfjsViewport;
-  render(params: {
-    canvasContext: CanvasRenderingContext2D;
-    viewport: PdfjsViewport;
-  }): { promise: Promise<void> };
-}
-interface PdfjsDocument {
-  numPages: number;
-  getPage(n: number): Promise<PdfjsPage>;
-}
+// Type-only imports stay inert; PDF.js runtime is loaded only by load().
+import type { PDFDocumentProxy, PageViewport } from "pdfjs-dist";
+import { renderPageLayers } from "./page-layers";
+type PdfjsViewport = PageViewport;
+type PdfjsDocument = PDFDocumentProxy;
 
 interface PageView {
   pageNum: number;
@@ -121,12 +107,19 @@ class PdfViewer implements PdfViewerApi {
   private readonly hooks: PdfViewerHooks;
   private scale: number;
   private readonly workerSrc?: string;
+  private readonly runtime?: typeof import("pdfjs-dist");
+  private readonly textLayer: boolean;
+  private readonly linkLayer: boolean;
+  private layerCleanups: Array<() => void> = [];
   private marks: Mark[] = [];
   private tool: PdfTool;
   private views: PageView[] = [];
   private draw: DrawState | null = null;
   private destroyed = false;
+  private loadEpoch = 0;
+  private renderEpoch = 0;
   private doc: PdfjsDocument | null = null;
+  private loadedRuntime?: typeof import("pdfjs-dist");
   private interactive = true;
 
   constructor(options: PdfViewerOptions) {
@@ -135,15 +128,17 @@ class PdfViewer implements PdfViewerApi {
     this.tool = options.tool ?? "highlight";
     this.scale = options.scale ?? 1.5;
     this.workerSrc = options.workerSrc;
+    this.runtime = options.pdfjs;
+    this.textLayer = options.textLayer ?? false;
+    this.linkLayer = options.linkLayer ?? false;
     if (options.palette) applyPalette(this.container, options.palette);
     if (options.src !== undefined) void this.load(options.src);
   }
 
   async load(src: PdfSource): Promise<void> {
-    const pdfjs = (await import("pdfjs-dist")) as unknown as {
-      GlobalWorkerOptions: { workerSrc: string };
-      getDocument(params: unknown): { promise: Promise<PdfjsDocument> };
-    };
+    const epoch = ++this.loadEpoch;
+    const pdfjs = this.runtime ?? await import("pdfjs-dist");
+    this.loadedRuntime = pdfjs;
     if (!pdfjs.GlobalWorkerOptions.workerSrc) {
       pdfjs.GlobalWorkerOptions.workerSrc =
         this.workerSrc ??
@@ -155,29 +150,50 @@ class PdfViewer implements PdfViewerApi {
         ? { url: src.toString() }
         : { data: src };
     const doc = await pdfjs.getDocument(params).promise;
-    if (this.destroyed) return;
+    if (this.destroyed || epoch !== this.loadEpoch) {
+      await doc.destroy();
+      return;
+    }
+    const previous = this.doc;
     this.doc = doc;
+    if (previous) void previous.destroy();
     await this.renderAll();
   }
 
   /** (Re)render every page of the loaded document at the current scale. */
   private async renderAll(): Promise<void> {
     const doc = this.doc;
+    const epoch = ++this.renderEpoch;
     if (!doc) return;
     this.teardownViews();
     this.container.replaceChildren();
 
     for (let n = 1; n <= doc.numPages; n++) {
       const page = await doc.getPage(n);
-      if (this.destroyed) return;
+      if (this.destroyed || epoch !== this.renderEpoch) return;
       const viewport = page.getViewport({ scale: this.scale });
       const view = this.mountPage(n, viewport);
       const ctx = view.page.getContext("2d");
       if (ctx) await page.render({ canvasContext: ctx, viewport }).promise;
+      if (this.destroyed || epoch !== this.renderEpoch) return;
+      if (this.textLayer || this.linkLayer) {
+        const cleanup = await renderPageLayers({
+          page, doc, viewport, element: view.wrap, TextLayer: this.loadedRuntime!.TextLayer,
+          text: this.textLayer, links: this.linkLayer,
+          navigate: (target) => this.scrollToPage(target),
+        });
+        if (this.destroyed || epoch !== this.renderEpoch) { cleanup(); return; }
+        this.layerCleanups.push(cleanup);
+      }
       this.hooks.onPageRender?.(n, {
         width: viewport.width,
         height: viewport.height,
         scale: this.scale,
+      }, {
+        element: view.wrap,
+        pdfToViewportPoint: (x, y) => viewport.convertToViewportPoint(x, y),
+        pdfToViewportRect: (rect) => viewport.convertToViewportRectangle(rect),
+        viewportToPdfPoint: (x, y) => viewport.convertToPdfPoint(x, y),
       });
     }
     this.repaint();
@@ -230,6 +246,7 @@ class PdfViewer implements PdfViewerApi {
     overlay.width = viewport.width;
     overlay.height = viewport.height;
     overlay.style.position = "absolute";
+    overlay.style.zIndex = "3";
     overlay.style.inset = "0";
     overlay.style.touchAction = "none"; // let Pointer Events own gestures
     // In non-interactive (Read/Review) mode the overlay must not capture
@@ -485,12 +502,16 @@ class PdfViewer implements PdfViewerApi {
   }
 
   private teardownViews(): void {
+    for (const cleanup of this.layerCleanups.splice(0)) cleanup();
     this.views = [];
     this.draw = null;
   }
 
   destroy(): void {
     this.destroyed = true;
+    this.loadEpoch++;
+    this.renderEpoch++;
+    if (this.doc) void this.doc.destroy();
     this.doc = null;
     this.teardownViews();
     this.marks = [];
