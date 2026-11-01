@@ -1,335 +1,119 @@
 ---
 description: |
-  [TOPIC] SciTeX-UI component-usage doctrine
-  [DETAILS] Adoption rules every app-builder agent follows: use scitex-ui
-  components, never hand-roll vanilla &lt;select&gt; / native scrollbars /
-  raw-hex CSS / shell-CSS edits. Maps directly onto the UI-101..116 lint
-  rules shipped by `scitex_sdk.ui._linter_plugin`.
+  [TOPIC] SDK UI component usage and header enforcement
+  [DETAILS] The actual UI-101 through UI-116 source checks, mandatory SDK header ownership, native hook installation, and coverage limits.
 tags: [scitex-ui-component-usage-doctrine, lint]
 ---
 
-# SciTeX-UI Component-Usage Doctrine
-
-How an app-builder agent (or human) writes scitex-ui-consuming UI without
-violating the shared foundation. `scitex-sdk ui lint` executes the CSS/HTML/TSX source walker. The
-`scitex_dev.linter.plugins` entry point catalogs its rules; the generic
-Python AST linter does not execute that frontend walker.
-
-Reference inventory: see `32_frontend-components.md` (per-component
-quick-start) and `34_frontend-components-theme.md` (theme tokens).
-This file is the **rule list** — what NOT to do, and what to do instead.
-
----
-
-## Core doctrine
-
-1. **Use scitex-sdk ui components — don't hand-roll** equivalents in your
-   app's `static/<app>/**`. `Dropdown` over vanilla `<select>`,
-   `DataTable` over hand-rolled tables, `ConfirmModal` over bespoke
-   dialogs, `Tooltip` over custom hover popovers, `ThemeProvider` over
-   reading the dark/light class manually.
-2. **Theme through tokens** (`var(--text-primary)`, `var(--bg-surface)`,
-   `var(--border-default)`, the `--workspace-*` and `--status-*`
-   families, the per-app `--app-accent-<app>` accents). Raw hex /
-   `rgb()` literals in app CSS are a doctrine violation.
-3. **Do not modify shared foundation CSS** from a consumer repo —
-   `scitex_sdk/ui/css/shell/*` and `scitex_sdk/ui/css/primitives/*` are the
-   ecosystem's shared theme surface (operator directive 13298). Touching
-   them from an app PR is an ERROR-level violation.
-4. **Don't copy scitex-sdk ui CSS into your `static/<app>/`** — import the
-   stylesheets via `<link>` / `@import` instead. Copies drift; imports
-   stay synced.
-5. **Scrollbar styling**: import the SDK's shared `shell/scrollbars.css`
-   surface (also included by the shell bundle). Consumer-local colour
-   rules fork theme behavior even when they reference tokens; UI-115
-   catches these independently of UI-105's raw-colour check.
-
----
-
-## Rule reference
-
-The lint plugin catalogs UI-101 through UI-116 via the
-`scitex_dev.linter.plugins` entry-point. `scitex-sdk ui lint <path>` walks
-`*.css`, `*.html`, and `*.tsx` files under the given path and emits a
-violation per match.
-
-### UI-101 — `vanilla-select-no-theme-opt-in` (WARN)
-
-A `<select>` element appears in `*.tsx` / `*.html` under `static/<app>/`
-without a `data-app-themed` attribute and without a sibling `body select`
-themed-styling rule in the adjacent CSS. Native `<select>` widgets render
-OS-default colours (white on dark themes) and break visual cohesion.
-
-**Fix**: use `scitex_sdk.ui.Dropdown` instead. If you must use a native
-`<select>` (printer dialog, legacy form), add `data-app-themed="true"`
-and ship a `body select { background: var(--bg-surface); color:
-var(--text-primary); border: 1px solid var(--border-default); }` rule.
-
-### UI-102 — `raw-hex-in-app-css` (WARN)
-
-A `#xxx`, `#xxxxxx`, `#xxxxxxxx`, or `rgb(...)` / `rgba(...)` literal
-appears in a `*.css` file under `static/<app>/**` outside a scrollbar-var
-declaration that references another `var(...)`.
-
-**Fix**: replace the literal with the matching theme token
-(`var(--text-primary)`, `var(--bg-surface)`, `var(--border-default)`,
-`var(--status-success)`, etc.). For app-specific accents, use
-`var(--app-accent-<your-app>)`.
-
-### UI-103 — `copied-scitex-ui-css` (WARN)
-
-A `*.css` file under `static/<app>/` contains a rule-signature
-fingerprint that matches a known scitex-sdk ui shell/primitive CSS rule —
-i.e. the file is a copy/paste of shared styling rather than an import.
-
-**Fix**: delete the local copy and import the scitex-sdk ui stylesheet:
-```html
-<link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/shell/theme.css' %}">
-```
-Copies drift the moment scitex-sdk ui ships a theme tweak; imports stay
-synced.
-
-### UI-104 — `consumer-touched-shell-or-primitives` (WARN → ERROR next release)
-
-A consumer repo's PR diff modifies `scitex_sdk/ui/css/shell/*` or
-`scitex_sdk/ui/css/primitives/*`. The shell + primitives layers are the
-**shared foundation** of every SciTeX app; per operator directive 13298
-they may only be edited from inside scitex-sdk ui itself (additive PRs to
-scitex-ui, with sign-off).
-
-**Flip date**: this rule starts as `WARN` in scitex-sdk ui 0.6.0 and
-**flips to `ERROR` in scitex-sdk ui 0.7.0** (standard adoption ramp). Plan
-your migration off shell/primitive edits in the WARN window.
-
-**Fix**: do not edit shared shell/primitive CSS from your consumer repo.
-If a token is missing, file an additive request against scitex-ui
-itself.
-
-### UI-105 — `scrollbar-raw-hex` (WARN)
-
-A `::-webkit-scrollbar-*` rule or `scrollbar-color: …` declaration in a
-consumer `*.css` uses a raw hex / `rgb(...)` literal instead of a
-`var(...)` reference.
-
-**Fix**: import the SDK's shared `shell/scrollbars.css` surface and
-remove local thumb/track colour rules. Tokenizing local colours alone
-still violates UI-115.
-
-### UI-106 — `long-native-select-no-filter` (WARN)
-
-A native `<select>` with more than 8 literal `<option>` tags and no
-Combobox enhancement. Past a dozen options a native picker is
-unscannable, and the widget offers only type-to-jump on the FIRST
-character.
-
-**Fix**: layer scitex-ui's fuzzy Combobox over it as a progressive
-enhancement — the `<select>` stays as the fallback. Opt out with
-`data-no-combobox` when a long list is genuinely fine (an ordered list
-scrolled by position rather than searched by name).
-
-**Blind spot, stated because absence of a finding is not evidence**: the
-option count comes from literal tags in the source, so a `<select>`
-filled from `fetch()` looks empty to the rule and will not be flagged
-however long it grows. That is why this is a warning.
-
-*(Undocumented here until 0.14.0 — the rule shipped in 0.12.0 and this
-page still said "the 5 rules above". A rule an adopter cannot read about
-is the same reach defect as one they cannot import.)*
-
-### UI-107 — `absolute-api-url-in-client-code` (ERROR)
-
-A root-anchored API path **literal** — `"/api/…"` or `"/apps/u/…"` — in
-`*.ts` / `*.tsx` / `*.js` / `*.jsx` / `*.html`. Correct standalone,
-silently wrong once the app is mounted as a scitex-hub built-in.
-
-The rule, its severity rationale, its two exemptions and its blind spot
-are documented with the contract they enforce, not here:
-**[41_dual-mode-mounting.md](41_dual-mode-mounting.md) § The lint rule.**
-Splitting a rule's *what* from its *why* across two pages is how one of
-them goes stale, and the mount contract is already that page's subject.
-
-### UI-108 — `leaf-local-header-element` (WARN)
-
-A literal `<header` tag in consumer HTML. The shared AppHeader primitive
-(`data-stx-app-header`) owns that row; a leaf-local header forks the
-moment the SDK ships a header tweak. Reference adopter: the SDK App
-wizard (`scitex_sdk/creator`). Comment lines mentioning the tag are
-exempt — a doc discussing the pattern is not the pattern. Document
-pages (legal/landing/docs) are out of scope: gates should scope UI-108
-to app surfaces rather than exempting the rule — a document `<header>`
-is semantics, not an app row.
-
-### UI-109 — `hub-duplicate-manifest-drift` (WARN)
-
-A `apps/workspace/*_app/manifest.json` hub-side copy whose `label` or
-`icon` disagrees with the leaf's own manifest (resolved from the
-installed dist named by `pip_package`). `name` is deliberately not
-compared: hub `name` is module identity, leaf `name` package identity.
-The leaf manifest is the single source for display metadata; the copy
-is the drift. Silent when the dist is not installed — unresolvable is
-not evidence.
-
-### UI-110 — `hardcoded-launcher-icon` (WARN)
-
-A hardcoded `"icon"` key in a hub `launcher_links/*.json`. Tiles must
-resolve the icon from the leaf manifest at render time (the registry
-already carries `manifest_icon_fa`); operator rule: leaf owns icons.
-Escaped ONLY by an explicit `"hub_native": true` declaration in the
-same file — hub-native tiles (chat, settings) have no leaf manifest,
-and the declaration keeps that auditable. `create-app` is not
-hub-native: it resolves from the SDK manifest.
-
-### UI-111 — `unconditional-important-directional-override` (WARN)
-
-A top-level `flex-direction` / `flex-wrap` `!important` in a file that
-also carries `@media`. The override silently beats the responsive rules
-(writer killed its own 600px breakpoint this way). `display` toggles are
-deliberately out of scope: tab-visibility state is JS-driven, not layout
-direction. Overrides already inside a media query are legitimate scoping
-and are never flagged; the SDK's own shell is exempt via
-`treat_as_consumer=False`. Third-party `vendor/` trees are never scanned.
-
-### UI-112 — `hardcoded-tab-title` + unrenderable multi-line `{# #}` (WARN)
-
-A literal `<title>…</title>` in a Django template: the tab must read the
-same name as the tile. Plus: a MULTI-LINE `{# ... #}` block is not a
-comment — Django only strips the single-line form, so the block is
-emitted verbatim into the page (measured twice 2026-10-22: journal
-app.html, scholar workspace_assets). Use
-`{% comment %}...{% endcomment %}` for multi-line commentary.
-
-### UI-113 — `appheader-row-override` (WARN)
-
-Consumer CSS touching `.stx-app-header*` / `[data-stx-app-header]`
-selectors. Row height, placement and font size come from the SDK alone
-so the title + version + project-picker row renders identically in
-every app. The SDK's own defining stylesheet is exempt via
-`treat_as_consumer=False` (same gate as UI-104/111).
-
-### UI-114 — `parallel-button-base` (WARN)
-
-Leaf-local `.btn { ... }` / bare `button { ... }` base instead of the
-shared `.stx-button` / `.stx-button--primary` primitive — one button
-look everywhere. The SDK's own primitive definition is exempt via
-`treat_as_consumer=False` (same gate as UI-104/111/113).
-
-### UI-115 — `scrollbar-without-shared-surface` (WARN)
-
-`scrollbar-color:` / `::-webkit-scrollbar-thumb|track` colour rules
-carrying a RAW colour (hex/rgb outside `var()`) in
-a consumer `*.css` that never imports `shell/scrollbars.css`. Colours
-must come from the shared shell surface (workspace-token backed,
-light/dark via `color-scheme`), never per-leaf literals — the FigRecipe
-canvas shipped a light native scrollbar on dark for exactly this
-reason. Import `shell/scrollbars.css` (in the `shell.css` / `all.css`
-bundles, right after `theme.css`) and keep only width/shape tweaks
-locally. The SDK's own `shell/scrollbars.css` is exempt via
-`treat_as_consumer=False` (same gate as UI-104/111/113/114);
-width-only rules and the token-backed file-tabs strip are out of
-scope.
-
-### UI-116 — `branded-app-title` (WARN)
-
-A hardcoded `SciTeX `-prefixed app title: `data-app-title="SciTeX …"`
-or a literal `<title>SciTeX …</title>` in a Django template. Tab and
-in-app header titles use the SHORT tile form (operator 2026-10-23) —
-the favicon carries the brand, a brand prefix is truncated noise at
-16px, and the project name lives in the app page itself. (UI115 is
-the scrollbar surface rule above.) For
-computed titles, `scitex_sdk.ui.branding.shell_title` strips the
-prefix, so view code passing the full product name and view code
-passing the tile label render identically.
-
----
-
-## How the linter is wired
-
-`scitex-sdk` registers the 16 rules above with scitex-dev's linter via
-the canonical entry-point:
-
-```toml
-# pyproject.toml
-[project.entry-points."scitex_dev.linter.plugins"]
-ui = "scitex_sdk.ui._linter_plugin:get_plugin"
-```
-
-So they appear in `scitex-linter list-rules` once `scitex-sdk` is
-pip-installed alongside `scitex-dev`. Active scanning of `*.css`,
-`*.html`, `*.tsx` is provided by `scitex-sdk ui lint <path>` (see
-`13_cli.md`).
-
-The plugin's `checkers` slot is intentionally empty — scitex-dev's
-in-tree checker is Python-AST-only, and the rules above target CSS /
-HTML / TSX surfaces that the standalone `scitex-sdk ui lint` walker
-covers instead. The two enforcement paths are complementary, not
-competing.
-
----
-
-## Doctrine in one paragraph
-
-If a `static/<app>/` file would make a SciTeX user say *"this widget
-looks different from the rest of the app"*, that's a UI-1xx
-violation. Use the scitex-sdk ui component, theme through tokens, and
-keep shared foundation CSS untouched. The lint rules above are the
-shape of that paragraph.
-
-
-## Mandatory app-header ownership enforcement
-
-The SDK owns the in-app title/version typography and project dropdown.
-Apps supply labels, versions, and scope availability through the shared
-component; disabled scope options remain visible. Do not restyle SDK header
-or dropdown selectors, add inline styles to them, or copy a local app header.
-Narrow app button styles to content controls, so generic ancestor button
-rules cannot reach the shared dropdown.
-
-Installing the SDK registers `scitex_sdk._audit_plugin:get_plugin` through
-`scitex_dev.audit.project`. The normal Dev project auditor runs
-`PS-SDK-HEADER` at error severity. The SDK's `sdk.header-contract` pre-edit
-and `sdk.header-contract-after-shell` post-tool hooks use the same detector
-and deny violations. Hosts must bind the discovered hooks to their agent
-events; an entry-point declaration alone does not activate agent interception.
-The existing scrollbar warning hook remains registered. Missing scanner
-imports and unreadable source fail enforcement rather than passing silently.
-
-The detector checks literal CSS selectors, inline header styles, recognizable
-local app-header markup, and generic button rules scoped to a known literal
-header ancestor. It allows SDK mount markup and unrelated toolbar controls.
-Handwritten canonical header classes do not establish ownership; use the
-SDK renderer or its React binding. Tests/examples, documentation artifacts, and build directories are excluded.
-Vite-manifest-declared CSS outputs are excluded only when authored frontend
-source is present; imported canonical SDK CSS in a bundle is not a local fork. Dynamic
-DOM/style generation, inherited browser defaults, and complex selector
-cascades require the SDK's real browser contract suite (`npm run test:headers`)
-and host integration checks; static source auditing does not prove computed
-style equality. Only the two canonical SDK CSS resources own these selectors.
-
-
-Native interception uses the canonical Dev 0.62.6 bridge:
+# SDK UI component usage
+
+Use SDK components and shared CSS for application chrome. Pass app labels,
+versions, and scope availability through component options. Scientific figures,
+annotations, and data palettes remain content, not application chrome.
+
+Component examples are in `32_frontend-components.md`; theme guidance is in
+`34_frontend-components-theme.md`. The implementation is
+`scitex_sdk.ui._linter._rules` and `_checker`, with header ownership in
+`_header_contract`.
+
+## Source checks
+
+The installed corpus contains **16** rules. IDs use the `STX-` prefix.
+Severity below is the current `build_rules()` output, not a future migration
+promise. `scitex-sdk ui lint PATH` returns nonzero for any finding, including
+warnings.
+
+| ID | Current severity | Detection and remedy |
+| --- | --- | --- |
+| UI-101 | warning | Native `select` without `data-app-themed` opt-in. Use the SDK Dropdown or an explicitly themed native control. |
+| UI-102 | warning | Raw hex/rgb/rgba in UI CSS. Use shared tokens; recognized content-palette paths are exempt from this colour check. |
+| UI-103 | warning | Copied shell/primitive selector signatures in consumer static CSS. Import SDK styles instead of maintaining copies. |
+| UI-104 | warning | Consumer edits under shared shell/primitives paths. Request SDK-owned changes; the currently shipped rule is still warning tier. |
+| UI-105 | warning | Raw colour inside scrollbar rules. Import the shared scrollbar surface; local token indirection alone does not satisfy UI-115. |
+| UI-106 | warning | Native select with more than eight options without filtering/Combobox enhancement or its explicit opt-out. |
+| UI-107 | error | Literal root-anchored `/api/` or `/apps/` client request paths. Use the host-provided mounted API base. |
+| UI-108 | warning | Literal local `header` markup, except pane headers and supported comment exclusions. Mount the SDK AppHeader instead. |
+| UI-109 | warning | Duplicate host builtin manifest label/icon disagrees with the leaf manifest. Keep identity leaf-owned. |
+| UI-110 | warning | Hardcoded icon in host launcher JSON. Render the leaf manifest icon. |
+| UI-111 | warning | Unconditional `!important` direction/wrap declaration in a responsive stylesheet. Let media rules control the layout. |
+| UI-112 | warning | Hardcoded Django tab title or unrenderable multiline `{# ... #}` comment. Use shared title context and `{% comment %}` blocks. |
+| UI-113 | warning | Shared header/dropdown ownership violations. The same detector also drives the mandatory project rule below. |
+| UI-114 | warning | Parallel leaf button base. Use `.stx-button` and its variants; scope content-specific rules to content controls. |
+| UI-115 | warning | Local scrollbar colouring or an unthemed scroll container. Import `shell/scrollbars.css`, also included by the shell bundle. |
+| UI-116 | warning | Literal `SciTeX `-prefixed `data-app-title` or Django title. Use the short app label on those surfaces. |
+
+The `scitex_dev.linter.plugins` entry point catalogs these rules. Its generic
+checker is Python-AST-only; its empty frontend `checkers` slot does **not**
+execute CSS/HTML scanning. The standalone SDK lint command executes the walker.
+
+## Mandatory header and dropdown ownership
+
+`scitex_sdk._audit_plugin:get_plugin` registers `PS-SDK-HEADER` through
+`scitex_dev.audit.project`. The normal Dev project auditor executes it at error
+severity, independently of the warning classification of UI-113.
+
+The SDK renderer owns header markup, typography, geometry, and project
+selector children. Consumer code may use an empty `data-stx-app-header` mount,
+the SDK React binding, and the SDK ProjectPicker mount/template tag. Copying
+canonical class names onto handwritten header, trigger, option, or search
+markup does not grant ownership. Disabled scope choices must remain visible.
+
+The shared detector rejects:
+
+- Direct consumer CSS for SDK header/dropdown selectors and inline styles on
+  those elements.
+- Recognizable local app-header markup and handwritten canonical header or
+  project-selector child markup.
+- A generic ancestor button rule that demonstrably reaches a literal shared
+  header and overrides its appearance. Independent toolbar controls are allowed.
+
+Only the two exact canonical SDK CSS resources in a project named `scitex-sdk`
+own these selectors. A whole SDK repository is not exempt. Consumers may use
+visibility-only rules on explicitly leaf-owned slot content; this preserves
+static-export fallback lifecycle without granting control over SDK typography.
+
+## Native agent bindings
+
+The SDK retains its scrollbar warning and declares two header guards:
+`sdk.header-contract` before native edits and
+`sdk.header-contract-after-shell` after shell/apply-patch changes. All accept
+native payload dictionaries and return violation strings. Dev 0.62.6 contains
+the canonical execution/installation bridge; the SDK `cli` and `project`
+extras require that floor.
 
 ```bash
 scitex-dev hooks install --provider scitex-sdk --config .claude/settings.json --harness claude --dry-run
 ```
 
-Remove `--dry-run` to merge bindings, then verify an actual native refusal.
-The SDK `cli`/`project` extras require Dev>=0.62.6. The header and existing
-scrollbar checks both accept native payload dictionaries and return violation
-strings. Hermes requires native command consent and config/plugin loading;
-its post-tool event observes changes and cannot veto them. Installing or
-listing rules alone does not prove that a running agent loaded its settings.
+Remove `--dry-run` to merge bindings, preserving unrelated settings and hooks.
+Use the intended target interpreter; its installed entry-point metadata must
+include the SDK provider. Discovery/listing alone does not activate interception.
+Verify a prohibited native tool call before claiming that a running client
+loaded the configuration. A pre-edit refusal prevents that edit; a post-tool
+finding reports a completed change and does not roll back files.
 
+Hermes additionally requires its native configuration writer, command consent,
+and startup or supported plugin/config reload. Do not fabricate allowlist
+approvals. Only `pre_tool_call` can veto; `post_tool_call` is an observer.
+Project auditing, CI, and correctly installed pre-push gates remain independent
+of native client support.
 
-Editor hooks resolve the actual target repository even when the client cwd is
-HOME. Post-shell source checks inspect staged, unstaged, and untracked files
-in the active Git repository, including repositories without a first commit.
-Shell calls outside a repository have no claimed project-source scope; they
-are not blocked as if they were failed header inspections. Project auditing
-and CI provide repository-wide coverage independently of client cwd.
+## Scope and limits
 
+Editor hooks resolve the actual target repository even when client cwd is
+HOME. Repository context uses tracked and nonignored Git inputs, avoiding
+ignored data/media/cache trees. Explicit editor targets are still checked when
+ignored. Post-shell checks inspect staged, unstaged, and untracked files,
+including unborn repositories. Shell calls outside a repository have no claimed
+project-source scope and are not refused as failed header inspections.
 
-Repository header context comes from Git-tracked and nonignored source inputs,
-so ignored user data/media/cache trees are not inspected on each edit. An
-explicit editor target is still checked even if ignored. Committed generated
-Vite CSS is checked through its authored frontend source, not mistaken for a
-consumer copy of imported canonical SDK styles.
+Tests, examples, documentation artifacts, and build directories are excluded.
+Vite-declared CSS output is excluded only when authored frontend inputs are
+present: imported canonical SDK CSS is not a consumer fork. Missing scanner
+imports and unreadable claimed source fail verification.
+
+This is literal-source analysis, not a computed-style proof. Dynamic DOM/style
+generation, complex selector cascades, and browser inheritance require the real
+SDK browser contract suite (`npm run test:headers`) and host integration checks.
+Keep component behavior and visual contracts in SDK-owned tests; fix consumers
+rather than adding per-app typography or geometry overrides.
