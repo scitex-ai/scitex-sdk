@@ -69,7 +69,9 @@ try {
           await page.locator(".stx-app-header .stx-app-project-selector__option").first().waitFor({ timeout: 10000 });
           await page.mouse.move(0, 0);
           await page.waitForTimeout(250);
-          const providerUrl = await page.locator('meta[name="stx-project-provider"]').first().getAttribute("content");
+          const providerUrl = await page.evaluate(() =>
+            document.querySelector('.stx-app-header [data-stx-project-picker]')?.getAttribute('data-provider-url') ||
+            document.querySelector('meta[name="stx-project-provider"]')?.getAttribute('content'));
           if (!providerUrl) throw new Error("Host project provider metadata is missing");
           const listingResponse = await context.request.get(new URL(providerUrl, page.url()).href);
           if (!listingResponse.ok()) throw new Error(`Project listing HTTP ${listingResponse.status()}`);
@@ -126,6 +128,7 @@ try {
           row.states.push({ theme, styles });
         }
       } catch (error) { failures.push({ route, width, error: error.message }); }
+      finally { await page.keyboard.press("Escape").catch(() => {}); }
       rows.push(row);
       console.log(`${route} ${width}px checked`);
     }
