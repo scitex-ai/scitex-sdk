@@ -336,7 +336,8 @@ def test_host_context_reaches_explicit_picker_and_canonical_meta():
     # Assert
     assert ('content="/host/projects/?app=writer"' in html
             and 'data-provider-url="/host/projects/?app=writer"' in html
-            and 'data-allow-user-scope="true"' in html)
+            and 'data-allow-user-scope="true"' in html
+            and 'data-scoped-protocol="true"' in html)
 
 
 def test_provider_url_without_request_remains_legacy_compatible():

@@ -32,3 +32,10 @@ Optional `scope_capability_reasons` maps disabled kinds to explanatory text.
 The generated starter explicitly declares user-only support because its
 backend renders a user workspace and implements no project resource operations.
 A leaf adding project operations must change its own declaration and tests.
+
+Scoped host provider meta tags include `data-scoped-protocol="true"`.
+`hostProjectProvider(document)` preserves that explicit host advertisement
+through the shared HTTP transport, so manual SDK consumers receive disabled
+All/project options too. An explicit `allowUserScope: false` still opts out;
+metadata alone does not force a picker into a user-only app. The server GET
+remains authoritative about protocol availability and disabled reasons.
