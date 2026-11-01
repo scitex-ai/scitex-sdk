@@ -145,7 +145,7 @@ def scan_filters(root, *, overlays=None, targets=None):
                     r"\{%.*?%\}|\{\{.*?\}\}",
                     lambda m: "\n" * m[0].count("\n"),
                     text,
-                    flags=re.S,
+                    flags=re.DOTALL,
                 )
             )
             out.extend(
