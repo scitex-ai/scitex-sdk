@@ -318,3 +318,11 @@ scrollbar checks both accept native payload dictionaries and return violation
 strings. Hermes requires native command consent and config/plugin loading;
 its post-tool event observes changes and cannot veto them. Installing or
 listing rules alone does not prove that a running agent loaded its settings.
+
+
+Editor hooks resolve the actual target repository even when the client cwd is
+HOME. Post-shell source checks inspect staged, unstaged, and untracked files
+in the active Git repository, including repositories without a first commit.
+Shell calls outside a repository have no claimed project-source scope; they
+are not blocked as if they were failed header inspections. Project auditing
+and CI provide repository-wide coverage independently of client cwd.
