@@ -39,6 +39,8 @@ from django.utils.html import format_html
 from scitex_sdk.ui.project_scope import (
     PROJECT_PROVIDER_META_NAME,
     host_project_provider_url,
+    host_project_provider,
+    supports_scoped_capability,
     project_id_for,
 )
 
@@ -81,13 +83,17 @@ def scitex_project_picker(
         scope = context.get("app_scope")
     project_scope = is_project_scope(scope)
     allow_user_scope = allow_user_scope is True
+    # Scoped hosts advertise availability through provider hooks. Request both
+    # choices so unsupported All stays visible-disabled, not silently omitted.
+    if project_scope and supports_scoped_capability(host_project_provider()):
+        allow_user_scope = True
     strict = strict is True
     if (not project_scope and not allow_user_scope) or not _signed_in(context):
         return ""
     if current_scope is not None:
         if current_scope not in (SCOPE_USER, SCOPE_PROJECT):
             raise ValueError("current scope must be explicit 'user' or 'project'")
-    provider_url = provider_url or host_project_provider_url()
+    provider_url = host_project_provider_url(context.get("request"), provider_url or None)
     if not provider_url:
         if strict:
             # Explicit opt-in only: a project-scoped, signed-in render
@@ -149,7 +155,7 @@ def _picker_tag(parser, token):
 
 @register.simple_tag(takes_context=True)
 def scitex_project_provider_meta(context):
-    url = host_project_provider_url()
+    url = host_project_provider_url(context.get("request"))
     if not url or context.get("request") is None or not _signed_in(context):
         return ""
     return format_html('<meta name="{}" content="{}">', PROJECT_PROVIDER_META_NAME, url)

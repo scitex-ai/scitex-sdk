@@ -179,18 +179,36 @@ def host_project_provider() -> Optional[ProjectProvider]:
     return provider() if isinstance(provider, type) else provider
 
 
-def host_project_provider_url() -> str:
-    """The host provider's HTTP endpoint (``settings.SCITEX_PROJECT_PROVIDER_URL``), or ""."""
+def host_project_provider_url(request: Any = None, provider_url: str | None = None) -> str:
+    """Resolve the host endpoint, optionally carrying request/app context.
+
+    A host provider may implement ``project_provider_url(request, base_url)``
+    to retain app-specific capability policy across the shared GET/POST API.
+    This optional hook does not change project authorization. An explicit
+    ``provider_url`` is contextualized too; calls without a request preserve
+    the legacy URL exactly.
+    """
     from django.conf import settings
     from django.urls import NoReverseMatch, reverse
 
-    target = getattr(settings, PROJECT_PROVIDER_URL_SETTING, "")
-    if not target or "/" in target:
-        return target or ""
-    try:
-        return reverse(target)
-    except NoReverseMatch:
+    target = provider_url if provider_url is not None else getattr(settings, PROJECT_PROVIDER_URL_SETTING, "")
+    if not target:
         return ""
+    if "/" in target:
+        url = target
+    else:
+        try:
+            url = reverse(target)
+        except NoReverseMatch:
+            return ""
+    if request is not None:
+        provider = host_project_provider()
+        contextualize = getattr(provider, "project_provider_url", None)
+        if callable(contextualize):
+            url = contextualize(request, url)
+            if not isinstance(url, str) or not url:
+                raise ValueError("Host project provider returned an invalid context URL")
+    return url
 
 
 def project_id_for(project: Any, provider: Optional[ProjectProvider] = None) -> str:
