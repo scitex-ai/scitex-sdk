@@ -34,6 +34,7 @@ from ._recent_pane import RecentPane  # noqa: F401
 from ._reply_quote import ReplyQuote  # noqa: F401
 from ._resizer import Resizer  # noqa: F401
 from ._selector_nav import SelectorNav  # noqa: F401
+from ._section_nav import SectionNav  # noqa: F401
 from ._settings_card import SettingsCard  # noqa: F401
 from ._sidebar_layout import SidebarLayout  # noqa: F401
 from ._status_bar import StatusBar  # noqa: F401

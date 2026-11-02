@@ -16,7 +16,8 @@
  *             tabindex="0|-1">Label</button>
  *   </div>
  * Roving tabindex + ArrowLeft/ArrowRight live in the producer; the CSS only
- * reads aria-selected, so any producer emitting the same attributes gets the
+ * reads aria-selected for tabs and aria-current for native section links, so
+ * any producer emitting the corresponding attributes gets the
  * same selected state. Keyboard focus keeps its own ring, visually distinct
  * from the selected underline.
  *
@@ -65,6 +66,7 @@
   font-size: 13px;
   font-weight: 400;
   white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -77,7 +79,7 @@
 /* Selected: underline ONLY in theme --accent (SciTeX navy light / gold dark).
  * No box (border stays transparent), no surface tint, no weight change —
  * the tab reads exactly like its siblings except for the 2px underline. */
-.stx-content-tabs__tab[aria-selected="true"] {
+.stx-content-tabs__tab:is([aria-selected="true"], [aria-current="location"], [aria-current="page"]) {
   border-color: transparent;
   border-bottom: 2px solid var(--accent, #1a2a40);
   background: transparent;

@@ -23,7 +23,7 @@ CSS = REPO / "src/scitex_sdk/ui/static/scitex_sdk/ui/css"
 CONTENT_TABS = CSS / "app/content-tabs.css"
 PANES = CSS / "app/panes.css"
 
-SELECTED = '.stx-content-tabs__tab[aria-selected="true"]'
+SELECTED = '.stx-content-tabs__tab:is([aria-selected="true"], [aria-current="location"], [aria-current="page"])'
 FOCUS = ".stx-content-tabs__tab:focus-visible"
 PANES_SELECTED = '.stx-panes__tab[aria-selected="true"]'
 PANES_FOCUS = ".stx-panes__tab:focus-visible"

@@ -35,6 +35,7 @@ const entries = [
   ["app/receipt/index", "app/receipt"],
   ["app/reply-quote/index", "app/reply-quote"],
   ["app/selector-nav/auto-mount", "app/selector-nav"],
+  ["app/section-nav/auto-mount", "app/section-nav"],
   ["app/toast/index", "app/toast"],
   ["app/tooltip/index", "app/tooltip"],
   ["app/tour-player/auto-mount", "app/tour-player"],

@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "tests/browser",
-  testMatch: ["app-header.spec.ts", "filter-field.spec.ts", "shell-frame.spec.ts", "project-view-context.spec.ts"],
+  testMatch: ["app-header.spec.ts", "filter-field.spec.ts", "shell-frame.spec.ts", "project-view-context.spec.ts", "section-nav.spec.ts"],
   fullyParallel: true,
   workers: process.env.CI ? 2 : undefined,
   use: {

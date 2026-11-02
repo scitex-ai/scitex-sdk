@@ -2,7 +2,7 @@
  *
  * Card ui-tabs-selected-state-standard-20260918. `panes.css` and
  * `content-tabs.css` style selection exclusively through
- * `[aria-selected="true"]` on `role="tab"` elements with roving tabindex.
+ * aria-selected on tab panels, and aria-current on native location links.
  * These tests pin the Panes producer to that markup contract: exactly one
  * tab selected, roving tabindex following selection, arrow keys moving
  * selection, and the stylesheet's selected selector matching the selected
@@ -98,7 +98,7 @@ describe("selected-tab DOM contract", () => {
     for (const file of ["content-tabs.css", "panes.css"]) {
       const css = readFileSync(join(CSS_DIR, file), "utf-8");
       const selector = file === "content-tabs.css"
-        ? '.stx-content-tabs__tab[aria-selected="true"]'
+        ? '.stx-content-tabs__tab:is([aria-selected="true"], [aria-current="location"], [aria-current="page"])'
         : '.stx-panes__tab[aria-selected="true"]';
       expect(css).toContain(selector);
     }
@@ -107,4 +107,14 @@ describe("selected-tab DOM contract", () => {
     expect(matched).toHaveLength(1);
     expect(matched[0].getAttribute("aria-selected")).toBe("true");
   });
+  it("shared selected selector admits current anchors but rejects inactive states", () => {
+    const selector = '.stx-content-tabs__tab:is([aria-selected="true"], [aria-current="location"], [aria-current="page"])';
+    document.body.innerHTML = `<button id="tab" class="stx-content-tabs__tab" aria-selected="true"></button>
+      <a id="location" class="stx-content-tabs__tab" aria-current="location"></a>
+      <a id="page" class="stx-content-tabs__tab" aria-current="page"></a>
+      <a id="inactive" class="stx-content-tabs__tab" aria-current="false"></a>
+      <a id="plain" class="stx-content-tabs__tab"></a>`;
+    expect(Array.from(document.querySelectorAll(selector), element => element.id)).toEqual(["tab", "location", "page"]);
+  });
+
 });

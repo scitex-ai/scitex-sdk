@@ -97,3 +97,5 @@ export type {
 } from "./project-selector";
 
 export { FilterField, mountFilterFields } from "./filter-field";
+
+export { SectionNav, mountSectionNavs } from "./section-nav";
