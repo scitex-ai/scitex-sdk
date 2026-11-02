@@ -35,13 +35,20 @@ jobs:
     steps:
       - name: Resolve version
         id: ver
+        env:
+          SDK_MANUAL_RELEASE_TAG: ${{ inputs.version }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            [[ "$GITHUB_REF" == refs/tags/* ]]
             v="${GITHUB_REF#refs/tags/}"
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            v="$SDK_MANUAL_RELEASE_TAG"
           else
-            v="${{ inputs.version }}"
+            exit 1
           fi
-          echo "version=$v" >> "$GITHUB_OUTPUT"
+          [[ "$v" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          printf 'version=%s\n' "$v" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.ver.outputs.version }}
@@ -68,22 +75,33 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Create an isolated test environment
         run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           python -m venv "$RUNNER_TEMP/scitex-sdk-release-tests-${{ matrix.python-version }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           printf '%s\n' "$RUNNER_TEMP/scitex-sdk-release-tests-${{ matrix.python-version }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/bin" >> "$GITHUB_PATH"
+          SDK_PHASE
+
       - name: Install dependencies
         run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           python -m pip install --upgrade pip
           # Contributor groups preserve runtime-only [all]. The project API
           # has a separate real all-extra resolution gate below.
           python -m pip install -e ".[gui,chat,mcp,cli]" --group dev
+          SDK_PHASE
+
       - name: Run tests
-        run: python -m pytest tests/
+        run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
+          python -m pytest tests/
+          SDK_PHASE
+
       - name: Run strict project-access controls with synthetic in-memory data
         env:
           SCITEX_ACCESS_STRICT: "1"
-        run: >-
-          python -m pytest tests/scitex_sdk/app/test_access_django.py
-          tests/scitex_sdk/app/api_access/test___init__.py
+        run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
+          python -m pytest tests/scitex_sdk/app/test_access_django.py tests/scitex_sdk/app/api_access/test___init__.py
+          SDK_PHASE
 
   build:
     needs: [test, frontend]
@@ -93,13 +111,20 @@ jobs:
     steps:
       - name: Resolve version
         id: ver
+        env:
+          SDK_MANUAL_RELEASE_TAG: ${{ inputs.version }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            [[ "$GITHUB_REF" == refs/tags/* ]]
             v="${GITHUB_REF#refs/tags/}"
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            v="$SDK_MANUAL_RELEASE_TAG"
           else
-            v="${{ inputs.version }}"
+            exit 1
           fi
-          echo "version=$v" >> "$GITHUB_OUTPUT"
+          [[ "$v" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          printf 'version=%s\n' "$v" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.ver.outputs.version }}
@@ -126,17 +151,22 @@ jobs:
           python-version: "3.12"
       - name: Build wheel + sdist
         run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           python -m pip install --upgrade pip build
           python -m build
           # fail-loud: an empty dist/ must stop the pipeline here.
           ls -1 dist/*.whl dist/*.tar.gz >/dev/null
+          SDK_PHASE
+
       - name: Verify source, sdist, wheel, and frontend package identity
-        run: >-
-          python scripts/verify-artifacts.py --source .
-          --wheel dist/scitex_sdk-*.whl --sdist dist/scitex_sdk-*.tar.gz
-          --tag "${{ steps.ver.outputs.version }}"
+        run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
+          python scripts/verify-artifacts.py --source . --wheel dist/scitex_sdk-*.whl --sdist dist/scitex_sdk-*.tar.gz --tag "${{ steps.ver.outputs.version }}"
+          SDK_PHASE
+
       - name: Resolve the actual all-extra wheel with published dependencies
         run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           set -euo pipefail
           # This is a release gate, not a metadata override or --no-deps install.
           wheel=$(realpath dist/scitex_sdk-*.whl)
@@ -153,6 +183,8 @@ jobs:
             'Normal SDK [all] resolution and pip check passed; inspect the ownership report.' \
             'Repository archival is administrative state, not dependency/migration evidence.' \
             'The separate retirement workflow must pass every registered consumer graph.' >> "$GITHUB_STEP_SUMMARY"
+          SDK_PHASE
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:

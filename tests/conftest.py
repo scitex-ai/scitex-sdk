@@ -1,6 +1,18 @@
 """Shared component metadata fixture, valid for source and wheel runs."""
-import pytest
+# Fence inherited store/libpq routing before importing pytest, Django or peers.
+# CI also wraps phases before interpreter startup; this is the local collection floor.
 import os
+import importlib.util
+from pathlib import Path
+
+_store_spec = importlib.util.spec_from_file_location(
+    "_sdk_test_store", Path(__file__).resolve().parents[1] / "scripts/ci-store-environment.py"
+)
+_store_guard = importlib.util.module_from_spec(_store_spec)
+_store_spec.loader.exec_module(_store_guard)
+_store_guard.protect_environment(os.environ)
+
+import pytest
 from tests._component_metadata import check_component_metadata
 
 # The merged App/UI suite shares one Django process. Configure both owned

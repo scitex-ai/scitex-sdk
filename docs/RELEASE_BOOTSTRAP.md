@@ -13,9 +13,10 @@ retired App/UI distributions, and normal source/sdist/wheel/frontend identity.
 Persisted Django labels/FKs, `scitex_ui` tag libraries, template blocks, existing
 env names and local configuration/storage contracts remain unchanged.
 
-## Current 0.3.17 release procedure
+## Current source release procedure
 
-The source version is an unpublished preview until normal publication succeeds.
+SDK 0.3.17 is published (PyPI upload 2026-11-01 UTC). Current source metadata
+is 0.3.18; source metadata alone does not establish public availability.
 `pyproject.toml` requires Dev>=0.62.6 for CLI/project tooling and `[all]`;
 old versions in the historical observations below are not current install floors.
 
@@ -24,10 +25,10 @@ old versions in the historical observations below are not current install floors
    PR events target `main`/`develop` only. Dispatch both existing workflows at
    the candidate branch, verify each run's `headSha`, or requalify after merging
    into a covered branch. An empty checks list is not a pass.
-2. Review and merge the source in order, retaining the 0.3.17 Python/frontend
+2. Review and merge the source in order, retaining the current Python/frontend
    versions and published dependency requirements. Do not tag an earlier base
    that omits the public PDF or request-local selection APIs.
-3. Push `v0.3.17` at the accepted commit using the repository's release process.
+3. Push the matching `vX.Y.Z` tag at the accepted commit using the repository's release process.
    The tag triggers `pypi-publish-and-github-release-on-tag.yml`. Its manual
    dispatch accepts an already-existing tag; it does not create one.
 4. Require the release's Python 3.11/3.12/3.13 tests, frontend gates, source/
@@ -40,6 +41,23 @@ old versions in the historical observations below are not current install floors
    to the accepted source before releasing LivePaper 0.2.20 and its Writer
    consumers. Retry an existing tag through the existing workflow only after
    classifying its actual failure; do not bypass a failed release gate.
+
+### Test-store isolation
+
+Normal package CI and release test/build/import phases start through
+`python3 -I -S scripts/ci-store-environment.py -- COMMAND`. The stdlib bootstrap
+removes inherited `PG*` and store selectors from the actual child environment,
+then selects an absent Unix socket under an exclusive mode-0700 directory and
+owned empty password/service files. This prevents default fleet-store routing;
+`SCITEX_DIR` and Django's in-memory SQLite setting alone do not do that.
+`PGSERVICE` is removed, not set to an empty service name. The same policy runs
+before pytest/Django imports in the local collection setup. CI wrapping also
+covers interpreter startup and dependency installation, before collection.
+Explicit owned test fixtures may override the floor afterwards. These SDK gates
+prove no Postgres persistence coverage; a real database fixture would require
+its own owned resource qualification. The wrapper does not change actor, ref,
+permissions, publication identity or runtime package bytes. Small refusal roots
+are retained under `/tmp`; they contain only empty credential/service files.
 
 The public dependency-retirement inventory remains a separate gate; SDK
 publication does not certify migrated downstream graphs. See the historical
