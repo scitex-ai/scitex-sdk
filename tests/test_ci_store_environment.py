@@ -108,3 +108,21 @@ print(root)
         raise AssertionError(child.stderr)
     shutil.rmtree(Path(child.stdout.strip()))
     assert child.returncode == 0
+
+
+def test_actual_bash_phase_cannot_reintroduce_service_from_inherited_startup(tmp_path):
+    startup = tmp_path / "owned-startup-fixture.sh"
+    startup.write_text("export PGSERVICE=synthetic-reintroduced\n")
+    environment = dict(os.environ, BASH_ENV=str(startup), ENV=str(startup))
+    phase = 'test -z "${PGSERVICE+x}"; test -z "${BASH_ENV+x}"; printf "%s\\n" "$PGSYSCONFDIR"'
+    baseline = subprocess.run(["bash", "-euo", "pipefail", "-c", phase],
+                              env=environment, capture_output=True, timeout=5)
+    if baseline.returncode == 0:
+        raise AssertionError("the real unguarded shell must exhibit the startup-file bypass")
+    child = subprocess.run([sys.executable, "-I", "-S", str(GUARD), "--",
+                            "bash", "-euo", "pipefail", "-c", phase],
+                           env=environment, capture_output=True, text=True, timeout=5)
+    if child.returncode:
+        raise AssertionError(child.stderr)
+    shutil.rmtree(Path(child.stdout.strip()))
+    assert child.returncode == 0

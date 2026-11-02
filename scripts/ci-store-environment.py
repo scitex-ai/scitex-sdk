@@ -15,7 +15,7 @@ def protect_environment(environment):
     root = Path(tempfile.mkdtemp(prefix="sdk-no-store-", dir="/tmp"))
     for key in tuple(environment):
         if key.startswith(("PG", "SCITEX_STORE_")) or key in {
-            "SCITEX_CARDS_DB", "SCITEX_CLEW_PROJECT",
+            "SCITEX_CARDS_DB", "SCITEX_CLEW_PROJECT", "BASH_ENV", "ENV",
         }:
             del environment[key]
     for name in ("pgpass", "pgservice.conf"):

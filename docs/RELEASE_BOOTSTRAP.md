@@ -47,6 +47,7 @@ old versions in the historical observations below are not current install floors
 Normal package CI and release test/build/import phases start through
 `python3 -I -S scripts/ci-store-environment.py -- COMMAND`. The stdlib bootstrap
 removes inherited `PG*` and store selectors from the actual child environment,
+including inherited `BASH_ENV`/`ENV` startup hooks that could restore selectors,
 then selects an absent Unix socket under an exclusive mode-0700 directory and
 owned empty password/service files. This prevents default fleet-store routing;
 `SCITEX_DIR` and Django's in-memory SQLite setting alone do not do that.
