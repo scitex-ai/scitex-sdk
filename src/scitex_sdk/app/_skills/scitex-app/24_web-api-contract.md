@@ -55,3 +55,19 @@ The existing installed-metadata reader uses `scitex_api.json` in dist-info and
 delegates to the pure parser. Missing data remains unknown and never justifies
 an import. Hosts still make an explicit `ApiAdmission` decision before resolving
 or enabling handlers; neither the auditor nor hooks change that decision.
+
+
+## SDK-owned bundled catalog
+
+The SDK itself declares `scitex.apis` name `scitex-sdk`, targeting
+`scitex_sdk._web._api:plugin`. Its relative `GET skills` operation returns
+`package="scitex-sdk"` and actual bundled skill IDs grouped by `scitex-sdk`,
+`scitex-app` and `scitex-ui`. No request path or user selection controls which
+filesystem location is read. It does not list installed user/global-provider
+skills, run scaffolding, or expose host paths.
+
+The Python reader is `scitex_sdk.list_bundled_skills()`. The optional Django
+adapter imports Django only when invoked (`scitex-sdk[gui]`); non-GET methods
+return JSON 405 with `Allow: GET`. Missing or invalid bundled resources return
+a typed JSON 503 without internal filenames. Hosts still use explicit admission;
+there is no auto-mounted live endpoint or added permission/enablement flow.

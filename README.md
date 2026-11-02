@@ -53,3 +53,9 @@ rules; standalone SDK UI use keeps Dev optional. See [provider transition
 (completed)](docs/UI_LINTER_PROVIDER_TRANSITION.md).
 
 Web API descriptor quality is enforced by the SDK-owned `PS-SDK-WEB` project auditor and hooks. See [Web API contract enforcement](src/scitex_sdk/app/_skills/scitex-app/24_web-api-contract.md) for source-only guarantees and host-admission boundaries.
+
+The SDK declares an opt-in read-only Web `skills` operation over its bundled
+SDK/App/UI documentation. Python callers can use
+`scitex_sdk.list_bundled_skills()` directly. This reads package resources only;
+it does not discover user skills or enable a hosted route. See the
+[Python API catalog](src/scitex_sdk/_skills/scitex-sdk/03_python-api.md).
