@@ -1,4 +1,4 @@
-{% load static i18n scitex_i18n %}
+{% load static i18n scitex_i18n scitex_static %}
 <!DOCTYPE html>
 <html lang="{{ shell_lang|default:'en' }}" data-theme-default="{{ shell_theme_default|default:'dark' }}">
     <head>
@@ -39,7 +39,7 @@
         <link rel="stylesheet"
               href="{% static 'scitex_sdk/ui/css/shell/stx-shell-sidebar.css' %}" />
         <link rel="stylesheet"
-              href="{% static 'scitex_sdk/ui/css/shell/workspace-three-col.css' %}" />
+              href="{% app_static 'scitex_sdk/ui/css/shell/workspace-three-col.css' %}" />
         <link rel="stylesheet"
               href="{% static 'scitex_sdk/ui/css/shell/workspace.css' %}" />
         <link rel="stylesheet"
@@ -61,7 +61,7 @@
         <link rel="stylesheet"
               href="{% static 'scitex_sdk/ui/css/shell/media-viewer.css' %}" />
         <link rel="stylesheet"
-              href="{% static 'scitex_sdk/ui/css/shell/mobile.css' %}" />
+              href="{% app_static 'scitex_sdk/ui/css/shell/mobile.css' %}" />
         {% scitex_js_catalog "scitex_sdk.ui" %}
         {% block extra_css %}{% endblock %}
     </head>
@@ -526,7 +526,7 @@
              header double-click / drag on #workspace-three-col, which this
              template renders above. Self-guards: no-op when that container is
              absent or the viewport is wide. See ADR 0002. -->
-        <script src="{% static 'scitex_sdk/ui/js/shell/mobile-swipe.js' %}"
+        <script src="{% app_static 'scitex_sdk/ui/js/shell/mobile-swipe.js' %}"
                 defer></script>
         <!-- Launcher overlay collision runtime (SSOT hub PR 923 §4): keeps the
              app surface at the full viewport and clears/retracts the overlay

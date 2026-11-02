@@ -4,16 +4,17 @@
  *
  *   workspace-three-col — THE LAYOUT THIS PACKAGE SHIPS:
  *     Below 768px the three columns become a vertical STACK. Every pane
- *     stays on the page; none is hidden and none needs to be switched to,
- *     so there is no pane-switcher, no JS and no state class involved.
+ *     stays reachable by page scrolling unless explicitly declared unused.
+ *     If all utility panes are unused, the module fills a finite viewport
+ *     frame below the naturally sized host header, with internal scrolling.
  *     An app hides a pane it does not use by DECLARING it:
  *     `shell_context(panes={"ai": "unused"})` emits `ws-pane-unused`.
  *
  *     It was single-pane until 2026-08-19, revealed by `.mobile-active-pane`
  *     — a class nothing in this package ever wrote, so all three panes were
  *     unreachable rather than collapsed. Measured at 390x844 before the fix:
- *     zero visible clickable elements on the page. Pinned by
- *     tests/develop/test_mobile_panes_stay_reachable.py.
+ *     zero visible clickable elements on the page. Real geometry, scrolling
+ *     and nested-sidebar controls are in tests/browser/shell-frame.spec.ts.
  *
  *   workspace-layout — NOT this package's markup:
  *     Rules for the hub's shell, which nothing here renders. They are inert
@@ -60,7 +61,7 @@
   }
 
   /* Inner sidebar panels (AI, worktree, viewer) must fill their pane */
-  .workspace-layout .workspace-pane .stx-shell-sidebar {
+  .workspace-layout :is(.workspace-pane:is([data-pane="chat"], [data-pane="console"], [data-pane="editor"]), .workspace-pane:is([data-pane="chat"], [data-pane="console"], [data-pane="editor"]) :is(.ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-apps-pane)) > .stx-shell-sidebar {
     width: 100% !important;
     height: 100% !important;
     flex: 1 !important;
@@ -68,14 +69,14 @@
   }
 
   /* Force-remove collapsed state in new layout — panes are always full */
-  .workspace-layout .workspace-pane .stx-shell-sidebar.collapsed {
+  .workspace-layout :is(.workspace-pane:is([data-pane="chat"], [data-pane="console"], [data-pane="editor"]), .workspace-pane:is([data-pane="chat"], [data-pane="console"], [data-pane="editor"]) :is(.ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-apps-pane)) > .stx-shell-sidebar.collapsed {
     width: 100% !important;
     height: 100% !important;
   }
 
   /* AI panel: fill the pane completely */
-  .workspace-layout .workspace-pane #stx-shell-ai-panel,
-  .workspace-layout .workspace-pane #ai-panel-container {
+  .workspace-layout .workspace-pane:is([data-pane="chat"], [data-pane="console"], [data-pane="editor"]) .ws-ai-pane > #stx-shell-ai-panel,
+  .workspace-layout .workspace-pane:is([data-pane="chat"], [data-pane="console"], [data-pane="editor"]) > #ai-panel-container {
     width: 100% !important;
     height: 100% !important;
     flex: 1 !important;
@@ -86,7 +87,7 @@
   }
 
   /* Sidebar content area: scrollable, fill remaining space */
-  .workspace-layout .workspace-pane .stx-shell-sidebar__content {
+  .workspace-layout :is(.workspace-pane:is([data-pane="chat"], [data-pane="console"], [data-pane="editor"]), .workspace-pane:is([data-pane="chat"], [data-pane="console"], [data-pane="editor"]) :is(.ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-apps-pane)) > .stx-shell-sidebar > .stx-shell-sidebar__content {
     flex: 1 !important;
     min-height: 0 !important;
     overflow-y: auto !important;
@@ -130,7 +131,13 @@
    * ║  Only one pane visible at a time. Sidebar icons switch panes.  ║
    * ╚══════════════════════════════════════════════════════════════════╝ */
 
-  /* Container: full viewport */
+  /* Used utility panes form a real, user-scrollable page stack. The
+     standalone body normally clips overflow for its desktop viewport frame. */
+  body.workspace-page:has(> .workspace-three-col) {
+    overflow-y: auto;
+  }
+
+  /* Container: utility stack, or the explicit content-only mode below. */
   .workspace-three-col {
     /* STACKED, not a fixed viewport box. The old rules pinned this to the
        viewport with overflow:hidden because exactly one pane was ever visible
@@ -174,8 +181,8 @@
    * workspace-three-col.css, which carries NO `!important` -- so a bare
    * `display: flex !important` here would outrank it and drag every declared-
    * unused pane back on screen at exactly the width where space is scarcest.
-   * Pinned by test_mobile_panes_stay_reachable.py::
-   * test_stacking_does_not_override_a_declared_unused_pane. */
+   * Verified with real geometry and hidden-pane controls in
+   * tests/browser/shell-frame.spec.ts. */
   .workspace-three-col > .ws-ai-pane:not(.ws-pane-unused),
   .workspace-three-col > .ws-worktree-pane:not(.ws-pane-unused),
   .workspace-three-col > .ws-viewer-pane:not(.ws-pane-unused) {
@@ -206,12 +213,33 @@
   }
 
 
-  /* Sidebars inside active panes: full width + height */
-  .workspace-three-col .stx-shell-sidebar,
-  .workspace-three-col #stx-shell-ai-panel,
-  .workspace-three-col #ws-worktree-sidebar,
-  .workspace-three-col #ws-viewer-sidebar,
-  .workspace-three-col #ws-apps-sidebar {
+  /* A declared content-only shell uses the viewport's remaining flex space.
+     Header height is normal flow, never a duplicated pixel offset. Presence
+     of all three explicit unused markers is required; emptiness proves nothing. */
+  body.workspace-page:has(> .workspace-three-col > .ws-ai-pane.ws-pane-unused):has(> .workspace-three-col > .ws-worktree-pane.ws-pane-unused):has(> .workspace-three-col > .ws-viewer-pane.ws-pane-unused) {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  body.workspace-page > .workspace-three-col:has(> .ws-ai-pane.ws-pane-unused):has(> .ws-worktree-pane.ws-pane-unused):has(> .ws-viewer-pane.ws-pane-unused) {
+    flex: 1 1 0%;
+    height: 0 !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .workspace-three-col:has(> .ws-ai-pane.ws-pane-unused):has(> .ws-worktree-pane.ws-pane-unused):has(> .ws-viewer-pane.ws-pane-unused) > .ws-module-pane {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+  }
+
+  /* Only the shell's direct utility sidebars fill those panes. App-owned
+     nested sidebars keep their own width, height and collapsed state. */
+  .workspace-three-col > :is(.ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-apps-pane) > .stx-shell-sidebar {
     width: 100% !important;
     min-width: 100% !important;
     max-width: 100% !important;
@@ -220,10 +248,7 @@
     flex-direction: column !important;
   }
 
-
-
-  /* Sidebar content: scrollable */
-  .workspace-three-col .stx-shell-sidebar__content {
+  .workspace-three-col > :is(.ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-apps-pane) > .stx-shell-sidebar > .stx-shell-sidebar__content {
     flex: 1 !important;
     min-height: 0 !important;
     overflow-y: auto !important;
@@ -276,7 +301,8 @@
   /* Touch targets (Apple HIG: 44px) — shared token, not a per-app literal.
    * --stx-touch-target-min is defined in theme.css so every consumer
    * (hub + leaves) references the SAME 44px value. */
-  .stx-shell-sidebar__header button,
+  .workspace-three-col > :is(.ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-apps-pane) > .stx-shell-sidebar > .stx-shell-sidebar__header button,
+  .workspace-layout :is(.workspace-pane:is([data-pane="chat"], [data-pane="console"], [data-pane="editor"]), .workspace-pane:is([data-pane="chat"], [data-pane="console"], [data-pane="editor"]) :is(.ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-apps-pane)) > .stx-shell-sidebar > .stx-shell-sidebar__header button,
   a.selector-nav-item {
     min-height: var(--stx-touch-target-min, 44px);
   }

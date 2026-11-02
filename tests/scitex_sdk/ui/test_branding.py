@@ -712,3 +712,19 @@ def test_dark_palette_declares_a_dark_color_scheme():
     declared = _color_scheme(dark)
     # Assert
     assert declared == ["dark"]
+
+
+@pytest.mark.parametrize("asset", [
+    "css/shell/mobile.css", "css/shell/workspace-three-col.css", "js/shell/mobile-swipe.js",
+])
+def test_shell_frame_asset_urls_track_real_file_content(asset):
+    """An ordinary reload gets the changed shell, not a cached old renderer."""
+    import hashlib
+    from scitex_sdk.ui import get_static_dir
+
+    # Arrange
+    digest = hashlib.sha256((get_static_dir() / asset).read_bytes()).hexdigest()[:12]
+    # Act
+    html = _render()
+    # Assert
+    assert f"/static/scitex_sdk/ui/{asset}?v={digest}" in html

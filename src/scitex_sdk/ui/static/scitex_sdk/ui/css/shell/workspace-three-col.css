@@ -453,5 +453,5 @@ body.stx-shell-ai-open #workspace-three-col #main-content {
 }
 
 /* --- Responsive: mobile layout handled by mobile.css ---
-   Panes are repositioned as absolute stacked layers with swipe navigation.
-   See: css/shell/mobile.css */
+   Used utility panes stack in a scrollable page. With all three explicitly
+   unused, the module fills the remaining viewport below the natural header. */
