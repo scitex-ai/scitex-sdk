@@ -4,6 +4,8 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Add SDK-owned `PS-SDK-WEB` source descriptor/handler checks through the existing Dev project-audit and native-hook providers, without importing or enabling consumer APIs.
+
 ## [0.3.18] - 2026-11-02
 
 - Bound phone content-only shells to remaining viewport flex space below the

@@ -49,6 +49,7 @@ scitex.app.get_files(...)
 
 ### Core SDK / interfaces
 - [05_standalone](05_standalone.md)
+- [24_web-api-contract](24_web-api-contract.md) — Source-only Web API quality audit and native hooks.
 - [20_env-vars](20_env-vars.md)
 - [07_backend-validation](07_backend-validation.md) — App validation pipeline + minimal-app checklist
 

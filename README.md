@@ -51,3 +51,5 @@ linter provider (UI-101..107, now the UI-101..114 corpus). Both
 distributions may remain installed while a compatible Dev registers the
 rules; standalone SDK UI use keeps Dev optional. See [provider transition
 (completed)](docs/UI_LINTER_PROVIDER_TRANSITION.md).
+
+Web API descriptor quality is enforced by the SDK-owned `PS-SDK-WEB` project auditor and hooks. See [Web API contract enforcement](src/scitex_sdk/app/_skills/scitex-app/24_web-api-contract.md) for source-only guarantees and host-admission boundaries.
