@@ -4,17 +4,17 @@ import { resolve, sep } from "node:path";
 
 const source = resolve("src/scitex_sdk");
 const ui = "/ui/static/scitex_sdk/ui";
-async function mount(page: Page, theme = "light", initial = "", script = true) {
+async function mount(page: Page, theme = "light", initial = "", script = true, margin = 120, smooth = false) {
   await page.route("http://sdk.test/**", async route => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname === "/") {
       await route.fulfill({ contentType: "text/html", body: `<!doctype html>
 <html data-theme="${theme}"><head><link rel="stylesheet" href="${ui}/css/shell/theme.css">
 <link rel="stylesheet" href="${ui}/css/app/content-tabs.css">
-<style>:root{--header-height:64px}body{margin:0;padding-top:64px}
+<style>:root{--header-height:64px}html{scroll-behavior:${smooth ? "smooth" : "auto"}}body{margin:0;padding-top:64px}
 header{position:fixed;top:0;height:var(--header-height);width:100%;background:gray;z-index:3}
-nav{position:sticky;top:var(--header-height);z-index:2}section{position:relative;scroll-margin-top:120px}
-#one{height:500px}#two{height:900px}#three{height:80px}#context{position:absolute;top:0;scroll-margin-top:120px}
+nav{position:sticky;top:var(--header-height);z-index:2}section{position:relative;scroll-margin-top:${margin}px}
+#one{height:500px}#two{height:900px}#three{height:80px}#context{position:absolute;top:0;scroll-margin-top:${margin}px}
 </style></head><body><header>Owned header</header>
 <nav data-stx-section-nav aria-label="Sections" class="stx-content-tabs">
 <a class="stx-content-tabs__tab" href="#one">One</a><a class="stx-content-tabs__tab" href="#two">Two</a>
@@ -107,3 +107,15 @@ test("without JS native anchors still navigate and all content remains present",
   await expect(page.locator("section")).toHaveCount(3);
   await expect(page.locator("section[hidden]")).toHaveCount(0);
 });
+
+for (const [width, margin] of [[1440, 160], [390, 205]]) {
+  test(`native smooth anchor with heading clearance stays current after resize: ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await mount(page, "light", "", true, margin, true);
+    await page.locator('nav a[href="#two"]').click();
+    await expect.poll(async () => Math.round(await page.locator("#two").evaluate(element => element.getBoundingClientRect().top))).toBe(margin);
+    await page.setViewportSize({ width: width - 1, height: 844 });
+    await expect(current(page)).toHaveAttribute("href", "#two");
+    await expect(page).toHaveURL("http://sdk.test/#two");
+  });
+}

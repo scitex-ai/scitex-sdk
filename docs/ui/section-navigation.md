@@ -17,7 +17,9 @@ and do not hide the rest of the page.
 
 Use the host's `app_static` tag for content-addressed resource URLs where available.
 The host owns sticky placement and layout. The controller measures the nav's
-actual bottom edge, so its sticky top must correctly follow the host header.
+actual bottom edge and each section's computed `scroll-margin-top`, so native
+anchor heading clearance remains current after later geometry updates. Its sticky
+top must correctly follow the host header.
 Nav/header size changes, viewport resizing, captured scroll events, hash changes
 and browser back/forward schedule a single animation-frame update. A short final
 section becomes current at the page bottom. Initial hashes and aliases inside a

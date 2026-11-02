@@ -67,7 +67,11 @@ var SectionNav = class {
     let selected = hashSection && this.items.some((item) => item.section === hashSection) ? hashSection : null;
     if (!selected) {
       const line = Math.max(0, Math.min(innerHeight - 1, this.element.getBoundingClientRect().bottom + 1));
-      const passed = ordered.filter(({ rect }) => rect.top <= line);
+      const passed = ordered.filter(({ item, rect }) => {
+        const margin = Number.parseFloat(getComputedStyle(item.section).scrollMarginTop);
+        const boundary = Number.isFinite(margin) ? Math.max(line, margin + 1) : line;
+        return rect.top <= boundary;
+      });
       selected = (passed.at(-1) ?? ordered[0]).item.section;
       const height = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
       if (height > innerHeight + 1 && scrollY + innerHeight >= height - 2) selected = ordered.at(-1).item.section;
