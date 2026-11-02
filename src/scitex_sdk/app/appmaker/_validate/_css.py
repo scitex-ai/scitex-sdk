@@ -82,10 +82,14 @@ __all__ = [
 
 from ._css_match import (
     _FOOTER_ELEMENT,
+    _MARGIN_PADDING_PROP,
+    _margin_padding_offense,
     _matched_names,
+    _declarations,
     _rule_blocks,
     _strip_excluded,
     _strip_pseudo_args,
+    _subject_names,
 )
 from ._css_tables import (
     _CHECKED,
@@ -400,6 +404,39 @@ def validate_css_canonical(app_dir: str | Path) -> CssScanReport:
                             f"{state!r} — the shell owns this state; react to "
                             f"it, do not drive it",
                             subject=state,
+                        )
+
+            # TIER 2d — margin/padding on the app container itself. The app
+            # styles its CHILDREN freely (see the tier-2 control test); a
+            # margin or padding on the box it renders INTO shrinks the
+            # largest app content instead, which is the defect class behind
+            # the fleet's dock-reserve and top-strip findings. Zero is a
+            # compliant reset and never fires; any non-zero length, `auto`,
+            # or inherited value does.
+            #
+            # SUBJECT, not membership: `#main-content .mine { margin: 8px }`
+            # styles the child and must stay silent, while `#main-content {
+            # margin: 8px }` styles the box and must fire. Membership alone
+            # cannot tell them apart, and the wrong answer here fails correct
+            # code — the exact false-positive class tier 2 exists to avoid.
+            for name in _subject_names(targets, APP_CONTAINERS):
+                for prop, value in _declarations(body):
+                    if not _MARGIN_PADDING_PROP.match(prop):
+                        continue
+                    if _margin_padding_offense(value):
+                        kind = (
+                            "margin"
+                            if prop.startswith("margin")
+                            else "padding"
+                        )
+                        add(
+                            f"{kind}-on-app-container", "2d", rel, line,
+                            selector,
+                            f"{kind} on {name!r} in {selector!r} — the app "
+                            f"renders INSIDE it; a {kind} here shrinks the "
+                            f"largest app content instead of spacing your own "
+                            f"nodes",
+                            subject=name,
                         )
 
     # Every report that reaches here is about ONE app: the manifest check at

@@ -203,4 +203,71 @@ def _rule_blocks(content: str):
         yield m.group(1).strip(), m.group(2), content.count("\n", 0, m.start(1)) + 1
 
 
+#: margin/padding declaration names, longhands included (`margin-inline`).
+_MARGIN_PADDING_PROP = re.compile(r"^(margin|padding)(-[a-z]+)?$", re.IGNORECASE)
+
+#: A static length. Unitless zero carries no unit; anything else unitless is
+#: invalid CSS for these properties and not this rule's job.
+_LENGTH = re.compile(
+    r"([-+]?(?:\d+\.?\d*|\.\d+))"
+    r"(px|em|rem|cap|ch|ex|ic|lh|rlh|vw|vh|vi|vb|vmin|vmax|"
+    r"cqw|cqh|cqi|cqb|cqmin|cqmax|cm|mm|q|in|pt|pc|%)",
+    re.IGNORECASE,
+)
+
+#: `auto` centers instead of spacing; on the app box that still insets the
+#: largest content. `inherit`/`unset`/`revert` hand the value to the shell or
+#: the UA, which is the defect by delegation. `initial` computes to zero and
+#: stays silent with the resets.
+_AUTO_OR_DELEGATED = re.compile(r"\b(auto|inherit|unset|revert)\b", re.IGNORECASE)
+
+
+def _declarations(body: str):
+    """(property, value) pairs of one rule body, lowercased property names."""
+    for chunk in body.split(";"):
+        if ":" not in chunk:
+            continue
+        prop, _, value = chunk.partition(":")
+        yield prop.strip().lower(), value
+
+
+def _margin_padding_offense(value: str) -> bool:
+    """Whether a margin/padding value insets the box it is set on.
+
+    Zero in any unit is a compliant reset. A bare `var()`/`env()` with no
+    literal length is invisible to a static read — declared in
+    `not_checked` rather than guessed at. A literal inside a fallback
+    (`var(--x, 8px)`, `calc(... + 24px)`) IS read: the fallback is the
+    value wherever the token is unpublished.
+    """
+    lowered = value.lower()
+    for match in _LENGTH.finditer(lowered):
+        if float(match.group(1)) != 0:
+            return True
+    return bool(_AUTO_OR_DELEGATED.search(lowered))
+
+
+def _subject_names(selector_list: str, names: tuple[str, ...]) -> list[str]:
+    """Which of `names` is the SUBJECT of some selector in the list.
+
+    Membership (`_matched_names`) is the wrong test here: `#main-content
+    .mine` mentions the container but styles the child. Only a name in the
+    last compound of a selector gets that rule's declarations, so only
+    those fire. Comma splitting runs on the `:not`/`:has`-blanked targets;
+    a comma inside `:is()`/`:where()` splits mid-selector, but the fragment
+    carrying the container still ends with it, so the verdict is unchanged.
+    """
+    found: list[str] = []
+    for part in selector_list.split(","):
+        compounds = [c for c in re.split(r"[\s>+~]+", part.strip()) if c]
+        if not compounds:
+            continue
+        subject = compounds[-1]
+        for name in names:
+            if re.search(rf"{re.escape(name)}{_BEM_MODIFIER}(?![\w-])", subject):
+                if name not in found:
+                    found.append(name)
+    return found
+
+
 # EOF

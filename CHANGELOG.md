@@ -4,6 +4,13 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Appmaker CSS validator gains tier 2d: margin/padding set on the app
+  container itself (`#main-content`, `#app-mount`, `.ws-module-pane`) is
+  reported, since it shrinks the largest app content. Zero resets stay
+  silent, as do margins on the app's own children; bare `var()`/`env()`
+  values are a declared blind spot. Calibrated silent over FigRecipe,
+  Writer, Stats, and SDK CSS (123 files).
+
 ## [0.3.18] - 2026-11-02
 
 - Bound phone content-only shells to remaining viewport flex space below the
