@@ -1,8 +1,8 @@
 name: release
 
 # SDK-owned App/UI source, frontend, and artifact gates precede publication.
-# [all] must resolve normally against published dependencies; unpublished
-# scitex-dev.project support deliberately holds this release.
+# [all] must resolve normally against published dependencies; the actual
+# wheel installation and ownership gates below determine release readiness.
 #
 # TRUSTED PUBLISHING matches on (repository, workflow FILENAME, environment).
 # This file must keep its name (pypi-p...-tag.yml) and the publish job must keep
