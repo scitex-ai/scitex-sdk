@@ -44,9 +44,13 @@ def scan_web_contract(repo_root, *, overlays=None):
         if len(text.encode()) > 1_000_000:
             raise ValueError("project metadata byte limit exceeded")
         data = tomllib.loads(text)
-        declarations = (
-            data.get("project", {}).get("entry-points", {}).get("scitex.apis", {})
-        )
+        package = data.get("project", {})
+        if not isinstance(package, dict):
+            raise ValueError("project metadata must be a table")
+        points = package.get("entry-points", {})
+        if not isinstance(points, dict):
+            raise ValueError("project.entry-points must be a table")
+        declarations = points.get("scitex.apis", {})
         if not isinstance(declarations, dict) or len(declarations) > 128:
             raise ValueError("scitex.apis must be a table with at most 128 entries")
     except (ValueError, OSError, TypeError) as exc:
