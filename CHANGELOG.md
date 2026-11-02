@@ -40,7 +40,7 @@ All notable changes to `scitex-sdk`.
 
 - Add opt-in main-details panes layout with a shared 320px Details default,
   responsive bounds and phone width, and collapse behavior preserving host
-  restored inline sizes. See docs/ui/main-details-panes.md; source preview only.
+  restored inline sizes. See docs/ui/main-details-panes.md; this opt-in mode remains experimental.
 
 - Creator starter choices and primary buttons use the semantic navy/gold primary-action roles; the
   in-app header reads SciTeX SDK while launcher labels remain SDK.

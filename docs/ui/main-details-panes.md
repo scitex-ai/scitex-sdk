@@ -1,4 +1,4 @@
-# Main/details pane layout (unreleased source preview)
+# Main/details pane layout (experimental, available since SDK 0.3.17)
 
 Opt a shared panes root into `data-stx-panes-layout="main-details"` when it has
 `data-stx-pane="main"` and `data-stx-pane="details"` children. The existing SDK grid
@@ -13,9 +13,11 @@ and the desktop maximum is removed. Other layout modes are unchanged.
 
 This does not introduce width persistence: hosts that already restore widths
 keep owning that storage. The existing panes client remembers the active pane.
-The new mode is a source-preview addition beyond the published 0.3.16 contract;
-consumers must qualify the future SDK release before publishing a new dependency
-floor. Current preview package metadata intentionally stays 0.3.16.
+This opt-in mode is included in the published SDK 0.3.17 release. It remains
+experimental: consumers must qualify the behavior against their declared SDK
+minimum rather than rely on a source checkout. The 0.3.18 source metadata is
+release preparation, not evidence that 0.3.18 is publicly available; verify the
+normal release and official PyPI artifacts before declaring that newer floor.
 
 Actual-browser candidate verification covered a 320px default, inline 400px
 restoration, collapse to 61px, expansion back to 400px, a 641px viewport bound,
