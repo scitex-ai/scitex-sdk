@@ -1796,11 +1796,12 @@ def test_discovery_reports_the_distribution_when_there_is_one():
     assert distribution != ""
 
 
-def test_no_installed_package_publishes_this_group_yet():
-    # Arrange — the declaration surface is new; discovery must be empty rather
-    # than raise when nothing has adopted it (real measurement, no fixture).
+def test_empty_entry_point_catalog_returns_no_refs():
+    # Arrange — preserve the empty-catalog contract after SDK adoption. The
+    # real installed SDK reference is exercised by _web/test__api.py.
+    catalog = ()
     # Act
-    found = discover_api_plugins()
+    found = discover_api_plugins(catalog)
     # Assert
     assert found == []
 

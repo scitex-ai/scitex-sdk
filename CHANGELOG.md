@@ -4,6 +4,11 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Resolve the public standalone-host helper lazily so descriptor imports do not initialize standalone logging or user directories; preserve function identity and discovery.
+
+- Declare an opt-in read-only Web `skills` route over actual bundled SDK/App/UI skill IDs, with a pure Python resource reader and no host/user discovery.
+
+- Add SDK-owned `PS-SDK-WEB` source descriptor/handler checks through the existing Dev project-audit and native-hook providers, without importing or enabling consumer APIs.
 - Appmaker CSS validator gains tier 2d: margin/padding set on the app
   container itself (`#main-content`, `#app-mount`, `.ws-module-pane`) is
   reported, since it shrinks the largest app content. Zero resets stay

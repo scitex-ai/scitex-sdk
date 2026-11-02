@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 
-def _source_changes(payload):
+def _source_changes(payload, *, suffixes=None):
     """Read proposed or changed files without mutating the project."""
 
     cwd = Path(payload.get("cwd") or Path.cwd()).resolve()
@@ -27,7 +27,7 @@ def _source_changes(payload):
     if tool in {"Write", "write_file", "Edit", "MultiEdit", "patch"} and filename:
         path = Path(filename)
         path = (path if path.is_absolute() else cwd / path).resolve()
-        if path.suffix.lower() not in {".css", ".html", ".htm", ".tsx", ".jsx"}:
+        if path.suffix.lower() not in (suffixes or {".css", ".html", ".htm", ".tsx", ".jsx"}):
             return None
         # Native clients can run from HOME while editing an absolute repo
         # path. Resolve the edited project's scope, never walk all HOME.

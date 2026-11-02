@@ -37,18 +37,39 @@ def check_shell_contract(repo_root, violation_class, violations):
         )
 
 
+def check_web_contract(repo_root, violation_class, violations):
+    """Report source API declaration and handler binding failures."""
+    from .app._api_contract import scan_web_contract
+
+    for finding in scan_web_contract(repo_root):
+        violations.append(
+            violation_class(
+                "PS-SDK-WEB", f"{finding.path}:{finding.line}", finding.detail
+            )
+        )
+
+
 def get_plugin():
     """Load the scanner eagerly: an incomplete installation must not pass."""
+    from .app._api_contract import scan_web_contract
     from .ui._linter._filter_contract import scan_filters
     from .ui._linter._header_contract import scan_headers
     from .ui._linter._shell_contract import scan_shell
 
     if not all(
-        callable(scanner) for scanner in (scan_headers, scan_filters, scan_shell)
+        callable(scanner)
+        for scanner in (scan_headers, scan_filters, scan_shell, scan_web_contract)
     ):
         raise TypeError("SDK chrome scanner is unavailable")
     return {
         "rules": [
+            (
+                "PS-SDK-WEB",
+                "API",
+                "SDK Web API source contract",
+                "E",
+                "sdk-web-api-contract",
+            ),
             (
                 "PS-SDK-HEADER",
                 "UI",
@@ -71,5 +92,10 @@ def get_plugin():
                 "sdk-shell-contract",
             ),
         ],
-        "checks": [check_header_contract, check_filter_contract, check_shell_contract],
+        "checks": [
+            check_header_contract,
+            check_filter_contract,
+            check_shell_contract,
+            check_web_contract,
+        ],
     }

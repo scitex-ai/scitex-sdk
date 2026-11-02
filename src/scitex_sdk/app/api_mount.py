@@ -290,6 +290,11 @@ def read_inert_descriptor(distribution: str) -> Optional[ApiPlugin]:
         raise AdmissionDenied(f"cannot read inert descriptor: {exc}") from exc
     if text is None:
         return None
+    return parse_inert_descriptor(text)
+
+
+def parse_inert_descriptor(text: str) -> ApiPlugin:
+    """Validate inert JSON using SDK constructors without importing leaf code."""
     try:
         data = json.loads(text)
     except ValueError as exc:
@@ -305,6 +310,7 @@ __all__ = [
     "admitted_routes",
     "dump_inert_descriptor",
     "read_inert_descriptor",
+    "parse_inert_descriptor",
     "require_admitted",
     "resolve_handler",
 ]

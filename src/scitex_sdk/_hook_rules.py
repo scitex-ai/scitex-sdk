@@ -31,7 +31,28 @@ def provide() -> list:
         "check": "scitex_sdk._header_hook:check_payload",
         "doctrine": "ui/_skills/scitex-ui/40_component-usage-doctrine.md",
     }
+    web = {
+        "rule": "Declare Web APIs with validated SDK descriptors and owned handler bindings.",
+        "reason": "Source validation must not import or activate leaf business code.",
+        "severity": "deny",
+        "provider": "scitex-sdk",
+        "owner_module": "scitex_sdk",
+        "check": "scitex_sdk._api_hook:check_payload",
+        "doctrine": "app/_skills/scitex-app/24_web-api-contract.md",
+    }
     return [
+        HookRule(
+            id="sdk.web-api-contract",
+            event="pre-tool-use",
+            matches=("Edit", "Write", "MultiEdit", "write_file", "patch"),
+            **web,
+        ),
+        HookRule(
+            id="sdk.web-api-contract-after-shell",
+            event="post-tool-use",
+            matches=("Bash", "terminal", "apply_patch"),
+            **web,
+        ),
         HookRule(
             id="sdk.header-contract",
             event="pre-tool-use",

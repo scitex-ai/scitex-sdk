@@ -6,13 +6,19 @@ import importlib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
+from ._bundled_skills import list_bundled_skills
+
 try:
     __version__ = version("scitex-sdk")
 except PackageNotFoundError:
     import re
 
     _project = Path(__file__).parents[2] / "pyproject.toml"
-    _match = re.search(r'^version\s*=\s*"([^"]+)"', _project.read_text(), re.M) if _project.exists() else None
+    _match = (
+        re.search(r'^version\s*=\s*"([^"]+)"', _project.read_text(), re.MULTILINE)
+        if _project.exists()
+        else None
+    )
     __version__ = _match.group(1) if _match else "0.0.0+local"
 
 
@@ -32,4 +38,10 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-__all__ = ["__version__", "app", "ui", "get_frontend_package_dir"]
+__all__ = [
+    "__version__",
+    "app",
+    "get_frontend_package_dir",
+    "list_bundled_skills",
+    "ui",
+]
