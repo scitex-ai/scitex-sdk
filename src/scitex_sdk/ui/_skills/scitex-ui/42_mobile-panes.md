@@ -115,6 +115,6 @@ so an ordinary reload receives their current bytes.
 
 Real Chromium regressions in `tests/browser/shell-frame.spec.ts` cover varied
 header/viewport heights, declared-unused panes, native wheel scrolling,
-nested/direct sidebar ownership and mobile breakpoint transitions. This is
-source-preview work for the coordinated SDK 0.3.18 release; it does not change
-the installed 0.3.17 fleet until the reviewed release is deployed.
+nested/direct sidebar ownership and mobile breakpoint transitions. Source changes reach
+an installed fleet only after its reviewed SDK release is deployed; a local
+source preview does not update existing installations.

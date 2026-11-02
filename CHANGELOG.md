@@ -4,7 +4,24 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
-## [0.3.17] - Unpublished preview
+## [0.3.18] - 2026-11-02
+
+- Bound phone content-only shells to remaining viewport flex space below the
+  natural host header when AI, Files and Viewer are explicitly unused; keep
+  used utility stacks reachable by page scrolling.
+- Restrict mobile sizing, gestures and collapse preferences to shell-owned
+  utility sidebars. Nested app Details panes keep their state, dimensions and
+  ARIA ownership across breakpoints and gestures.
+- Content-fingerprint the two changed shell stylesheets and mobile runtime.
+  Add real Chromium frame/scroll/ownership regressions to the existing automatic
+  frontend gate, plus rendered-template hash checks.
+- Preserve the seven unrelated source/bundle drifts and existing strict audit
+  debt as separate work; this narrow release rebuilds only mobile-swipe.
+- Public availability requires the normal release workflow and independently
+  verified PyPI artifacts. Feature and metadata CI alone are not evidence of
+  publication.
+
+## [0.3.17] - 2026-11-01
 
 - Expose request-local project view selections independently of remembered
   preference; authorize project access with optional `remember=False`.
@@ -13,9 +30,9 @@ All notable changes to `scitex-sdk`.
   callbacks remain supported.
 - Add the shared DataTable, focus-aware filter fields, and source ownership
   checks. Their public UI builds ship in the Python wheel.
-- This source version is a preview until the normal release workflow publishes
-  it. LivePaper 0.2.20 and Writer consumers requiring these APIs must follow
-  the SDK release; source installation is not evidence of public availability.
+- Published to PyPI on 2026-11-01 UTC. LivePaper 0.2.20 and Writer consumers
+  use the released SDK APIs; source installation alone is not publication
+  evidence.
 
 - Normalize AppHeader and ProjectSelector typography independently of page root
   fonts, and limit Creator button styles to its action rows. Add Chromium
