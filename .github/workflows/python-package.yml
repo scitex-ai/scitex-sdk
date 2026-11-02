@@ -50,26 +50,39 @@ jobs:
             "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Create an isolated Python environment for this job
         run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           python -m venv "$RUNNER_TEMP/scitex-sdk-ci-${{ matrix.python-version }}-${{ matrix.branch }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           printf '%s\n' "$RUNNER_TEMP/scitex-sdk-ci-${{ matrix.python-version }}-${{ matrix.branch }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/bin" >> "$GITHUB_PATH"
+          SDK_PHASE
+
       - name: Install contributor and runtime dependencies
         run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           python -m pip install --upgrade pip
           python -m pip install -e '.[gui,chat,mcp,cli]' --group dev
           python -m pip check
+          SDK_PHASE
+
       - name: Test source and strict access controls
         run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           python -m pytest tests/ -q -ra
           SCITEX_ACCESS_STRICT=1 python -m pytest \
             tests/scitex_sdk/app/test_access_django.py \
             tests/scitex_sdk/app/api_access/test___init__.py -q -ra
+          SDK_PHASE
+
       - name: Build from sdist and verify package identity
         run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           python -m build
           python scripts/verify-artifacts.py --source . \
             --wheel dist/scitex_sdk-*.whl --sdist dist/scitex_sdk-*.tar.gz
+          SDK_PHASE
+
       - name: Test installed wheel and strict access controls
         run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           python -m pip uninstall -y scitex-sdk
           python -m pip install dist/scitex_sdk-*.whl
           python -m pip check
@@ -77,8 +90,11 @@ jobs:
           env -u PYTHONPATH SCITEX_ACCESS_STRICT=1 python -m pytest \
             tests/scitex_sdk/app/test_access_django.py \
             tests/scitex_sdk/app/api_access/test___init__.py -q -ra
+          SDK_PHASE
+
       - name: Verify minimal GUI installation without retired distributions
         run: |
+          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           set -euo pipefail
           wheel=$(realpath dist/scitex_sdk-*.whl)
           python -m venv "$RUNNER_TEMP/scitex-sdk-gui-${{ matrix.python-version }}-${{ matrix.branch }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
@@ -108,3 +124,4 @@ jobs:
           assert ScitexUiConfig.name == 'scitex_sdk.ui'
           assert ui.get_static_dir().is_relative_to(get_frontend_package_dir())
           PYTHON
+          SDK_PHASE
