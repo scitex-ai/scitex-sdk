@@ -91,6 +91,23 @@ width, margins, or background. On Hub, `--site-content-max-width` matches app
 and global-header widths; surrounding space uses Hub's theme-aware backdrop.
 SDK project audits and native hooks enforce ownership of these shell surfaces.
 
+On phones the shell reads the three explicit utility declarations emitted by
+`panes={"ai": "unused", "files": "unused", "viewer": "unused"}`. If all three
+are unused, the body and module use finite flex space below the naturally sized
+host header; there is no app-specific header offset. Otherwise the utility
+stack remains reachable by page scrolling. An app keeps its internal scrolling
+inside the module frame.
+
+Shell sizing and mobile gestures own only direct utility sidebars, including
+the host's Chat/Console and Editor utility wrappers. A nested app Details pane
+keeps its own collapse, dimensions and ARIA state. The shell must neither clear
+that class on a breakpoint nor restore it from utility preferences.
+`tests/browser/shell-frame.spec.ts` exercises real wheel scrolling, varied
+header and viewport heights, direct/wrapped utilities and nested sidebar state.
+These cases run in the existing `frontend / header-browser` CI job. The two
+shell stylesheets and mobile runtime use `app_static` URLs, so changed asset
+bytes change the browser URL without manual version strings.
+
 ## Read-only page scope
 
 A page may intentionally start at All Projects while the user's shared profile

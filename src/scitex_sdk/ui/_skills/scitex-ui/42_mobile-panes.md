@@ -92,3 +92,29 @@ Do not turn the columns themselves into accordions.
 - `python examples/04_mobile_panes_demo.py` writes a standalone demo page (`index.html` in the run's session directory).
 - `npx vitest run` covers switching, persistence, breakpoint and swipe
   (`tests/scitex_sdk/ui/vitest/panes.test.ts`); `tests/scitex_sdk/ui/templatetags/test_scitex_panes.py` covers the tag.
+
+
+## Outer shell and nested app panes
+
+The shared shell's utility panes differ from an app's tabbed panes above.
+On phones, declared-used AI, Files and Viewer panes remain in a vertically
+scrollable shell stack. Declare an unused utility through
+`shell_context(panes={"ai": "unused", "files": "unused", "viewer": "unused"})`;
+the template emits the corresponding direct `ws-pane-unused` markers.
+Only when all three are explicitly unused does the content module fill the
+remaining viewport in a flex frame below the naturally sized host header.
+No app-specific header-height subtraction is needed. Content scrolls inside
+that bounded module; used utilities retain real page scrolling.
+
+Mobile shell sizing, gestures and saved collapse preferences act only on
+sidebars directly owned by utility panes. A nested app Details sidebar keeps
+its own collapsed class, size, ARIA state and handlers. Do not add a leaf state
+observer to undo a shell mutation or duplicate the shell's viewport geometry.
+The changed CSS and mobile runtime URLs use the SDK `app_static` content hash
+so an ordinary reload receives their current bytes.
+
+Real Chromium regressions in `tests/browser/shell-frame.spec.ts` cover varied
+header/viewport heights, declared-unused panes, native wheel scrolling,
+nested/direct sidebar ownership and mobile breakpoint transitions. This is
+source-preview work for the coordinated SDK 0.3.18 release; it does not change
+the installed 0.3.17 fleet until the reviewed release is deployed.

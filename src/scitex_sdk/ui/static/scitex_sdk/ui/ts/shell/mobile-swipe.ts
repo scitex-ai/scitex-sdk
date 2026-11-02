@@ -24,13 +24,32 @@ const SIDEBAR_IDS = [
   "ws-apps-sidebar",
 ];
 
+/** Only direct utility-pane sidebars belong to the mobile shell. */
+const UTILITY_PANES = ".ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-apps-pane";
+
+function shellSidebars(): HTMLElement[] {
+  const container = document.getElementById("workspace-three-col");
+  return container
+    ? Array.from(container.querySelectorAll<HTMLElement>(
+      ":scope > :is(" + UTILITY_PANES + ") > .stx-shell-sidebar",
+    ))
+    : [];
+}
+
+function shellDragTargets(): HTMLElement[] {
+  return shellSidebars().flatMap(sidebar => Array.from(
+    sidebar.querySelectorAll<HTMLElement>(":scope > .panel-resizer, :scope > .stx-shell-sidebar__header"),
+  ));
+}
+
 // --- Two-finger swipe tracking ---
 let touchStartY = 0;
 let touchFingers = 0;
 let swipeTarget: HTMLElement | null = null;
 
 function findParentSidebar(el: HTMLElement): HTMLElement | null {
-  return el.closest<HTMLElement>(".stx-shell-sidebar");
+  const sidebar = el.closest<HTMLElement>(".stx-shell-sidebar");
+  return sidebar && shellSidebars().includes(sidebar) ? sidebar : null;
 }
 
 function onTouchStart(e: TouchEvent): void {
@@ -94,10 +113,9 @@ function onTouchEnd(e: TouchEvent): void {
 
 function saveMobileCollapseState(): void {
   const collapsed: string[] = [];
-  SIDEBAR_IDS.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el?.classList.contains("collapsed")) {
-      collapsed.push(id);
+  shellSidebars().forEach((sidebar) => {
+    if (SIDEBAR_IDS.includes(sidebar.id) && sidebar.classList.contains("collapsed")) {
+      collapsed.push(sidebar.id);
     }
   });
   localStorage.setItem(MOBILE_COLLAPSE_KEY, JSON.stringify(collapsed));
@@ -109,8 +127,8 @@ function restoreMobileCollapseState(): void {
     if (!saved) return;
     const collapsed: string[] = JSON.parse(saved);
     collapsed.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) {
+      const el = shellSidebars().find(sidebar => sidebar.id === id);
+      if (SIDEBAR_IDS.includes(id) && el) {
         el.classList.add("collapsed");
         console.log(`[MobileGesture] Restored collapsed: ${id}`);
       }
@@ -129,7 +147,7 @@ function onDblClick(e: MouseEvent): void {
   );
   if (!header) return;
 
-  const sidebar = header.closest<HTMLElement>(".stx-shell-sidebar");
+  const sidebar = findParentSidebar(header);
   if (!sidebar) return;
 
   const toggleBtn = sidebar.querySelector<HTMLElement>(".panel-toggle-btn");
@@ -156,9 +174,7 @@ let vResPrevStartH = 0;
 let vResNextStartH = 0;
 
 function findPaneWrapper(el: HTMLElement): HTMLElement | null {
-  return el.closest<HTMLElement>(
-    ".ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-module-pane",
-  );
+  return findParentSidebar(el)?.parentElement ?? null;
 }
 
 function findAdjacentPanes(
@@ -179,7 +195,7 @@ function findAdjacentPanes(
     el.classList.contains("ws-module-pane");
 
   let prevPane = pane.previousElementSibling as HTMLElement | null;
-  while (prevPane && !isPaneClass(prevPane)) {
+  while (prevPane && (!isPaneClass(prevPane) || prevPane.classList.contains("ws-pane-unused"))) {
     prevPane = prevPane.previousElementSibling as HTMLElement | null;
   }
 
@@ -195,7 +211,7 @@ function onVerticalResizeStart(e: MouseEvent | TouchEvent): void {
   const resizer = target.closest<HTMLElement>(".panel-resizer");
   const header = target.closest<HTMLElement>(".stx-shell-sidebar__header");
   const dragSource = resizer || header;
-  if (!dragSource) return;
+  if (!dragSource || !findParentSidebar(dragSource)) return;
 
   // For headers, find the pane wrapper directly
   let panes: { prev: HTMLElement; next: HTMLElement } | null = null;
@@ -223,9 +239,7 @@ function onVerticalResizeStart(e: MouseEvent | TouchEvent): void {
   // Don't change heights here — let mousemove handle all sizing
   // so the border always follows the cursor with no jump.
   [vResPrevPane, vResNextPane].forEach((pane) => {
-    const sidebar = pane.querySelector<HTMLElement>(
-      ".stx-shell-sidebar.collapsed",
-    );
+    const sidebar = shellSidebars().find(candidate => candidate.parentElement === pane);
     if (sidebar) sidebar.classList.remove("collapsed");
   });
 
@@ -264,7 +278,7 @@ function onVerticalResizeEnd(): void {
   // Collapse panes dragged below 60px
   const collapseIfSmall = (pane: HTMLElement | null) => {
     if (!pane || pane.offsetHeight >= 60) return;
-    const sidebar = pane.querySelector<HTMLElement>(".stx-shell-sidebar");
+    const sidebar = shellSidebars().find(candidate => candidate.parentElement === pane);
     if (sidebar) {
       sidebar.classList.add("collapsed");
       pane.style.removeProperty("height");
@@ -318,18 +332,14 @@ function enableMobile(): void {
   // Pane wrappers get inline flex/height from mobile drag — clear on re-init.
   // Do NOT touch sidebar inline styles — desktop resizer depends on them.
   const paneSelectors =
-    ".ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-module-pane";
+    ":scope > :is(.ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-module-pane)";
   container.querySelectorAll<HTMLElement>(paneSelectors).forEach((pane) => {
     pane.style.removeProperty("flex");
     pane.style.removeProperty("height");
   });
 
-  // First: uncollapse all panels (clear desktop collapse state)
-  container
-    .querySelectorAll<HTMLElement>(".stx-shell-sidebar.collapsed")
-    .forEach((panel) => {
-      panel.classList.remove("collapsed");
-    });
+  // Clear desktop state only on shell-owned utility panels, never app Details.
+  shellSidebars().forEach(panel => panel.classList.remove("collapsed"));
 
   // Then: restore mobile-specific collapse preferences
   restoreMobileCollapseState();
@@ -340,9 +350,7 @@ function enableMobile(): void {
   container.addEventListener("dblclick", onDblClick);
 
   // Reciprocal vertical resize — mouse + touch on panel resizers AND headers
-  const dragTargets = container.querySelectorAll<HTMLElement>(
-    ".panel-resizer, .stx-shell-sidebar__header",
-  );
+  const dragTargets = shellDragTargets();
   dragTargets.forEach((el) => {
     el.addEventListener("mousedown", onVerticalResizeStart as EventListener);
     el.addEventListener("touchstart", onVerticalResizeStart as EventListener, {
@@ -373,9 +381,7 @@ function disableMobile(): void {
   container.removeEventListener("dblclick", onDblClick);
 
   // Remove mobile drag listeners from headers and resizers
-  container
-    .querySelectorAll<HTMLElement>(".panel-resizer, .stx-shell-sidebar__header")
-    .forEach((el) => {
+  shellDragTargets().forEach((el) => {
       el.removeEventListener(
         "mousedown",
         onVerticalResizeStart as EventListener,
@@ -401,7 +407,7 @@ function disableMobile(): void {
 
   // Clear mobile inline styles from pane wrappers
   const paneSelectors =
-    ".ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-module-pane";
+    ":scope > :is(.ws-ai-pane, .ws-worktree-pane, .ws-viewer-pane, .ws-module-pane)";
   container.querySelectorAll<HTMLElement>(paneSelectors).forEach((pane) => {
     pane.style.removeProperty("flex");
     pane.style.removeProperty("height");
