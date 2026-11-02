@@ -158,6 +158,107 @@ def test_setting_a_shell_state_class_is_reported(tmp_path):
 
 
 # --------------------------------------------------------------------------
+# TIER 2d — margin/padding on the app container itself. Only the abusive
+# operation errors: the box the app renders INTO must not shrink.
+# --------------------------------------------------------------------------
+
+
+def test_a_margin_on_the_app_container_is_reported(tmp_path):
+    """`#main-content` is the box, not a node. A margin on it insets the
+    largest app content."""
+    # Arrange
+    app = _app(tmp_path, "#main-content { margin: 8px }\n")
+    # Act
+    report = validate_css_canonical(app)
+    # Assert
+    assert [d.rule for d in report.details] == ["margin-on-app-container"]
+    assert [d.subject for d in report.details] == ["#main-content"]
+
+
+def test_a_zero_reset_on_the_app_container_is_allowed(tmp_path):
+    """Zero is a compliant reset, not a margin. The OK-example apps reset
+    their roots; failing that would fail correct code."""
+    # Arrange
+    app = _app(tmp_path, "#main-content { margin: 0; padding: 0 }\n")
+    # Act
+    report = validate_css_canonical(app)
+    # Assert
+    assert not report.findings
+
+
+def test_a_margin_on_a_child_inside_the_container_is_allowed(tmp_path):
+    """THE CONTROL THAT DEFINES TIER 2d. Membership is the wrong test:
+    `#main-content .mine` mentions the container but styles the child, so
+    only a container in the SUBJECT position fires."""
+    # Arrange
+    app = _app(tmp_path, "#main-content .mine { margin: 8px }\n")
+    # Act
+    report = validate_css_canonical(app)
+    # Assert
+    assert not report.findings
+
+
+def test_an_auto_margin_on_the_app_container_is_reported(tmp_path):
+    """`margin: 0 auto` centers the box instead of spacing children — the
+    side gaps are still margins on the largest content."""
+    # Arrange
+    app = _app(tmp_path, ".ws-module-pane { margin: 0 auto }\n")
+    # Act
+    report = validate_css_canonical(app)
+    # Assert
+    assert [d.rule for d in report.details] == ["margin-on-app-container"]
+
+
+def test_a_literal_inside_a_calc_fallback_is_reported(tmp_path):
+    """The fleet's dock-reserve shape: `calc(var(--site-dock-height,0px) +
+    24px)`. The 24px is the value wherever the token is unpublished, so a
+    static read that skipped calc contents would miss exactly this."""
+    # Arrange
+    app = _app(
+        tmp_path,
+        "#app-mount { padding-bottom: calc(var(--site-dock-height, 0px) + 24px) }\n",
+    )
+    # Act
+    report = validate_css_canonical(app)
+    # Assert
+    assert [d.rule for d in report.details] == ["padding-on-app-container"]
+
+
+def test_a_safe_area_env_fallback_of_zero_is_allowed(tmp_path):
+    """`env(safe-area-inset-bottom, 0px)` is phone compliance with a zero
+    fallback — no literal inset, so nothing to report."""
+    # Arrange
+    app = _app(tmp_path, "#app-mount { padding-bottom: env(safe-area-inset-bottom, 0px) }\n")
+    # Act
+    report = validate_css_canonical(app)
+    # Assert
+    assert not report.findings
+
+
+def test_a_bare_token_reference_is_allowed_and_declared(tmp_path):
+    """A bare `var(--x)` has no static value to read. Passing it is a
+    deliberate blind spot, carried in the report rather than guessed at."""
+    # Arrange
+    app = _app(tmp_path, "#main-content { margin: var(--app-gap) }\n")
+    # Act
+    report = validate_css_canonical(app)
+    # Assert
+    assert not report.findings
+    assert any("var()/env()" in entry for entry in report.not_checked)
+
+
+def test_a_container_first_in_a_selector_list_is_reported_once(tmp_path):
+    """`#main-content, .mine` styles the box through its first selector.
+    One declaration still yields one finding — counts must not inflate."""
+    # Arrange
+    app = _app(tmp_path, "#main-content, .mine { padding: 4px }\n")
+    # Act
+    report = validate_css_canonical(app)
+    # Assert
+    assert [d.rule for d in report.details] == ["padding-on-app-container"]
+
+
+# --------------------------------------------------------------------------
 # THE REPORT SHAPE — the blind spot and the denominator are in the RETURN
 # VALUE, not only in prose.
 # --------------------------------------------------------------------------
