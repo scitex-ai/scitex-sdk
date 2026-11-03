@@ -124,3 +124,15 @@ Resolve explicit server-side project views with
 access checks without changing a global preference during a GET. Apps with
 multiple scope modes should handle the picker's change event and navigate their
 own view (`navigate=""` disables the default project-only navigation).
+
+
+### Vite build ownership
+
+The source audit recognizes a Vite manifest only when its `src` (or source key)
+resolves to a real, enumerated, nonsymlink source input in the audited checkout.
+Inputs need not use a `frontend/src` directory; host `apps/**/static/**/ts`
+layouts work too. The manifest describes one build, including external bridge
+bundles, without claiming that external source belongs to the host. Declared CSS
+outputs within the build directory defer to source inspection; authored inputs
+and overrides remain checked. An unbound manifest, ignored/symlinked input, or
+escaping/unlisted output cannot claim that treatment.

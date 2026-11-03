@@ -4,6 +4,14 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.19] - 2026-11-03
+
+- Recognize Vite builds through their real, owned manifest source inputs,
+  including host `apps/**/static/**/ts` layouts. Generated bundles containing
+  shared SDK header styles defer to authored source inspection.
+- Keep unbound manifests, ignored or symlinked inputs, escaping/unlisted outputs
+  and authored header overrides subject to the existing ownership checks.
+
 ## [0.3.18] - 2026-11-02
 
 - Bound phone content-only shells to remaining viewport flex space below the
