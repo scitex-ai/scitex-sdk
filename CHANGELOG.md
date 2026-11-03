@@ -4,6 +4,11 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Recheck declared Web APIs after staged or unstaged handler/descriptor deletions,
+  while preserving the chrome hooks' changed-file policy. Document the five
+  discovery paths and distinguish source contracts, installed providers and
+  host admission.
+
 - Resolve the public standalone-host helper lazily so descriptor imports do not initialize standalone logging or user directories; preserve function identity and discovery.
 
 - Declare an opt-in read-only Web `skills` route over actual bundled SDK/App/UI skill IDs, with a pure Python resource reader and no host/user discovery.

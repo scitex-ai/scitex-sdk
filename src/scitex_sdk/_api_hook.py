@@ -6,7 +6,9 @@ from .app._api_contract import scan_web_contract
 
 def check_payload(payload):
     """Validate the proposed declaration and its owned dependency bindings."""
-    changed = _source_changes(payload, suffixes={".py", ".toml"})
+    changed = _source_changes(
+        payload, suffixes={".py", ".toml"}, include_deletions=True
+    )
     if changed is None:
         return []
     root, overlays, targets = changed

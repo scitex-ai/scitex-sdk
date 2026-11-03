@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 
-def _source_changes(payload, *, suffixes=None):
+def _source_changes(payload, *, suffixes=None, include_deletions=False):
     """Read proposed or changed files without mutating the project."""
 
     cwd = Path(payload.get("cwd") or Path.cwd()).resolve()
@@ -71,9 +71,10 @@ def _source_changes(payload, *, suffixes=None):
             # Source hooks cover project changes. Host commands outside a repo
             # have no source baseline; the project auditor/CI owns that boundary.
             return None
+        diff_filter = "ACMRD" if include_deletions else "ACMR"
         for args in (
-            ["diff", "--name-only", "--diff-filter=ACMR", "-z"],
-            ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
+            ["diff", "--name-only", f"--diff-filter={diff_filter}", "-z"],
+            ["diff", "--cached", "--name-only", f"--diff-filter={diff_filter}", "-z"],
             ["ls-files", "--others", "--exclude-standard", "-z"],
         ):
             changed = subprocess.run(

@@ -33,6 +33,15 @@ The SDK's existing `scitex_dev.hooks` provider adds
 native client reload/consent remain the normal Dev workflow; declaration alone
 does not prove a running client executed a hook. Post-shell checks report after
 execution and cannot undo the shell operation.
+The Web post-shell check includes staged and unstaged deletions: removing an
+owned descriptor or handler cannot make its remaining declaration pass silently.
+Other chrome checks retain their own changed-file policy.
+
+These checks require an installed SDK that actually contains the declared
+provider modules and entry points. Source availability in a checkout is not
+evidence that a different installed wheel exposes the rule. Inspect installed
+entry-point metadata before claiming dispatcher coverage; an SDK version string
+alone is insufficient.
 
 The source reader parses owned modules and constants/reexports, with limits of
 32 modules, 1 MB per module, 30,000 AST nodes per module, depth 40 and 20,000
