@@ -156,7 +156,7 @@ def _source_paths(root: Path) -> set[Path]:
 
 
 def _generated_css(root: Path, paths: set[Path]) -> set[Path]:
-    """Skip Vite-declared outputs only when authored frontend source is present.
+    """Skip Vite-declared outputs only when owned authored inputs are present.
 
     Bundles include unmodified SDK CSS, so auditing them as consumer overrides
     would reject legitimate imports. The source remains mandatory to inspect.
@@ -166,23 +166,41 @@ def _generated_css(root: Path, paths: set[Path]) -> set[Path]:
         if manifest.name != "manifest.json" or manifest.parent.name != ".vite":
             continue
         base = manifest.parent.parent
-        source_roots = [
-            parent / "frontend/src"
-            for parent in base.parents
-            if parent.is_relative_to(root)
-        ]
-        if not any(
-            path.is_relative_to(source)
-            and path.suffix in {".css", ".html", ".ts", ".tsx", ".js", ".jsx"}
-            for source in source_roots
-            for path in paths
-        ):
-            continue
         content = json.loads(manifest.read_text(encoding="utf-8"))
+        if not isinstance(content, dict):
+            continue
+        # Vite's src (or source-key fallback) is relative to the project root,
+        # not its output directory. A real enumerated input binds this build to
+        # the audited checkout; unrelated/ignored/symlinked files cannot do so.
+        inputs = set()
+        for key, entry in content.items():
+            if not isinstance(entry, dict):
+                continue
+            relative = entry.get("src", key)
+            if not isinstance(relative, str):
+                continue
+            source = root / relative
+            if (
+                source in paths
+                and source.suffix in {".css", ".html", ".ts", ".tsx", ".js", ".jsx"}
+                and source.is_file()
+                and source.resolve() == source.absolute()
+                and source.is_relative_to(root)
+                and not set(source.relative_to(root).parts) & _SKIP
+            ):
+                inputs.add(source)
+        if not inputs:
+            continue
         for entry in content.values():
+            if not isinstance(entry, dict):
+                continue
             for relative in [entry.get("file", ""), *entry.get("css", [])]:
                 path = (base / relative).resolve()
-                if path.suffix == ".css" and path.is_relative_to(base.resolve()):
+                if (
+                    path.suffix == ".css"
+                    and path.is_relative_to(base.resolve())
+                    and path not in inputs
+                ):
                     generated.add(path)
     return generated
 
