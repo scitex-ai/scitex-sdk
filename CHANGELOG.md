@@ -4,6 +4,14 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Preserve documentation ownership across host module replacement: prefer the
+  closest explicit pane (including empty suppression), prune detached header
+  instances and adopt only an unambiguous picker in an explicit owning region.
+
+- Add an optional host-supplied API documentation action to the canonical
+  TypeScript/React header, preserving project-picker state and refusing unsafe
+  URLs. The SDK supplies no host route or domain capability catalog.
+
 - Recheck declared Web APIs after staged or unstaged handler/descriptor deletions,
   while preserving the chrome hooks' changed-file policy. Document the five
   discovery paths and distinguish source contracts, installed providers and
@@ -20,6 +28,13 @@ All notable changes to `scitex-sdk`.
   silent, as do margins on the app's own children; bare `var()`/`env()`
   values are a declared blind spot. Calibrated silent over FigRecipe,
   Writer, Stats, and SDK CSS (123 files).
+## [0.3.19] - 2026-11-03
+
+- Recognize Vite builds through their real, owned manifest source inputs,
+  including host `apps/**/static/**/ts` layouts. Generated bundles containing
+  shared SDK header styles defer to authored source inspection.
+- Keep unbound manifests, ignored or symlinked inputs, escaping/unlisted outputs
+  and authored header overrides subject to the existing ownership checks.
 
 ## [0.3.18] - 2026-11-02
 

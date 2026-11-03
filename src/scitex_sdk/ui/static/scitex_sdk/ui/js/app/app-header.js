@@ -1,6 +1,6 @@
-/* AUTO-GENERATED from ts/app/app-header/auto-mount.ts via esbuild — do not edit by hand. Rebuild: npx esbuild ts/app/app-header/auto-mount.ts --bundle --format=esm --outfile=js/app/app-header.js */
+/* AUTO-GENERATED from ts/app/app-header/auto-mount.ts via esbuild — do not edit by hand. Rebuild: npm run build:ui -- --only js/app/app-header.js */
 
-// src/scitex_sdk/ui/static/scitex_sdk/ui/ts/_base/BaseComponent.ts
+// ts/_base/BaseComponent.ts
 var BaseComponent = class {
   container;
   config;
@@ -26,10 +26,23 @@ var BaseComponent = class {
   }
 };
 
-// src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/app-header/types.ts
+// ts/app/app-header/types.ts
 var APP_VERSION_ATTRIBUTE = "data-app-version";
 var HEADER_ATTRIBUTE = "data-stx-app-header";
 var APP_TITLE_ATTRIBUTE = "data-app-title";
+var API_DOCS_URL_ATTRIBUTE = "data-stx-api-docs-url";
+function resolveApiDocsUrl(root, explicit) {
+  const value = explicit === void 0 ? root.closest(`[${API_DOCS_URL_ATTRIBUTE}]`)?.getAttribute(API_DOCS_URL_ATTRIBUTE) : explicit;
+  if (!value) return null;
+  if (/[\u0000-\u0020\u007f\\]/.test(value)) return null;
+  if (value.startsWith("/") && !value.startsWith("//")) return value;
+  try {
+    const parsed = new URL(value);
+    return ["https:", "http:"].includes(parsed.protocol) && !parsed.username && !parsed.password ? value : null;
+  } catch {
+    return null;
+  }
+}
 function resolveAppVersion(root, explicit) {
   if (explicit != null && explicit.trim() !== "") return explicit.trim();
   const own = root.getAttribute(APP_VERSION_ATTRIBUTE);
@@ -81,7 +94,7 @@ function orderedActions(actions = []) {
   }).map((entry) => entry.action);
 }
 
-// src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/app-header/_AppHeader.ts
+// ts/app/app-header/_AppHeader.ts
 var CLS = "stx-app-header";
 var APP_HEADER_COMMAND = "stx-app-header:command";
 var AppHeader = class extends BaseComponent {
@@ -97,6 +110,7 @@ var AppHeader = class extends BaseComponent {
   actionsEl;
   /** The contract payload this header rendered from, when the page carried one. */
   shellProps;
+  apiDocsAction = null;
   constructor(config) {
     super(config);
     const doc = this.container.ownerDocument ?? document;
@@ -123,6 +137,7 @@ var AppHeader = class extends BaseComponent {
     this.setVersion(
       config.version || this.shellProps?.version || resolveAppVersion(this.container)
     );
+    this.setApiDocsUrl(config.apiDocsUrl, config.apiDocsLabel);
     for (const element of config.actions ?? []) this.actionsEl.appendChild(element);
     for (const action of orderedActions(this.shellProps?.actions)) {
       this.actionsEl.appendChild(this.buildAction(action));
@@ -193,16 +208,41 @@ var AppHeader = class extends BaseComponent {
   addAction(element) {
     this.actionsEl.appendChild(element);
   }
+  /** Reuse the shared href-action primitive; no API is fetched or enabled. */
+  setApiDocsUrl(url, label) {
+    const resolved = resolveApiDocsUrl(this.container, url);
+    if (!resolved) {
+      this.apiDocsAction?.remove();
+      this.apiDocsAction = null;
+      return;
+    }
+    if (!this.apiDocsAction) {
+      this.apiDocsAction = this.buildAction({ id: "api-docs", label: "API", href: resolved });
+      this.actionsEl.prepend(this.apiDocsAction);
+    }
+    this.apiDocsAction.setAttribute("href", resolved);
+    this.apiDocsAction.setAttribute("aria-label", label ?? this.config.apiDocsLabel ?? "API documentation");
+    this.apiDocsAction.setAttribute("title", label ?? this.config.apiDocsLabel ?? "API documentation");
+  }
   destroy() {
     this.headerEl.remove();
     super.destroy();
   }
 };
 
-// src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/app-header/mount.ts
+// ts/app/app-header/mount.ts
 var MOUNTED_ATTRIBUTE = "data-stx-app-header-mounted";
 var instances = [];
 function mountAppHeader(root = document, options = {}) {
+  for (let i = instances.length - 1; i >= 0; i--) {
+    const previous = instances[i];
+    if (!previous.header.headerEl.isConnected) {
+      if (!previous.container.isConnected) previous.header.destroy();
+      instances.splice(i, 1);
+    }
+  }
+  const declared = root.querySelectorAll(`[${HEADER_ATTRIBUTE}]`);
+  const regionPickers = root instanceof Element && declared.length === 1 ? root.querySelectorAll(".stx-app-project-selector[data-stx-project-picker]") : null;
   const mounted = [];
   for (const element of Array.from(
     root.querySelectorAll(`[${HEADER_ATTRIBUTE}]`)
@@ -213,23 +253,23 @@ function mountAppHeader(root = document, options = {}) {
     const pickers = element.querySelectorAll(
       ":scope > .stx-app-project-selector[data-stx-project-picker]"
     );
-    if (header.projectSlot && pickers.length === 1) {
-      header.projectSlot.appendChild(pickers[0]);
-    }
-    instances.push(header);
+    const picker = pickers.length === 1 ? pickers[0] : pickers.length === 0 && regionPickers?.length === 1 ? regionPickers[0] : null;
+    if (header.projectSlot && picker) header.projectSlot.appendChild(picker);
+    instances.push({ header, container: element });
     mounted.push(header);
   }
   return mounted;
 }
 function getAppHeader() {
-  return instances.length === 1 ? instances[0] : null;
+  const connected = instances.filter(({ header }) => header.headerEl.isConnected);
+  return connected.length === 1 ? connected[0].header : null;
 }
 var stxAppHeader = {
   mount: mountAppHeader,
   get: getAppHeader
 };
 
-// src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/app-header/auto-mount.ts
+// ts/app/app-header/auto-mount.ts
 window.stxAppHeader = stxAppHeader;
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => mountAppHeader());
@@ -237,6 +277,7 @@ if (document.readyState === "loading") {
   mountAppHeader();
 }
 export {
+  API_DOCS_URL_ATTRIBUTE,
   APP_HEADER_COMMAND,
   APP_TITLE_ATTRIBUTE,
   APP_VERSION_ATTRIBUTE,
@@ -245,6 +286,7 @@ export {
   SHELL_PROPS_META_NAME,
   orderedActions,
   readShellProps,
+  resolveApiDocsUrl,
   resolveAppTitle,
   resolveAppVersion
 };

@@ -9,14 +9,16 @@ export interface AppHeaderProps {
   version?: string;
   projectSelector?: ReactNode;
   actions?: ReactNode;
+  apiDocsUrl?: string | null;
+  apiDocsLabel?: string;
 }
 
-export function AppHeader({ title, version, projectSelector, actions }: AppHeaderProps) {
+export function AppHeader({ title, version, projectSelector, actions, apiDocsUrl, apiDocsLabel }: AppHeaderProps) {
   const container = useRef<HTMLDivElement>(null);
   const component = useRef<HeaderComponent | null>(null);
   const [slots, setSlots] = useState<HeaderComponent | null>(null);
-  const text = useRef({ title, version });
-  text.current = { title, version };
+  const text = useRef({ title, version, apiDocsUrl, apiDocsLabel });
+  text.current = { title, version, apiDocsUrl, apiDocsLabel };
   const hasProjectSelector = projectSelector != null;
 
   useLayoutEffect(() => {
@@ -38,7 +40,8 @@ export function AppHeader({ title, version, projectSelector, actions }: AppHeade
   useLayoutEffect(() => {
     component.current?.setTitle(title);
     component.current?.setVersion(version ?? "");
-  }, [title, version]);
+    component.current?.setApiDocsUrl(apiDocsUrl, apiDocsLabel);
+  }, [title, version, apiDocsUrl, apiDocsLabel]);
 
   return <>
     <div ref={container} />

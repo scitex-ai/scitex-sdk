@@ -132,7 +132,7 @@ def _write_vite_output(root):
     (base / ".vite").mkdir(parents=True)
     (base / "assets").mkdir()
     (base / ".vite/manifest.json").write_text(
-        '{"style.css":{"file":"assets/index.css"}}'
+        '{"src/app/frontend/src/leaf.css":{"file":"assets/index.css"}}'
     )
     (base / "assets/index.css").write_text(".stx-app-header{height:40px}")
 
