@@ -4,6 +4,10 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Add an optional host-supplied API documentation action to the canonical
+  TypeScript/React header, preserving project-picker state and refusing unsafe
+  URLs. The SDK supplies no host route or domain capability catalog.
+
 - Recheck declared Web APIs after staged or unstaged handler/descriptor deletions,
   while preserving the chrome hooks' changed-file policy. Document the five
   discovery paths and distinguish source contracts, installed providers and

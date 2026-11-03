@@ -26,6 +26,8 @@ export const HEADER_ATTRIBUTE = "data-stx-app-header";
 
 /** Leaf title, read only when no explicit `title` is passed. */
 export const APP_TITLE_ATTRIBUTE = "data-app-title";
+/** Host-supplied documentation URL; the SDK never constructs a host route. */
+export const API_DOCS_URL_ATTRIBUTE = "data-stx-api-docs-url";
 
 export interface AppHeaderConfig extends BaseComponentConfig {
   /** Leaf title. The LEAF owns its translation (pass an already-translated string). */
@@ -34,6 +36,10 @@ export interface AppHeaderConfig extends BaseComponentConfig {
   version?: string | null;
   /** Badge prefix; the default matches the ecosystem convention (`v0.22.0`). */
   versionPrefix?: string;
+  /** Optional host docs action; null/empty explicitly hides it. */
+  apiDocsUrl?: string | null;
+  /** Accessible action label, translated by the host when appropriate. */
+  apiDocsLabel?: string;
   /** App-specific actions, appended in order into the actions slot. */
   actions?: HTMLElement[];
   /**
@@ -44,6 +50,26 @@ export interface AppHeaderConfig extends BaseComponentConfig {
   projectSlot?: boolean;
   /** Inject the payload instead of reading the page's meta tag (tests, SPA boot). */
   shellProps?: ShellProps | null;
+}
+
+/** Admit a normal navigation URL, never a script or protocol-relative URL. */
+export function resolveApiDocsUrl(
+  root: HTMLElement,
+  explicit?: string | null,
+): string | null {
+  const value = explicit === undefined
+    ? root.closest(`[${API_DOCS_URL_ATTRIBUTE}]`)?.getAttribute(API_DOCS_URL_ATTRIBUTE)
+    : explicit;
+  if (!value) return null;
+  if (/[\u0000-\u0020\u007f\\]/.test(value)) return null;
+  if (value.startsWith("/") && !value.startsWith("//")) return value;
+  try {
+    const parsed = new URL(value);
+    return ["https:", "http:"].includes(parsed.protocol) && !parsed.username && !parsed.password
+      ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -98,16 +124,14 @@ export function resolveAppTitle(
 }
 
 /* ── The scitex-app shell contract (the host's props payload) ──────────────
- * scitex-app owns the WRITER: `scitex_sdk.app.shell_contract.inject_shell_props()`
- * emits `<meta name="stx-app-shell" content="{...}">` with the leaf's title,
+ * A host may emit `<meta name="stx-app-shell" content="{...}">` with the leaf's title,
  * its INSTALLED version, the scope, an optional project provider, the actions
- * and the command registry. This module is the READER half, and the meta name
- * below MUST stay byte-identical to theirs (`SHELL_PROPS_META_NAME`) — a reader
- * looking for a name nobody writes reaches nobody, which is the stx-mount
- * history. scitex-app PR #199 (2026-09-17) is the writer.
+ * and the command registry. This module is the optional READER; it does not
+ * promise a Python writer or infer host capabilities. API docs can instead
+ * use the explicit host mount attribute above.
  */
 
-/** Mirrors `scitex_sdk.app.shell_contract.SHELL_PROPS_META_NAME`. */
+/** Optional host shell metadata name. */
 export const SHELL_PROPS_META_NAME = "stx-app-shell";
 
 /** One header action: a control that MUST name a command or an href. */
