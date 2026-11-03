@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.20"]
+requires = ["hatchling>=1.27", "tomli>=2.0; python_version < '3.11'"]
 build-backend = "hatchling.build"
 
 [project]
@@ -12,6 +12,7 @@ requires-python = ">=3.10"
 authors = [{name = "Yusuke Watanabe", email = "ywatanabe@scitex.ai"}]
 keywords = ["scitex", "app-sdk", "ui", "django", "typescript"]
 dependencies = [
+    "tomli>=2.0; python_version < '3.11'",
     "click>=8.0.0",
     "rich>=13.0.0",
     "scitex-config>=0.3.6",
@@ -40,7 +41,7 @@ dev = [
     "build>=1.0",
     "django>=4.2",
     "fastmcp>=2.0.0",
-    "hatchling>=1.20",
+    "hatchling>=1.27",
     "litellm>=1.0.0",
     "openapi-spec-validator>=0.8",
     "packaging>=23.0",
@@ -103,6 +104,9 @@ artifacts = [
     "src/scitex_sdk/**/_docs/**",
 ]
 
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/scitex_sdk"]
 
@@ -112,7 +116,7 @@ packages = ["src/scitex_sdk"]
 # Select real project inputs directly, including the release/frontend gates.
 only-include = [
     "src/scitex_sdk", "scripts", "tests", "docs", "examples", ".github",
-    "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml", ".gitignore",
+    "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml", ".gitignore", "hatch_build.py",
     "package.json", "package-lock.json", "tsconfig.json", "eslint.config.mjs",
     "vitest.config.ts", "playwright.header.config.ts", ".readthedocs.yaml",
 ]
