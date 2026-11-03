@@ -4,6 +4,8 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Build source-proven Web API descriptors into wheel dist-info through a shared backend-neutral producer and Hatch adapter; reject competing metadata producers without importing consumers.
+
 - Preserve documentation ownership across host module replacement: prefer the
   closest explicit pane (including empty suppression), prune detached header
   instances and adopt only an unambiguous picker in an explicit owning region.

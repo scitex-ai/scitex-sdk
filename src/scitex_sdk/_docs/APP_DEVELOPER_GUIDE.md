@@ -96,3 +96,12 @@ measured statically, so no linter rule covers it — reviewers check
 placement, the SDK supplies the primitives.
 
 iOS and Android native delivery is a future target, not a shipped feature.
+
+
+### Installed Web API metadata
+
+A `scitex.apis` declaration must also be serialized into the wheel's dist-info
+for metadata-only host discovery. Use the SDK-owned build producer and standard
+Hatch adapter; do not import the consumer or maintain duplicate descriptor JSON.
+See [the Web API build recipe](../app/_skills/scitex-app/24_web-api-contract.md#build-the-installed-declaration).
+Missing installed metadata remains unknown and never implies host admission.

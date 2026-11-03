@@ -66,6 +66,48 @@ an import. Hosts still make an explicit `ApiAdmission` decision before resolving
 or enabling handlers; neither the auditor nor hooks change that decision.
 
 
+## Build the installed declaration
+
+An entry point alone does not populate installed inert metadata. With SDK
+0.3.20 or later as a build dependency, a standard Hatch custom hook can reuse
+the SDK producer without importing the declaring package:
+
+```python
+from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+from scitex_sdk.app.api_build import prepare_hatch_api_metadata
+
+class CustomBuildHook(BuildHookInterface):
+    def initialize(self, version, build_data):
+        self.api_metadata = prepare_hatch_api_metadata(self, build_data)
+
+    def finalize(self, version, build_data, artifact_path):
+        if self.api_metadata is not None:
+            self.api_metadata.cleanup()
+```
+
+Save this as `hatch_build.py`, include it in the sdist, declare
+`[tool.hatch.build.hooks.custom] path = "hatch_build.py"`, and add
+`scitex-sdk>=0.3.20` to `[build-system].requires` alongside `hatchling>=1.27`. The
+adapter runs only for wheels. It emits one `scitex_api.json` directly in the
+wheel's actual dist-info directory, where `read_inert_descriptor()` looks.
+The SDK uses the same producer for its own bundled catalog.
+
+Other build backends can call `build_inert_api_metadata(project_root)` for
+UTF-8 JSON bytes, or `write_inert_api_metadata(project_root, destination)` for
+a new output file, then add it to their normal dist-info/RECORD machinery.
+The writer refuses an existing final file or symlink; callers own the parent
+directory and its containment. No schema copy, consumer import, or provider
+execution is required. Source scanning and serialization use the same SDK
+contracts as the audit and installed reader.
+
+The current distribution-level format supports exactly one provider. Multiple
+entry points, unsupported source, missing handlers and overlapping Hatch
+force-include targets fail the build instead of selecting a provider silently.
+Verify a normal sdist-to-wheel rebuild contains exactly one descriptor and
+RECORD row, then read it from an installed wheel. This proves a declaration is
+available to hosts; it still does not enable its routes or verify handlers.
+
+
 ## SDK-owned bundled catalog
 
 The SDK itself declares `scitex.apis` name `scitex-sdk`, targeting
