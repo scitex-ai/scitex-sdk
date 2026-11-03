@@ -244,6 +244,58 @@ def test_native_post_shell_reports_actual_changed_declaration(api_repo):
     assert any("PS-SDK-WEB" in str(finding) for finding in findings)
 
 
+@pytest.mark.parametrize(
+    "stage_command", [("diff", "--name-only"), ("add", "-u")],
+    ids=["unstaged", "staged"],
+)
+def test_post_shell_reports_deleted_owned_handler(api_repo, stage_command):
+    # A deletion alone must invalidate the still-declared handler binding.
+    # Arrange
+    import subprocess
+
+    from scitex_dev.hooks._dispatch import dispatch
+
+    from scitex_sdk._header_hook import _source_changes
+
+    path = api_repo / "src/demo/api.py"
+    path.write_text(
+        path.read_text().replace("demo.api:ping", "demo.handlers:ping")
+    )
+    handler = path.with_name("handlers.py")
+    handler.write_text("def ping(request):\n    raise RuntimeError('never run')\n")
+    subprocess.run(["git", "init", "-q", str(api_repo)], check=True)
+    subprocess.run(["git", "-C", str(api_repo), "add", "."], check=True)
+    subprocess.run(
+        [
+            "git", "-C", str(api_repo), "-c", "user.name=SDK fixture",
+            "-c", "user.email=sdk-fixture@example.invalid", "commit", "-qm", "fixture",
+        ],
+        check=True,
+    )
+    handler.unlink()
+    subprocess.run(
+        ["git", "-C", str(api_repo), *stage_command], check=True, capture_output=True
+    )
+    payload = {
+        "hook_event_name": "PostToolUse",
+        "cwd": str(api_repo),
+        "tool_name": "Bash",
+        "tool_input": {"command": "already executed"},
+    }
+
+    # Act
+    findings = dispatch(payload, provider="scitex-sdk")
+
+    # Assert
+    # Chrome's existing changed-file policy remains unaffected.
+    observed = (
+        any("PS-SDK-WEB" in str(f) and "demo.handlers" in str(f) for f in findings),
+        (path.parent / "EXECUTED").exists(),
+        _source_changes(payload)[2],
+    )
+    assert observed == (True, False, set())
+
+
 def test_missing_api_scanner_refuses_provider_loading(tmp_path):
     # Arrange
     import shutil

@@ -59,3 +59,22 @@ SDK/App/UI documentation. Python callers can use
 `scitex_sdk.list_bundled_skills()` directly. This reads package resources only;
 it does not discover user skills or enable a hosted route. See the
 [Python API catalog](src/scitex_sdk/_skills/scitex-sdk/03_python-api.md).
+
+The five interfaces have distinct discovery paths:
+
+| Interface | Discover the SDK surface |
+|---|---|
+| Python | `scitex_sdk.app`, `scitex_sdk.ui`, `scitex_sdk.project`; `scitex-sdk list-python-apis --json` |
+| CLI | `scitex-sdk --help`, then `app --help` or `ui --help` |
+| MCP | `scitex-sdk mcp list-tools` for the App/UI tool catalog |
+| Web API | The `scitex.apis` entry point names an `ApiPlugin` data object; inspect its `openapi_fragment()` in a trusted SDK environment |
+| Skills | `scitex-sdk skills list --json` and the installed `scitex_dev.skills` providers |
+
+<sub><b>Table 1.</b> SDK interface discovery; host admission and live availability are checked separately.</sub>
+
+Dev owns generic interface presence and dispatch. The SDK supplies Web
+descriptor quality checks through that dispatcher; leaves keep their domain
+logic and handlers. Source declarations, installed providers, host admission,
+and a reachable server are separate observations. A host must explicitly admit
+a descriptor before resolving handlers; publishing or discovering it alone
+does not enable an endpoint.
