@@ -234,6 +234,15 @@ var AppHeader = class extends BaseComponent {
 var MOUNTED_ATTRIBUTE = "data-stx-app-header-mounted";
 var instances = [];
 function mountAppHeader(root = document, options = {}) {
+  for (let i = instances.length - 1; i >= 0; i--) {
+    const previous = instances[i];
+    if (!previous.header.headerEl.isConnected) {
+      if (!previous.container.isConnected) previous.header.destroy();
+      instances.splice(i, 1);
+    }
+  }
+  const declared = root.querySelectorAll(`[${HEADER_ATTRIBUTE}]`);
+  const regionPickers = root instanceof Element && declared.length === 1 ? root.querySelectorAll(".stx-app-project-selector[data-stx-project-picker]") : null;
   const mounted = [];
   for (const element of Array.from(
     root.querySelectorAll(`[${HEADER_ATTRIBUTE}]`)
@@ -244,16 +253,16 @@ function mountAppHeader(root = document, options = {}) {
     const pickers = element.querySelectorAll(
       ":scope > .stx-app-project-selector[data-stx-project-picker]"
     );
-    if (header.projectSlot && pickers.length === 1) {
-      header.projectSlot.appendChild(pickers[0]);
-    }
-    instances.push(header);
+    const picker = pickers.length === 1 ? pickers[0] : pickers.length === 0 && regionPickers?.length === 1 ? regionPickers[0] : null;
+    if (header.projectSlot && picker) header.projectSlot.appendChild(picker);
+    instances.push({ header, container: element });
     mounted.push(header);
   }
   return mounted;
 }
 function getAppHeader() {
-  return instances.length === 1 ? instances[0] : null;
+  const connected = instances.filter(({ header }) => header.headerEl.isConnected);
+  return connected.length === 1 ? connected[0].header : null;
 }
 var stxAppHeader = {
   mount: mountAppHeader,

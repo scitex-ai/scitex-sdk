@@ -3,7 +3,7 @@ import {
   AppHeader, API_DOCS_URL_ATTRIBUTE, resolveApiDocsUrl,
 } from "../../../../src/scitex_sdk/ui/static/scitex_sdk/ui/ts/app/app-header";
 
-beforeEach(() => { document.body.innerHTML = ""; });
+beforeEach(() => { document.body.innerHTML = ""; document.body.removeAttribute(API_DOCS_URL_ATTRIBUTE); });
 
 describe("Host-supplied API documentation action", () => {
   it("uses the shared action slot and preserves other controls on update/removal", () => {
@@ -51,5 +51,17 @@ describe("Host-supplied API documentation action", () => {
     const root = document.createElement("div");
     const header = new AppHeader({ container: root });
     expect(header.actionsEl.children.length).toBe(0);
+  });
+});
+
+describe("Workspace ownership boundaries", () => {
+  it("uses the closest owner and an explicit empty region suppresses a stale body owner", () => {
+    document.body.setAttribute(API_DOCS_URL_ATTRIBUTE,"/docs?package=old");
+    document.body.innerHTML='<main data-stx-api-docs-url="/docs?package=new"><div id="mount"></div></main>';
+    const root=document.querySelector<HTMLElement>('#mount')!;
+    expect(resolveApiDocsUrl(root)).toBe('/docs?package=new');
+    root.parentElement!.setAttribute(API_DOCS_URL_ATTRIBUTE,'');
+    expect(resolveApiDocsUrl(root)).toBeNull();
+    document.body.removeAttribute(API_DOCS_URL_ATTRIBUTE);
   });
 });

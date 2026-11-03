@@ -4,6 +4,10 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Preserve documentation ownership across host module replacement: prefer the
+  closest explicit pane (including empty suppression), prune detached header
+  instances and adopt only an unambiguous picker in an explicit owning region.
+
 - Add an optional host-supplied API documentation action to the canonical
   TypeScript/React header, preserving project-picker state and refusing unsafe
   URLs. The SDK supplies no host route or domain capability catalog.

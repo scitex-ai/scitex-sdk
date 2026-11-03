@@ -80,3 +80,19 @@ adapter imports Django only when invoked (`scitex-sdk[gui]`); non-GET methods
 return JSON 405 with `Allow: GET`. Missing or invalid bundled resources return
 a typed JSON 503 without internal filenames. Hosts still use explicit admission;
 there is no auto-mounted live endpoint or added permission/enablement flow.
+
+## GUI links to this contract
+
+The canonical TypeScript/React `AppHeader` accepts an optional `apiDocsUrl`.
+The host can instead declare `data-stx-api-docs-url` on the nearest owning
+container. SDK validates navigation safety and renders the existing action slot;
+it does not choose a host route, enumerate business capabilities or enable an API.
+An explicit empty declaration suppresses an older ancestor's owner URL.
+
+After replacing an owned module pane, the host can call
+`stxAppHeader.mount(pane)`. The SDK prunes detached instances and may adopt one
+canonical picker only for a single declared header in that explicit region.
+Ambiguous regions are not guessed; document auto-mount keeps direct-child rules.
+Do not patch individual leaf DOM selectors or assume an old bundled frontend
+contains a newly installed SDK feature. Rebuild through the host's normal asset
+pipeline and record the exact SDK/leaf inputs and output hashes.

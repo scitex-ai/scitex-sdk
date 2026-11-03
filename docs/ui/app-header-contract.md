@@ -157,3 +157,21 @@ bundles, without claiming that external source belongs to the host. Declared CSS
 outputs within the build directory defer to source inspection; authored inputs
 and overrides remain checked. An unbound manifest, ignored/symlinked input, or
 escaping/unlisted output cannot claim that treatment.
+
+### Host module replacement
+
+The host places `data-stx-api-docs-url` on the nearest owning pane before
+mounting a module. The closest declaration wins; an explicit empty value
+suppresses an old body-level owner. Removing the attribute would allow that old
+owner to be inherited and is not an ownership reset.
+
+For a replaced module, use the existing `stxAppHeader.mount(pane)` port after
+inserting its content. Reinserted ES modules can already be cached. An explicit
+element region can supply one canonical SDK project picker for one declared
+header, including a sibling picker. Ambiguous regions are left untouched.
+Document-wide auto-mount retains its direct-child picker policy. React continues
+to own its own project-selector portal.
+
+Mount prunes disconnected instances and disposes detached owned containers;
+`get()` returns only a uniquely connected header. Removing a header does not
+authorize clearing a connected container that its owner has repurposed.
