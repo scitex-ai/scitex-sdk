@@ -4,6 +4,14 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.22] - 2026-11-04
+
+- Add opt-in uniform content-tab widths through the shared tab primitive and
+  `--stx-content-tabs-tab-width`. Preserve default sizing and semantic selection
+  colors; long labels wrap and overflowing rows scroll horizontally.
+- Verify the public CSS entry point, custom widths, minimum hit areas and
+  unchanged defaults in desktop/mobile light/dark browser checks.
+
 ## [0.3.21] - 2026-11-04
 
 - Recognize generated CSS from nested Vite projects through their enumerated
