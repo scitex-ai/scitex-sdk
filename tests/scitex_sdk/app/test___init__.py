@@ -7,9 +7,10 @@ as an orphan test with no matching source file, and the rule was right — the
 better name was the one that says which module the property belongs to.)
 
 WHY THIS EXISTS. 0.11.0 added `from ._standalone import hosts_to_allow` to the
-package root, so `_standalone` — the module that runs Django servers — now
-imports EAGERLY on every `import scitex_app`. It keeps its Django imports inside
-its functions, so the property holds; nothing enforced that it kept holding.
+package root, which originally initialized `_standalone` on every import.
+The public helper now resolves lazily, preserving identity while descriptor
+imports avoid standalone logging initialization and user-directory writes.
+These tests retain the optional-framework import contract.
 
 WHY IT MATTERS TO SOMEONE ELSE. scitex-scholar made scitex-app a HARD dependency
 of their server extra and retired the "scitex-app not installed" fallback, on
@@ -103,3 +104,27 @@ def test_scitex_app_config_is_in_the_public_all():
 
 
 # EOF
+
+
+def test_standalone_helper_is_lazy_discoverable_and_identity_preserving():
+    # Arrange
+    import json
+
+    program = (
+        "import sys,json;from scitex_sdk import app;"
+        'before=("hosts_to_allow" in dir(app) and "hosts_to_allow" in app.__all__ '
+        'and "scitex_sdk.app._standalone" not in sys.modules);'
+        "from scitex_sdk.app._standalone import hosts_to_allow;"
+        "print(json.dumps([before,app.hosts_to_allow is hosts_to_allow,"
+        'app.hosts_to_allow is app.hosts_to_allow,app.hosts_to_allow("127.0.0.1")]))'
+    )
+    # Act
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", program],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=10,
+    )
+    # Assert
+    assert json.loads(result.stdout) == [True, True, True, []]

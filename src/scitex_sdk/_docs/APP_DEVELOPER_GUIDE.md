@@ -64,8 +64,24 @@ before changing an app. Skills explain workflow and invariants; CLI and MCP
 are execution interfaces used within that workflow. Use `scitex-sdk app`
 for app development and `scitex-sdk ui` for UI tooling. Install optional
 dependencies for the capability being used (`gui`, `chat`, `mcp`, `cli`).
-The `project` and `all` extras require a genuine published Dev>=0.62 API;
-the consolidation release is held until that upstream requirement resolves.
+The `project`, `cli`, and `all` extras require the Dev version declared in
+`pyproject.toml` (currently `scitex-dev>=0.62.6`). Use a normal extras install
+and `pip check` to qualify the dependency graph.
+
+## Web API contracts and agent discovery
+
+Leaf packages declare real `ApiPlugin` objects through `scitex.apis`; the SDK
+owns their route, schema, operation-ID and scope contracts. Dev discovers the
+SDK's `PS-SDK-WEB` project auditor and native hooks through the existing
+`scitex_dev.audit.project` and `scitex_dev.hooks` providers. It owns generic
+interface presence; it does not replace leaf domain behavior.
+
+Read the bundled [Web API contract](../app/_skills/scitex-app/24_web-api-contract.md)
+for source-only checks, inert distribution metadata and explicit host admission.
+The SDK's own example is a read-only bundled-skills catalog. A declaration or
+passing source audit does not prove an installed provider, enabled route or
+live server. Discover Python, CLI, MCP and skills through the
+[SDK workflow](../_skills/scitex-sdk/SKILL.md).
 
 ## Layout doctrine: main content vs Details pane
 
@@ -80,3 +96,12 @@ measured statically, so no linter rule covers it — reviewers check
 placement, the SDK supplies the primitives.
 
 iOS and Android native delivery is a future target, not a shipped feature.
+
+
+### Installed Web API metadata
+
+A `scitex.apis` declaration must also be serialized into the wheel's dist-info
+for metadata-only host discovery. Use the SDK-owned build producer and standard
+Hatch adapter; do not import the consumer or maintain duplicate descriptor JSON.
+See [the Web API build recipe](../app/_skills/scitex-app/24_web-api-contract.md#build-the-installed-declaration).
+Missing installed metadata remains unknown and never implies host admission.

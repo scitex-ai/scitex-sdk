@@ -94,6 +94,7 @@ _CHECKED = (
     "!important against app containers and shared components",
     ":root redefinition of shared design tokens",
     "setting shell body-state classes",
+    "margin/padding on the app container itself",
 )
 
 _NOT_CHECKED = (
@@ -126,6 +127,9 @@ _NOT_CHECKED = (
     "which is a DOM fact and not a string fact. It is also a documented shell "
     "pattern rather than a defect, so the rule is the shell's to state before "
     "it can be enforced (same parser, same card)",
+    "margin/padding set entirely through var()/env() with no literal length "
+    "or auto — no static value to read, so the 2d rule passes it rather than "
+    "guessing at the token's published value",
 )
 
 

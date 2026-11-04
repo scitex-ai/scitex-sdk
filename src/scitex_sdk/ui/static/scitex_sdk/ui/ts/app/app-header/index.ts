@@ -2,6 +2,7 @@
 export { AppHeader, APP_HEADER_COMMAND } from "./_AppHeader";
 export {
   APP_TITLE_ATTRIBUTE,
+  API_DOCS_URL_ATTRIBUTE,
   APP_VERSION_ATTRIBUTE,
   HEADER_ATTRIBUTE,
   SHELL_PROPS_META_NAME,
@@ -9,6 +10,7 @@ export {
   readShellProps,
   resolveAppTitle,
   resolveAppVersion,
+  resolveApiDocsUrl,
 } from "./types";
 export type {
   AppHeaderConfig,

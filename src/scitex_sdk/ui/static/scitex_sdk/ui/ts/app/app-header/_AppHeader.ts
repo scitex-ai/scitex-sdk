@@ -50,6 +50,7 @@ import {
   readShellProps,
   resolveAppTitle,
   resolveAppVersion,
+  resolveApiDocsUrl,
 } from "./types";
 
 /** The de-facto registry: the class-manifest guard reads this declaration. */
@@ -75,6 +76,7 @@ export class AppHeader extends BaseComponent<AppHeaderConfig> {
   readonly actionsEl: HTMLDivElement;
   /** The contract payload this header rendered from, when the page carried one. */
   readonly shellProps: ShellProps | null;
+  private apiDocsAction: HTMLElement | null = null;
 
   constructor(config: AppHeaderConfig) {
     super(config);
@@ -120,6 +122,7 @@ export class AppHeader extends BaseComponent<AppHeaderConfig> {
         this.shellProps?.version ||
         resolveAppVersion(this.container),
     );
+    this.setApiDocsUrl(config.apiDocsUrl, config.apiDocsLabel);
     for (const element of config.actions ?? []) this.actionsEl.appendChild(element);
     for (const action of orderedActions(this.shellProps?.actions)) {
       this.actionsEl.appendChild(this.buildAction(action));
@@ -197,6 +200,23 @@ export class AppHeader extends BaseComponent<AppHeaderConfig> {
   /** Append one app-specific action into the actions slot. */
   addAction(element: HTMLElement): void {
     this.actionsEl.appendChild(element);
+  }
+
+  /** Reuse the shared href-action primitive; no API is fetched or enabled. */
+  setApiDocsUrl(url?: string | null, label?: string): void {
+    const resolved = resolveApiDocsUrl(this.container, url);
+    if (!resolved) {
+      this.apiDocsAction?.remove();
+      this.apiDocsAction = null;
+      return;
+    }
+    if (!this.apiDocsAction) {
+      this.apiDocsAction = this.buildAction({ id: "api-docs", label: "API", href: resolved });
+      this.actionsEl.prepend(this.apiDocsAction);
+    }
+    this.apiDocsAction.setAttribute("href", resolved);
+    this.apiDocsAction.setAttribute("aria-label", label ?? this.config.apiDocsLabel ?? "API documentation");
+    this.apiDocsAction.setAttribute("title", label ?? this.config.apiDocsLabel ?? "API documentation");
   }
 
   override destroy(): void {

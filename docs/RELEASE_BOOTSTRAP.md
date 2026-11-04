@@ -15,10 +15,11 @@ env names and local configuration/storage contracts remain unchanged.
 
 ## Current source release procedure
 
-SDK 0.3.17 is published (PyPI upload 2026-11-01 UTC). Current source metadata
-is 0.3.18; source metadata alone does not establish public availability.
-`pyproject.toml` requires Dev>=0.62.6 for CLI/project tooling and `[all]`;
-old versions in the historical observations below are not current install floors.
+Determine the current published version from official PyPI distribution metadata
+and the matching GitHub release/tag; determine the candidate version from
+`pyproject.toml`. Source metadata alone does not establish public availability.
+The version-specific bootstrap observations below are historical, not a current
+release-status feed. `pyproject.toml` is authoritative for active dependency floors.
 
 1. Qualify the exact combined source. Stacked pull requests whose base is a
    feature branch do not trigger `frontend.yml` or `python-package.yml`: those
@@ -27,7 +28,7 @@ old versions in the historical observations below are not current install floors
    into a covered branch. An empty checks list is not a pass.
 2. Review and merge the source in order, retaining the current Python/frontend
    versions and published dependency requirements. Do not tag an earlier base
-   that omits the public PDF or request-local selection APIs.
+   that omits accepted GUI or Web API contracts.
 3. Push the matching `vX.Y.Z` tag at the accepted commit using the repository's release process.
    The tag triggers `pypi-publish-and-github-release-on-tag.yml`. Its manual
    dispatch accepts an already-existing tag; it does not create one.
@@ -38,8 +39,7 @@ old versions in the historical observations below are not current install floors
 5. Publication uses the existing `pypi` environment and PyPI trusted publisher.
    Keep the workflow filename and environment identity. The GitHub release is
    created only after publication; verify the public distributions correspond
-   to the accepted source before releasing LivePaper 0.2.20 and its Writer
-   consumers. Retry an existing tag through the existing workflow only after
+   to the accepted source before releasing dependent consumers. Retry an existing tag through the existing workflow only after
    classifying its actual failure; do not bypass a failed release gate.
 
 ### Test-store isolation

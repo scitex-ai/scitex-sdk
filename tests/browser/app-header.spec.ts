@@ -6,9 +6,13 @@ const source = resolve("src/scitex_sdk");
 const ui = "/ui/static/scitex_sdk/ui";
 
 async function mount(page: Page, rootSize: number, theme: string,
-  userAllowed = true, projectAllowed = true, wrapped = false) {
+  userAllowed = true, projectAllowed = true, wrapped = false, apiDocs = false) {
   await page.route("http://sdk.test/**", async route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname === "/docs/web-api/") {
+      await route.fulfill({contentType:"text/html",body:"<h1>Owned API documentation fixture</h1>"});
+      return;
+    }
     if (pathname === "/") {
       await route.fulfill({ contentType: "text/html", body: `<!doctype html>
         <html data-theme="${theme}"><head>
@@ -18,7 +22,7 @@ async function mount(page: Page, rootSize: number, theme: string,
         <link rel="stylesheet" href="${ui}/css/app/project-selector.css">
         <link rel="stylesheet" href="/creator/static/scitex_sdk_creator/wizard.css">
         <style>html{font-size:${rootSize}px}body{margin:0;font-family:Georgia;line-height:1.95}.framework-project-wrapper{max-width:260px}</style>
-        </head><body><div class="stx-creator"><div id="mount"></div></div>
+        </head><body ${apiDocs ? 'data-stx-api-docs-url="/docs/web-api/?package=scitex-example"' : ""}><div class="stx-creator"><div id="mount"></div></div>
         <script type="module">
           import {AppHeader} from '${ui}/js/app/app-header.js';
           import {ProjectSelector} from '${ui}/js/app/project-selector.js';
@@ -132,5 +136,21 @@ for (const theme of ["light", "dark"]) {
         expect(await page.evaluate(() => (window as Window & { commits?: unknown[] }).commits)).toEqual([]);
       });
     }
+  }
+}
+
+for (const width of [1440, 390]) {
+  for (const keyboard of [false, true]) {
+    test(`API docs native navigation width=${width}, keyboard=${keyboard}`, async ({page}) => {
+      await page.setViewportSize({width,height:900});
+      await mount(page,16,"light",true,true,false,true);
+      const action=page.getByRole("link",{name:"API documentation",exact:true});
+      await expect(action).toHaveAttribute("href","/docs/web-api/?package=scitex-example");
+      await expect(page.locator(".stx-app-project-selector__trigger")).toHaveText("Example");
+      if (keyboard) { await action.focus(); await page.keyboard.press("Enter"); }
+      else await action.click();
+      await expect(page).toHaveURL("http://sdk.test/docs/web-api/?package=scitex-example");
+      await expect(page.getByRole("heading",{name:"Owned API documentation fixture"})).toBeVisible();
+    });
   }
 }

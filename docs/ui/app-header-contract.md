@@ -15,6 +15,27 @@ zoom still scales them. Desktop picker triggers are 36px high, with 44px
 targets on phones or coarse pointers. The shared responsive rules own wrapping.
 Colors continue to use the shared semantic palette in both themes.
 
+## Host-supplied API documentation action
+
+The host may supply `apiDocsUrl` to the TypeScript or React `AppHeader`, or
+stamp `data-stx-api-docs-url` on its mount or an ancestor. The shared header
+uses its existing href-action primitive to show an accessible **API** link.
+`apiDocsLabel` supplies a translated accessible label. Updating the URL keeps
+the same project picker and actions; `null` or an empty value hides the link.
+No URL means no action. The SDK never guesses a package, host route or API
+endpoint, fetches a catalog, or enables a handler.
+
+Hosts normalize the owning distribution from their application registry and
+choose the documentation URL. A package-scoped page must distinguish missing
+providers, declared schemas, host admission and actual live availability.
+Origin-relative and HTTP(S) links are supported; script/data URLs, userinfo,
+protocol-relative links and control characters are refused.
+
+The prebuilt `js/app/app-header.js` comes from `scripts/build-ui.mjs`.
+Standalone pages should load it through `{% app_static %}` so its content
+fingerprint changes with this implementation. Hosts bundling React/TypeScript
+must rebuild their own frontend against the matching installed SDK package.
+
 Keep content CSS scoped to content controls. For example, Creator styles
 `.stx-actions > button`, rather than every button under `.stx-creator`: the
 broader selector also restyled the shared picker trigger and its options.
@@ -136,3 +157,21 @@ bundles, without claiming that external source belongs to the host. Declared CSS
 outputs within the build directory defer to source inspection; authored inputs
 and overrides remain checked. An unbound manifest, ignored/symlinked input, or
 escaping/unlisted output cannot claim that treatment.
+
+### Host module replacement
+
+The host places `data-stx-api-docs-url` on the nearest owning pane before
+mounting a module. The closest declaration wins; an explicit empty value
+suppresses an old body-level owner. Removing the attribute would allow that old
+owner to be inherited and is not an ownership reset.
+
+For a replaced module, use the existing `stxAppHeader.mount(pane)` port after
+inserting its content. Reinserted ES modules can already be cached. An explicit
+element region can supply one canonical SDK project picker for one declared
+header, including a sibling picker. Ambiguous regions are left untouched.
+Document-wide auto-mount retains its direct-child picker policy. React continues
+to own its own project-selector portal.
+
+Mount prunes disconnected instances and disposes detached owned containers;
+`get()` returns only a uniquely connected header. Removing a header does not
+authorize clearing a connected container that its owner has repurposed.

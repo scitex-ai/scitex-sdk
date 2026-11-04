@@ -38,4 +38,22 @@ describe("React canonical header binding", () => {
     expect(container.querySelector(".stx-app-header__slot--project-selector")).toBeNull();
     act(() => root.unmount());
   });
+  it("updates a supplied docs route without recreating the React picker", () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    const render = (url: string | null) => act(() => root.render(createElement(AppHeader, {
+      title: "Example", apiDocsUrl: url,
+      projectSelector: createElement("button", { id: "api-test-picker" }, "Project"),
+    })));
+    render("/docs?package=first");
+    const picker = container.querySelector("#api-test-picker");
+    render("/docs?package=second");
+    expect(container.querySelector('[data-stx-action="api-docs"]')?.getAttribute("href")).toBe("/docs?package=second");
+    expect(container.querySelector("#api-test-picker")).toBe(picker);
+    render(null);
+    expect(container.querySelector('[data-stx-action="api-docs"]')).toBeNull();
+    act(() => root.unmount());
+    container.remove();
+  });
 });

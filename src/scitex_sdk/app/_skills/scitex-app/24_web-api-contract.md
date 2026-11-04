@@ -1,0 +1,140 @@
+---
+description: Source-only SDK Web API descriptor checks dispatched by scitex-dev.
+tags: [web-api, contracts, auditing, hooks]
+---
+
+# Web API contract enforcement
+
+Register a descriptor **data object**, not a provider function:
+
+```toml
+[project.entry-points."scitex.apis"]
+my_api = "my_package.api:PLUGIN"
+```
+
+`PLUGIN` must be an SDK `ApiPlugin` whose id equals `my_api`. Declare its
+`ApiRoute`, schemas, authentication/scope, rate and idempotency contracts using
+constructors from `scitex_sdk.app.api_plugin`. Handler strings name owned
+functions or class methods, such as `my_package.views:read_item`.
+
+The SDK's `PS-SDK-WEB` rule is registered through the existing
+`scitex_dev.audit.project` provider. Dev's project audit dispatches it alongside
+other installed leaf rules. For example:
+
+```bash
+scitex-dev ecosystem audit-project my-api --path . --rule PS-SDK-WEB --json
+```
+
+The equivalent command was exercised against owned valid/invalid source
+fixtures: exit 0 and exit 1 respectively, without executing consumer code.
+The SDK's existing `scitex_dev.hooks` provider adds
+`sdk.web-api-contract` before editor changes and
+`sdk.web-api-contract-after-shell` after shell changes. Hook installation and
+native client reload/consent remain the normal Dev workflow; declaration alone
+does not prove a running client executed a hook. Post-shell checks report after
+execution and cannot undo the shell operation.
+The Web post-shell check includes staged and unstaged deletions: removing an
+owned descriptor or handler cannot make its remaining declaration pass silently.
+Other chrome checks retain their own changed-file policy.
+
+These checks require an installed SDK that actually contains the declared
+provider modules and entry points. Source availability in a checkout is not
+evidence that a different installed wheel exposes the rule. Inspect installed
+entry-point metadata before claiming dispatcher coverage; an SDK version string
+alone is insufficient.
+
+The source reader parses owned modules and constants/reexports, with limits of
+32 modules, 1 MB per module, 30,000 AST nodes per module, depth 40 and 20,000
+evaluation steps per declaration. It never imports consumer modules or executes
+handlers, arbitrary calls, comprehensions or dynamic factories. Conditional
+rebinding, missing/foreign handlers, cycles, unsupported expressions and unknown
+provenance produce explicit failures. Use a literal SDK descriptor or a justified
+normal audit exception when a static contract genuinely cannot apply; do not
+import the application to make inspection pass.
+
+Validation reuses the SDK constructors and `ApiPlugin.openapi_fragment()`;
+relative normalized routes, unique method/path claims, schema collisions,
+operation IDs and existing scope/idempotency contracts keep one implementation.
+A passing audit proves source declaration structure and handler binding syntax,
+not runtime behavior, host enablement, authorization or live availability.
+
+For inert distribution data, `api_mount.dump_inert_descriptor(plugin)` and
+`api_mount.parse_inert_descriptor(text)` share the same validated constructors.
+The existing installed-metadata reader uses `scitex_api.json` in dist-info and
+delegates to the pure parser. Missing data remains unknown and never justifies
+an import. Hosts still make an explicit `ApiAdmission` decision before resolving
+or enabling handlers; neither the auditor nor hooks change that decision.
+
+
+## Build the installed declaration
+
+An entry point alone does not populate installed inert metadata. With SDK
+0.3.20 or later as a build dependency, a standard Hatch custom hook can reuse
+the SDK producer without importing the declaring package:
+
+```python
+from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+from scitex_sdk.app.api_build import prepare_hatch_api_metadata
+
+class CustomBuildHook(BuildHookInterface):
+    def initialize(self, version, build_data):
+        self.api_metadata = prepare_hatch_api_metadata(self, build_data)
+
+    def finalize(self, version, build_data, artifact_path):
+        if self.api_metadata is not None:
+            self.api_metadata.cleanup()
+```
+
+Save this as `hatch_build.py`, include it in the sdist, declare
+`[tool.hatch.build.hooks.custom] path = "hatch_build.py"`, and add
+`scitex-sdk>=0.3.20` to `[build-system].requires` alongside `hatchling>=1.27`. The
+adapter runs only for wheels. It emits one `scitex_api.json` directly in the
+wheel's actual dist-info directory, where `read_inert_descriptor()` looks.
+The SDK uses the same producer for its own bundled catalog.
+
+Other build backends can call `build_inert_api_metadata(project_root)` for
+UTF-8 JSON bytes, or `write_inert_api_metadata(project_root, destination)` for
+a new output file, then add it to their normal dist-info/RECORD machinery.
+The writer refuses an existing final file or symlink; callers own the parent
+directory and its containment. No schema copy, consumer import, or provider
+execution is required. Source scanning and serialization use the same SDK
+contracts as the audit and installed reader.
+
+The current distribution-level format supports exactly one provider. Multiple
+entry points, unsupported source, missing handlers and overlapping Hatch
+force-include targets fail the build instead of selecting a provider silently.
+Verify a normal sdist-to-wheel rebuild contains exactly one descriptor and
+RECORD row, then read it from an installed wheel. This proves a declaration is
+available to hosts; it still does not enable its routes or verify handlers.
+
+
+## SDK-owned bundled catalog
+
+The SDK itself declares `scitex.apis` name `scitex-sdk`, targeting
+`scitex_sdk._web._api:plugin`. Its relative `GET skills` operation returns
+`package="scitex-sdk"` and actual bundled skill IDs grouped by `scitex-sdk`,
+`scitex-app` and `scitex-ui`. No request path or user selection controls which
+filesystem location is read. It does not list installed user/global-provider
+skills, run scaffolding, or expose host paths.
+
+The Python reader is `scitex_sdk.list_bundled_skills()`. The optional Django
+adapter imports Django only when invoked (`scitex-sdk[gui]`); non-GET methods
+return JSON 405 with `Allow: GET`. Missing or invalid bundled resources return
+a typed JSON 503 without internal filenames. Hosts still use explicit admission;
+there is no auto-mounted live endpoint or added permission/enablement flow.
+
+## GUI links to this contract
+
+The canonical TypeScript/React `AppHeader` accepts an optional `apiDocsUrl`.
+The host can instead declare `data-stx-api-docs-url` on the nearest owning
+container. SDK validates navigation safety and renders the existing action slot;
+it does not choose a host route, enumerate business capabilities or enable an API.
+An explicit empty declaration suppresses an older ancestor's owner URL.
+
+After replacing an owned module pane, the host can call
+`stxAppHeader.mount(pane)`. The SDK prunes detached instances and may adopt one
+canonical picker only for a single declared header in that explicit region.
+Ambiguous regions are not guessed; document auto-mount keeps direct-child rules.
+Do not patch individual leaf DOM selectors or assume an old bundled frontend
+contains a newly installed SDK feature. Rebuild through the host's normal asset
+pipeline and record the exact SDK/leaf inputs and output hashes.

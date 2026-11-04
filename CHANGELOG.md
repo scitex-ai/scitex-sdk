@@ -4,6 +4,32 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Build source-proven Web API descriptors into wheel dist-info through a shared backend-neutral producer and Hatch adapter; reject competing metadata producers without importing consumers.
+
+- Preserve documentation ownership across host module replacement: prefer the
+  closest explicit pane (including empty suppression), prune detached header
+  instances and adopt only an unambiguous picker in an explicit owning region.
+
+- Add an optional host-supplied API documentation action to the canonical
+  TypeScript/React header, preserving project-picker state and refusing unsafe
+  URLs. The SDK supplies no host route or domain capability catalog.
+
+- Recheck declared Web APIs after staged or unstaged handler/descriptor deletions,
+  while preserving the chrome hooks' changed-file policy. Document the five
+  discovery paths and distinguish source contracts, installed providers and
+  host admission.
+
+- Resolve the public standalone-host helper lazily so descriptor imports do not initialize standalone logging or user directories; preserve function identity and discovery.
+
+- Declare an opt-in read-only Web `skills` route over actual bundled SDK/App/UI skill IDs, with a pure Python resource reader and no host/user discovery.
+
+- Add SDK-owned `PS-SDK-WEB` source descriptor/handler checks through the existing Dev project-audit and native-hook providers, without importing or enabling consumer APIs.
+- Appmaker CSS validator gains tier 2d: margin/padding set on the app
+  container itself (`#main-content`, `#app-mount`, `.ws-module-pane`) is
+  reported, since it shrinks the largest app content. Zero resets stay
+  silent, as do margins on the app's own children; bare `var()`/`env()`
+  values are a declared blind spot. Calibrated silent over FigRecipe,
+  Writer, Stats, and SDK CSS (123 files).
 ## [0.3.19] - 2026-11-03
 
 - Recognize Vite builds through their real, owned manifest source inputs,

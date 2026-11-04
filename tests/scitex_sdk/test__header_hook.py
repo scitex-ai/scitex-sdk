@@ -96,7 +96,13 @@ def test_existing_guard_is_preserved_and_scripts_exist():
         and all(
             files("scitex_sdk").joinpath(r.script).is_file() for r in rules if r.script
         )
-        and len([r for r in rules if r.severity == "deny"]) == 2
+        and {r.id for r in rules if r.severity == "deny"}
+        == {
+            "sdk.header-contract",
+            "sdk.header-contract-after-shell",
+            "sdk.web-api-contract",
+            "sdk.web-api-contract-after-shell",
+        }
     )
 
 

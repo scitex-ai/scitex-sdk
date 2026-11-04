@@ -37,9 +37,7 @@ from ._files_api import (
     validate,
     write_file,
 )
-from ._standalone import hosts_to_allow
 from .sdk import FilesBackend, build_tree, get_files, register_backend
-
 
 __all__ = [
     "__version__",
@@ -89,6 +87,11 @@ def __getattr__(name: str):
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     _LOADING.add(name)
     try:
+        if name == "hosts_to_allow":
+            from ._standalone import hosts_to_allow as value
+
+            globals()[name] = value
+            return value
         if name in {"i18n", "plugins", "project_context"}:
             from importlib import import_module
 
@@ -119,6 +122,11 @@ def __getattr__(name: str):
     finally:
         _LOADING.discard(name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    """Keep the standalone public helper discoverable without initializing it."""
+    return sorted(set(globals()) | {"hosts_to_allow"})
 
 
 # EOF
