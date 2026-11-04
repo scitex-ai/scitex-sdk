@@ -4,6 +4,15 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.21] - 2026-11-04
+
+- Recognize generated CSS from nested Vite projects through their enumerated
+  package build command, static output directory, manifest and authored inputs.
+  Keep ambiguous or unsupported builds subject to ordinary inspection, and
+  continue checking authored header and shell styles.
+
+## [0.3.20] - 2026-11-04
+
 - Build source-proven Web API descriptors into wheel dist-info through a shared backend-neutral producer and Hatch adapter; reject competing metadata producers without importing consumers.
 
 - Preserve documentation ownership across host module replacement: prefer the
