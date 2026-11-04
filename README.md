@@ -60,6 +60,12 @@ SDK/App/UI documentation. Python callers can use
 it does not discover user skills or enable a hosted route. See the
 [Python API catalog](src/scitex_sdk/_skills/scitex-sdk/03_python-api.md).
 
+The `scitex.cli` declaration exposes only `sdk`, using the same
+`scitex_sdk.cli:main` target as the public console script. App/UI remain
+subgroups of that command, not separate CLI providers. This declaration
+does not enable Python, MCP, Web routes or skills; those surfaces retain
+their own discovery and admission rules.
+
 The five interfaces have distinct discovery paths:
 
 | Interface | Discover the SDK surface |
