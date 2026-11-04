@@ -16,7 +16,6 @@ async function mount(page: Page, theme: string) {
       await route.fulfill({ contentType: "text/html", body: `<!doctype html><html data-theme="${theme}"><head>
         <link rel="stylesheet" href="${ui}/css/shell/theme.css">
         <link rel="stylesheet" href="${ui}/css/app/content-tabs.css">
-        <link rel="stylesheet" href="${ui}/css/app/content-tabs-sizing.css">
         <style>html{font-size:14px}body{margin:12px;font-family:sans-serif}main{max-width:960px}</style>
         </head><body><main>${[2, 3, 4].map(count => `<div class="stx-content-tabs stx-content-tabs--uniform" role="tablist">${buttons(count)}</div>`).join("")}
         <div class="stx-content-tabs custom stx-content-tabs--uniform" style="--stx-content-tabs-tab-width:11rem" role="tablist">${buttons(2)}</div>
