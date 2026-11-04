@@ -19,7 +19,7 @@ _TOKEN = re.compile(
     re.DOTALL,
 )
 _CONFIG_NAMES = {f"vite.config.{suffix}" for suffix in ("ts", "js", "mts", "mjs")}
-_BUILD = re.compile(r"\s*(?:tsc\s*&&\s*)?vite\s+build\s*")
+_BUILD = re.compile(r"[ \t]*(?:tsc[ \t]*&&[ \t]*)?vite[ \t]+build[ \t]*")
 
 
 def _tokens(source):
