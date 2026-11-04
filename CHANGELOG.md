@@ -4,6 +4,14 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.23] - 2026-11-04
+
+- Declare the existing canonical SDK CLI through the installed `scitex.cli`
+  provider metadata (`sdk = "scitex_sdk.cli:main"`). Keep the existing
+  `scitex-sdk` launcher, Python API, App/UI assets, and dependency graph.
+- Document declaration discovery and independent operator exposure settings;
+  publication supplies capability metadata and does not force a client to load it.
+
 ## [0.3.22] - 2026-11-04
 
 - Add opt-in uniform content-tab widths through the shared tab primitive and
