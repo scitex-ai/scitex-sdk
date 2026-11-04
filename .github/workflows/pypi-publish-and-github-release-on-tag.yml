@@ -29,6 +29,9 @@ jobs:
   test:
     runs-on: [self-hosted, Linux, X64, scitex-ci]
     strategy:
+      # Fresh Python/dependency trees share the runner disk. Bound I/O fan-out
+      # instead of changing the subprocess deadlines or dropping a version.
+      max-parallel: 1
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
