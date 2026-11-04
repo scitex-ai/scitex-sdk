@@ -61,6 +61,10 @@ def test_nested_output_uses_static_build_context(tmp_path):
         "vite build --config other.ts",
         "echo 'vite build'",
         "vite build # comment",
+        "vite\nbuild",
+        "vite\rbuild",
+        "vite\r\nbuild",
+        "vite\u2028build",
         "$(echo vite) build",
     ],
 )
