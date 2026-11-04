@@ -149,3 +149,26 @@ import { ConfirmModal } from "@scitex/sdk/ui/react/app/confirm-modal";
 ## See also
 - [33_frontend-components-bridge.md](33_frontend-components-bridge.md) — Bridge infrastructure (BridgeConfig, fetch override, event bus) and `usePanelResize` hook
 - [34_frontend-components-theme.md](34_frontend-components-theme.md) — CSS theme variables, reference implementation (figrecipe), packaging requirements
+
+## Uniform content-tab widths
+
+Load `css/app/content-tabs.css` (also included by `css/app.css` and
+`css/all.css`); it imports the optional sizing module. Add `stx-content-tabs--uniform` to
+rows whose tabs should have the same width, even when the rows contain different
+numbers of tabs:
+
+```html
+<div class="stx-content-tabs stx-content-tabs--uniform" role="tablist"
+     aria-label="Applications">
+  <button class="stx-content-tabs__tab" role="tab" aria-selected="true"
+          aria-controls="application-panel" tabindex="0">Application</button>
+</div>
+```
+
+The default width is `9rem`. Set `--stx-content-tabs-tab-width` on a shared
+ancestor to choose another width consistently across rows. The 44px minimum hit
+width remains. Long labels wrap, and the row scrolls horizontally when it cannot
+fit all tabs. Keep the selected tab visible by scrolling its row horizontally;
+automatic selection must not move the document vertically. The producer still
+owns selection, roving tabindex and keyboard actions. Tabs without the modifier
+retain their existing intrinsic sizing and selected/focus appearance.
