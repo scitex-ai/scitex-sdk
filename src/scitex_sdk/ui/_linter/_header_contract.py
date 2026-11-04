@@ -172,25 +172,34 @@ def _generated_css(root: Path, paths: set[Path]) -> set[Path]:
         # Vite's src (or source-key fallback) is relative to the project root,
         # not its output directory. A real enumerated input binds this build to
         # the audited checkout; unrelated/ignored/symlinked files cannot do so.
-        inputs = set()
-        for key, entry in content.items():
-            if not isinstance(entry, dict):
-                continue
-            relative = entry.get("src", key)
-            if not isinstance(relative, str):
-                continue
-            source = root / relative
-            if (
-                source in paths
-                and source.suffix in {".css", ".html", ".ts", ".tsx", ".js", ".jsx"}
-                and source.is_file()
-                and source.resolve() == source.absolute()
-                and source.is_relative_to(root)
-                and not set(source.relative_to(root).parts) & _SKIP
-            ):
-                inputs.add(source)
-        if not inputs:
+        from ._vite_roots import nested_vite_roots
+
+        candidates = {root} | nested_vite_roots(root, paths, base)
+        bound = []
+        for project_root in candidates:
+            inputs = set()
+            for key, entry in content.items():
+                if not isinstance(entry, dict):
+                    continue
+                relative = entry.get("src", key)
+                if not isinstance(relative, str):
+                    continue
+                source = project_root / relative
+                if (
+                    source in paths
+                    and source.suffix in {".css", ".html", ".ts", ".tsx", ".js", ".jsx"}
+                    and source.is_file()
+                    and source.resolve() == source.absolute()
+                    and source.is_relative_to(root)
+                    and not set(source.relative_to(root).parts) & _SKIP
+                ):
+                    inputs.add(source)
+            if inputs:
+                bound.append(inputs)
+        # Never pick an arbitrary owner if multiple roots bind this output.
+        if len(bound) != 1:
             continue
+        inputs = bound[0]
         for entry in content.values():
             if not isinstance(entry, dict):
                 continue
