@@ -31,3 +31,8 @@ tags: [scitex-sdk]
 
 Use CLI/MCP commands after applying this workflow. Skill-first means read the
 workflow first; it does not forbid execution tools.
+
+The installed `scitex.cli` metadata declares only `sdk` at
+`scitex_sdk.cli:main`, matching the console script. Use its `app` and `ui`
+subgroups; component docs/skills declarations are not extra CLI providers.
+Python, MCP and Web API admission remain independent.

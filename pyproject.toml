@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scitex-sdk"
-version = "0.3.22"
+version = "0.3.23"
 description = "SciTeX app contracts, UI components, and host capabilities in one SDK."
 readme = "README.md"
 license = "AGPL-3.0-only"
@@ -61,6 +61,9 @@ docs = [
 
 [project.scripts]
 scitex-sdk = "scitex_sdk.cli:main"
+
+[project.entry-points."scitex.cli"]
+sdk = "scitex_sdk.cli:main"
 
 [project.entry-points."scitex.apis"]
 scitex-sdk = "scitex_sdk._web._api:plugin"
