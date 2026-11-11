@@ -1,5 +1,5 @@
 /**
- * Base module — shared abstractions for scitex-ui components.
+ * Base module — shared abstractions for SciTeX SDK components.
  */
 export { BaseComponent } from "./BaseComponent";
 export type { BaseComponentConfig } from "./types";
@@ -40,3 +40,5 @@ export {
   resetCatalog,
 } from "./gettext";
 export type { CatalogEntry, JsCatalogPayload } from "./gettext";
+
+export { csrfToken } from "./csrf";

@@ -644,16 +644,22 @@ var ProjectSelector = class extends BaseComponent {
   }
 };
 
+// ts/_base/csrf.ts
+function csrfToken() {
+  if (typeof document === "undefined") return "";
+  const rendered = document.querySelector(
+    'input[name="csrfmiddlewaretoken"]'
+  )?.value;
+  if (rendered) return rendered;
+  const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
 // ts/app/project-selector/provider.ts
 function staticProjectProvider(projects, current = null) {
   return {
     listProjects: async () => ({ projects, current })
   };
-}
-function csrfToken() {
-  if (typeof document === "undefined" || typeof document.cookie !== "string") return "";
-  const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : "";
 }
 var PROJECT_PROVIDER_META_NAME = "stx-project-provider";
 var SCOPED_HTTP_TRANSPORT = Symbol.for("scitex-sdk.ui.scoped-http-project-provider");
