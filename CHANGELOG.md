@@ -4,6 +4,17 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.24] - 2026-11-12
+
+- Read Django-rendered CSRF tokens before falling back to the CSRF cookie, so
+  project and scope changes work with HttpOnly cookies. Export the shared
+  frontend helper and update both shipped picker bundles.
+- Route CPU validation and release jobs through shared organization admission
+  and the quarantine-aware runner pool. Preserve fork refusals, test coverage,
+  dependency checks and publication ordering.
+- Clarify test contracts without changing their refusal conditions; add real
+  HTTP controls for CSRF headers and workflow routing regression checks.
+
 ## [0.3.23] - 2026-11-04
 
 - Declare the existing canonical SDK CLI through the installed `scitex.cli`
