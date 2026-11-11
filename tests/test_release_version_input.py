@@ -16,7 +16,9 @@ def resolver_scripts():
 
 
 def test_actual_resolvers_select_push_and_manual_tags(tmp_path):
+    # Arrange
     outputs = []
+    # Act
     for index, script in enumerate(resolver_scripts()):
         for event in ("push", "workflow_dispatch"):
             output = tmp_path / f"{index}-{event}"
@@ -26,13 +28,16 @@ def test_actual_resolvers_select_push_and_manual_tags(tmp_path):
             if child.returncode:
                 raise AssertionError(child.stderr)
             outputs.append(output.read_text())
+    # Assert
     assert outputs == ["version=v0.3.18\n"] * 4
 
 
 def test_actual_resolvers_refuse_shell_injection_and_invalid_tags(tmp_path):
+    # Arrange
     marker = tmp_path / "must-not-exist"
     refused = []
     malicious = [f'v0.3.18"; touch {marker}; #', f"$(touch {marker})", f"`touch {marker}`", "v0.3.18\nversion=v9.9.9", "main", "v0.3.18rc1"]
+    # Act
     for index, script in enumerate(resolver_scripts()):
         for value in malicious:
             output = tmp_path / f"refused-{index}"
@@ -40,4 +45,5 @@ def test_actual_resolvers_refuse_shell_injection_and_invalid_tags(tmp_path):
                        SDK_MANUAL_RELEASE_TAG=value, GITHUB_OUTPUT=str(output))
             child = subprocess.run(["bash", "-c", script], env=env, capture_output=True, timeout=5)
             refused.append(child.returncode != 0 and not output.exists() and not marker.exists())
+    # Assert
     assert all(refused)
