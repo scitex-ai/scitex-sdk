@@ -21,13 +21,23 @@ on:
         type: string
 
 jobs:
+  runner-admission:
+    uses: scitex-ai/.github/.github/workflows/runner-admission.yml@d7d96c34d68cdfbb5503a933591f7748b5aa30ee
+    permissions: {}
+    with:
+      runs_on: '["self-hosted","Linux","X64","scitex-org-cpu"]'
+
   frontend:
     uses: ./.github/workflows/frontend.yml
     with:
       ref: ${{ github.event_name == 'push' && github.ref_name || inputs.version }}
 
   test:
-    runs-on: [self-hosted, Linux, X64, scitex-ci]
+    needs: runner-admission
+    runs-on: >-
+      ${{ needs.runner-admission.outputs.native_authorized == 'true'
+          && fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}')
+          || fromJSON('["ubuntu-latest"]') }}
     strategy:
       # Fresh Python/dependency trees share the runner disk. Bound I/O fan-out
       # instead of changing the subprocess deadlines or dropping a version.
@@ -107,8 +117,11 @@ jobs:
           SDK_PHASE
 
   build:
-    needs: [test, frontend]
-    runs-on: [self-hosted, Linux, X64, scitex-ci]
+    needs: [test, frontend, runner-admission]
+    runs-on: >-
+      ${{ needs.runner-admission.outputs.native_authorized == 'true'
+          && fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}')
+          || fromJSON('["ubuntu-latest"]') }}
     outputs:
       version: ${{ steps.ver.outputs.version }}
     steps:
@@ -252,8 +265,11 @@ jobs:
           packages-dir: ${{ env.SDK_RELEASE_PACKAGES_DIR }}
 
   release:
-    needs: [build, publish]
-    runs-on: [self-hosted, Linux, X64, scitex-ci]
+    needs: [build, publish, runner-admission]
+    runs-on: >-
+      ${{ needs.runner-admission.outputs.native_authorized == 'true'
+          && fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}')
+          || fromJSON('["ubuntu-latest"]') }}
     permissions:
       contents: write
     steps:
