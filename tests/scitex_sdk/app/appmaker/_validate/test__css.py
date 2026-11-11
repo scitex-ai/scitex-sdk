@@ -171,8 +171,9 @@ def test_a_margin_on_the_app_container_is_reported(tmp_path):
     # Act
     report = validate_css_canonical(app)
     # Assert
-    assert [d.rule for d in report.details] == ["margin-on-app-container"]
-    assert [d.subject for d in report.details] == ["#main-content"]
+    assert [(d.rule, d.subject) for d in report.details] == [
+        ("margin-on-app-container", "#main-content")
+    ]
 
 
 def test_a_zero_reset_on_the_app_container_is_allowed(tmp_path):
@@ -243,8 +244,7 @@ def test_a_bare_token_reference_is_allowed_and_declared(tmp_path):
     # Act
     report = validate_css_canonical(app)
     # Assert
-    assert not report.findings
-    assert any("var()/env()" in entry for entry in report.not_checked)
+    assert (bool(report.findings), any("var()/env()" in entry for entry in report.not_checked)) == (False, True)
 
 
 def test_a_container_first_in_a_selector_list_is_reported_once(tmp_path):

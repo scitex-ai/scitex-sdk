@@ -11,6 +11,7 @@ GUARD = Path(__file__).resolve().parents[1] / "scripts/ci-store-environment.py"
 
 
 def test_child_startup_removes_hostile_selectors_before_imports():
+    # Arrange
     environment = dict(os.environ, PGSERVICE="hostile-service", PGHOST="fleet.invalid",
                        PGHOSTADDR="192.0.2.1", PGOPTIONS="hostile-options",
                        PGPASSWORD="synthetic-test-value", SCITEX_STORE_DSN="postgresql://fleet.invalid/db",
@@ -28,6 +29,7 @@ assert Path(os.environ['PGPASSFILE']).read_bytes() == b''
 assert Path(os.environ['PGSERVICEFILE']).read_bytes() == b''
 print(json.dumps({'root':str(root)}))
 """
+    # Act
     baseline = subprocess.run([sys.executable, "-I", "-c", code], env=environment,
                               capture_output=True, text=True, timeout=10)
     if baseline.returncode == 0:
@@ -39,10 +41,12 @@ print(json.dumps({'root':str(root)}))
         raise AssertionError(child.stderr)
     root = Path(json.loads(child.stdout)["root"])
     shutil.rmtree(root)
+    # Assert
     assert child.returncode == 0
 
 
 def test_explicit_owned_sqlite_fixture_still_operates(tmp_path):
+    # Arrange
     database = tmp_path / "fixture.sqlite3"
     code = """
 import os, sqlite3, sys
@@ -54,6 +58,7 @@ with sqlite3.connect(sys.argv[1]) as connection:
     assert connection.execute('SELECT value FROM owned_fixture').fetchone() == ('fixture',)
 print(Path(os.environ['PGPASSFILE']).parent)
 """
+    # Act
     child = subprocess.run([sys.executable, "-I", "-S", str(GUARD), "--",
                             sys.executable, "-I", "-c", code, str(database)],
                            env=dict(os.environ, PGSERVICE="hostile-service"),
@@ -61,30 +66,38 @@ print(Path(os.environ['PGPASSFILE']).parent)
     if child.returncode:
         raise AssertionError(child.stderr)
     shutil.rmtree(Path(child.stdout.strip()))
+    # Assert
     assert database.is_file()
 
 
 def test_local_collection_floor_removes_rather_than_blanks_selectors():
+    # Arrange
     spec = importlib.util.spec_from_file_location("sdk_store_floor_control", GUARD)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     environment = {"PGSERVICE": "hostile", "SCITEX_STORE_DSN": "postgresql://fleet.invalid/db", "UNCHANGED": "value"}
+    # Act
     root = module.protect_environment(environment)
     try:
         result = ("PGSERVICE" not in environment, environment["UNCHANGED"], (root / "pgpass").stat().st_mode & 0o777)
     finally:
         shutil.rmtree(root)
+    # Assert
     assert result == (True, "value", 0o600)
 
 
 def test_phase_preserves_child_failure_status():
+    # Arrange
+    # Act
     child = subprocess.run([sys.executable, "-I", "-S", str(GUARD), "--",
                             sys.executable, "-I", "-c", "raise SystemExit(23)"],
                            capture_output=True, timeout=10)
+    # Assert
     assert child.returncode == 23
 
 
 def test_real_dev_store_resolves_floor_and_explicit_fixture_without_network():
+    # Arrange
     code = """
 import os, sys
 from pathlib import Path
@@ -100,6 +113,7 @@ os.environ['SCITEX_STORE_DSN'] = 'postgresql://owned_fixture@/fixture?host=' + s
 assert host_store(pkg='sdk-fixture-control').dsn == os.environ['SCITEX_STORE_DSN']
 print(root)
 """
+    # Act
     child = subprocess.run([sys.executable, "-I", "-S", str(GUARD), "--",
                             sys.executable, "-I", "-c", code],
                            env=dict(os.environ, PGSERVICE="hostile-service"),
@@ -107,14 +121,17 @@ print(root)
     if child.returncode:
         raise AssertionError(child.stderr)
     shutil.rmtree(Path(child.stdout.strip()))
+    # Assert
     assert child.returncode == 0
 
 
 def test_actual_bash_phase_cannot_reintroduce_service_from_inherited_startup(tmp_path):
+    # Arrange
     startup = tmp_path / "owned-startup-fixture.sh"
     startup.write_text("export PGSERVICE=synthetic-reintroduced\n")
     environment = dict(os.environ, BASH_ENV=str(startup), ENV=str(startup))
     phase = 'test -z "${PGSERVICE+x}"; test -z "${BASH_ENV+x}"; printf "%s\\n" "$PGSYSCONFDIR"'
+    # Act
     baseline = subprocess.run(["bash", "-euo", "pipefail", "-c", phase],
                               env=environment, capture_output=True, timeout=5)
     if baseline.returncode == 0:
@@ -125,4 +142,5 @@ def test_actual_bash_phase_cannot_reintroduce_service_from_inherited_startup(tmp
     if child.returncode:
         raise AssertionError(child.stderr)
     shutil.rmtree(Path(child.stdout.strip()))
+    # Assert
     assert child.returncode == 0
