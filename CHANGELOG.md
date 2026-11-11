@@ -6,6 +6,8 @@ All notable changes to `scitex-sdk`.
 
 ## [0.3.24] - 2026-11-12
 
+- Require Config 0.3.8 or newer so minimum-dependency installations on Python
+  3.10 use its supported PyYAML dependency range.
 - Read Django-rendered CSRF tokens before falling back to the CSRF cookie, so
   project and scope changes work with HttpOnly cookies. Export the shared
   frontend helper and update both shipped picker bundles.
