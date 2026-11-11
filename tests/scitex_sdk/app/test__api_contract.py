@@ -50,13 +50,15 @@ def test_real_descriptor_passes_without_consumer_execution(api_repo):
     ],
 )
 def test_malformed_metadata_tables_report_a_finding(api_repo, metadata):
-    # Malformed TOML structure must produce an audit finding, never a crash.
+    # Arrange
     (api_repo / "pyproject.toml").write_text(metadata)
+    # Act
     findings = scan_web_contract(api_repo)
-    assert len(findings) == 1
-    assert findings[0].path == "pyproject.toml"
-    assert "metadata cannot be verified" in findings[0].detail
-    assert not (api_repo / "src/demo/EXECUTED").exists()
+    result = (len(findings), findings[0].path,
+              "metadata cannot be verified" in findings[0].detail,
+              (api_repo / "src/demo/EXECUTED").exists())
+    # Assert
+    assert result == (1, "pyproject.toml", True, False)
 
 
 @pytest.mark.parametrize(

@@ -38,6 +38,15 @@ plugin = ApiPlugin(id="demo", title="Demo", api_version="1", routes=(
     return root, package, marker
 
 
+def _error_from(error_type, operation, *args):
+    """Observe an expected refusal as data alongside filesystem invariants."""
+    try:
+        operation(*args)
+    except error_type as error:
+        return error
+    return None
+
+
 def test_source_roundtrip_has_real_operations_without_importing_consumer(declaration):
     # Arrange
     root, _, marker = declaration
@@ -65,10 +74,10 @@ def test_constructor_looking_consumer_expression_is_refused_without_execution(
         )
     )
     (package / "descriptor.py").write_text(source)
-    # Act / Assert
-    with pytest.raises(ApiMetadataBuildError):
-        build_inert_api_metadata(root)
-    assert not marker.exists()
+    # Act
+    error = _error_from(ApiMetadataBuildError, build_inert_api_metadata, root)
+    # Assert
+    assert (isinstance(error, ApiMetadataBuildError), marker.exists()) == (True, False)
 
 
 def test_missing_handler_refuses_output_instead_of_false_green_metadata(
@@ -78,10 +87,10 @@ def test_missing_handler_refuses_output_instead_of_false_green_metadata(
     root, package, _ = declaration
     (package / "views.py").unlink()
     output = tmp_path / "scitex_api.json"
-    # Act / Assert
-    with pytest.raises(ApiMetadataBuildError):
-        write_inert_api_metadata(root, output)
-    assert not output.exists()
+    # Act
+    error = _error_from(ApiMetadataBuildError, write_inert_api_metadata, root, output)
+    # Assert
+    assert (isinstance(error, ApiMetadataBuildError), output.exists()) == (True, False)
 
 
 def test_escaping_source_symlink_is_not_imported_or_serialized(declaration, tmp_path):
@@ -91,10 +100,10 @@ def test_escaping_source_symlink_is_not_imported_or_serialized(declaration, tmp_
     external.write_bytes((package / "descriptor.py").read_bytes())
     (package / "descriptor.py").unlink()
     (package / "descriptor.py").symlink_to(external)
-    # Act / Assert
-    with pytest.raises(ApiMetadataBuildError):
-        build_inert_api_metadata(root)
-    assert not marker.exists()
+    # Act
+    error = _error_from(ApiMetadataBuildError, build_inert_api_metadata, root)
+    # Assert
+    assert (isinstance(error, ApiMetadataBuildError), marker.exists()) == (True, False)
 
 
 def test_multiple_valid_declarations_cannot_silently_choose_one(declaration):
@@ -109,29 +118,34 @@ def test_multiple_valid_declarations_cannot_silently_choose_one(declaration):
     )
     metadata = root / "pyproject.toml"
     metadata.write_text(metadata.read_text() + 'other="demo_api.descriptor:other"\n')
-    # Act / Assert
+    # Act
     with pytest.raises(ApiMetadataBuildError, match="exactly one"):
+        # Assert
         build_inert_api_metadata(root)
 
 
-@pytest.mark.parametrize("symlink", [False, True])
-def test_writer_never_clobbers_existing_or_symlinked_output(
-    declaration, tmp_path, symlink
-):
-    # Arrange
-    root, _, _ = declaration
+@pytest.fixture(params=["existing", "symlink"])
+def protected_output(request, tmp_path):
+    """Both supported forms of pre-existing output retain their payloads."""
     original = tmp_path / "sentinel"
     original.write_text("preserve")
     output = tmp_path / "scitex_api.json"
-    if symlink:
+    if request.param == "symlink":
         output.symlink_to(original)
     else:
         output.write_text("preserve")
-    # Act / Assert
-    with pytest.raises(FileExistsError):
-        write_inert_api_metadata(root, output)
-    assert (original.read_text(), output.read_text()) == ("preserve", "preserve")
+    return original, output
 
+
+def test_writer_never_clobbers_existing_or_symlinked_output(declaration, protected_output):
+    # Arrange
+    root, _, _ = declaration
+    original, output = protected_output
+    # Act
+    error = _error_from(FileExistsError, write_inert_api_metadata, root, output)
+    result = (isinstance(error, FileExistsError), original.read_text(), output.read_text())
+    # Assert
+    assert result == (True, "preserve", "preserve")
 
 def test_hatch_adapter_uses_actual_metadata_naming_and_owned_temporary_output(
     declaration,
@@ -185,8 +199,9 @@ def test_hatch_adapter_refuses_a_competing_metadata_producer(
             get_force_include=lambda: {"other": destination} if configured else {},
         ),
     )
-    # Act / Assert
+    # Act
     with pytest.raises(ApiMetadataBuildError, match="another producer"):
+        # Assert
         prepare_hatch_api_metadata(
             hook, {"force_include": {} if configured else {"other": destination}}
         )

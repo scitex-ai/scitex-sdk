@@ -9,8 +9,18 @@ permissions:
   contents: read
 
 jobs:
+  runner-admission:
+    uses: scitex-ai/.github/.github/workflows/runner-admission.yml@d7d96c34d68cdfbb5503a933591f7748b5aa30ee
+    permissions: {}
+    with:
+      runs_on: '["self-hosted","Linux","X64","scitex-org-cpu"]'
+
   published-consumer-graphs:
-    runs-on: [self-hosted, Linux, X64, scitex-ci]
+    needs: runner-admission
+    runs-on: >-
+      ${{ needs.runner-admission.outputs.native_authorized == 'true'
+          && fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}')
+          || fromJSON('["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
       - name: Use a job-owned Python tool cache
