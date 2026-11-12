@@ -4,6 +4,7 @@ The full SDK suite needs the declared contributor dependencies, including
 Hatchling and the OpenAPI validator. From this checkout, install with:
 
 ```bash
+python -m pip install --upgrade pip
 python -m pip install -e '.[gui,chat,mcp,cli]' --group dev
 python -m pytest tests/ -q -ra
 SCITEX_ACCESS_STRICT=1 python -m pytest \
