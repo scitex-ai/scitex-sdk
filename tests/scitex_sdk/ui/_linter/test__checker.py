@@ -1177,5 +1177,7 @@ def test_ui115_fires_on_raw_colour_when_consumer(tmp_path: Path) -> None:
         by_file.setdefault(Path(v.path).name, []).append(v.rule.id)
 
     # Assert
-    assert "STX-UI115" not in by_file.get("clean.css", [])
-    assert "STX-UI115" in by_file.get("dirty.css", [])
+    assert (
+        "STX-UI115" in by_file.get("clean.css", []),
+        "STX-UI115" in by_file.get("dirty.css", []),
+    ) == (False, True)

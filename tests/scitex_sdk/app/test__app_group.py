@@ -68,7 +68,7 @@ class TestNormalizeGroup:
         # Assert
         assert got == GROUP_WORK
 
-    def test_typo_raises(self):
+    def test_typo_group_value_raises(self):
         # Arrange
         value = "foundatoin"
         # Act

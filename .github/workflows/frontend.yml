@@ -17,9 +17,19 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  runner-admission:
+    uses: scitex-ai/.github/.github/workflows/runner-admission.yml@d7d96c34d68cdfbb5503a933591f7748b5aa30ee
+    permissions: {}
+    with:
+      runs_on: '["self-hosted","Linux","X64","scitex-org-cpu"]'
+
   typecheck:
     name: typecheck
-    runs-on: [self-hosted, Linux, X64, scitex-ci]
+    needs: runner-admission
+    runs-on: >-
+      ${{ needs.runner-admission.outputs.native_authorized == 'true'
+          && fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}')
+          || fromJSON('["ubuntu-latest"]') }}
     timeout-minutes: 15
     steps:
       # Preserve the UI fork boundary before checkout or npm lifecycle scripts.
@@ -60,7 +70,11 @@ jobs:
 
   lint:
     name: lint
-    runs-on: [self-hosted, Linux, X64, scitex-ci]
+    needs: runner-admission
+    runs-on: >-
+      ${{ needs.runner-admission.outputs.native_authorized == 'true'
+          && fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}')
+          || fromJSON('["ubuntu-latest"]') }}
     timeout-minutes: 15
     steps:
       # Preserve the UI fork boundary before checkout or npm lifecycle scripts.
@@ -102,7 +116,11 @@ jobs:
 
   vitest:
     name: vitest
-    runs-on: [self-hosted, Linux, X64, scitex-ci]
+    needs: runner-admission
+    runs-on: >-
+      ${{ needs.runner-admission.outputs.native_authorized == 'true'
+          && fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}')
+          || fromJSON('["ubuntu-latest"]') }}
     timeout-minutes: 15
     steps:
       # Preserve the UI fork boundary before checkout or npm lifecycle scripts.
@@ -129,7 +147,11 @@ jobs:
 
   header-browser:
     name: header-browser
-    runs-on: [self-hosted, Linux, X64, scitex-ci]
+    needs: runner-admission
+    runs-on: >-
+      ${{ needs.runner-admission.outputs.native_authorized == 'true'
+          && fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}')
+          || fromJSON('["ubuntu-latest"]') }}
     timeout-minutes: 15
     steps:
       # Preserve the UI fork boundary before checkout or npm lifecycle scripts.

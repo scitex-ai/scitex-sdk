@@ -216,8 +216,10 @@ def test_disabled_entry_rides_along_but_legacy_post_refuses_it():
     refused = _post(view, {"id": "beta"})
     accepted = _post(view, {"id": "alpha"})
     # Assert
-    assert body["projects"][1] == {"id": "beta", "name": "Beta", "disabled": True, "disabled_reason": "Archived — read-only"}
-    assert refused.status_code == 403 and accepted.status_code == 200 and provider.remembered == ["alpha"]
+    assert (body["projects"][1], refused.status_code, accepted.status_code, provider.remembered) == (
+        {"id": "beta", "name": "Beta", "disabled": True, "disabled_reason": "Archived — read-only"},
+        403, 200, ["alpha"],
+    )
 
 
 def test_scoped_get_advertises_user_scope_disabled_reason():

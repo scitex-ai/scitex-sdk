@@ -7,6 +7,7 @@
  */
 
 import type { ProjectOption, ProjectSelection } from "./types";
+import { csrfToken } from "../../_base/csrf";
 
 export interface ProjectListing {
   projects: ProjectOption[];
@@ -36,12 +37,6 @@ export function staticProjectProvider(
   return {
     listProjects: async () => ({ projects, current }),
   };
-}
-
-function csrfToken(): string {
-  if (typeof document === "undefined" || typeof document.cookie !== "string") return "";
-  const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
-  return match ? decodeURIComponent(match[1]) : "";
 }
 
 /** Meta the host stamps to advertise its project provider endpoint.
