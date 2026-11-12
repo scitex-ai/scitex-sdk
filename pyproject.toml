@@ -127,6 +127,7 @@ only-include = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
+    "django_db: optional pytest-django database-use declaration for strict SQLite proofs",
     "slow: subprocess package/build gates",
     "smoke: fast CLI happy-path controls",
     "e2e: end-to-end workflows against real subsystems",

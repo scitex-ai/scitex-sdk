@@ -50,6 +50,11 @@ from django.db import connection, models
 # worker is not ours to choose.
 _ACCESS_STRICT_PROOF = os.environ.get("SCITEX_ACCESS_STRICT") == "1"
 
+# Declare the real SQLite use to pytest-django when a consumer installs it.
+# Transactional mode permits schema_editor; the non-strict suite stays DB-free.
+if _ACCESS_STRICT_PROOF:
+    pytestmark = pytest.mark.django_db(transaction=True)
+
 if not settings.configured:
     settings.configure(
         DEFAULT_CHARSET="utf-8",
