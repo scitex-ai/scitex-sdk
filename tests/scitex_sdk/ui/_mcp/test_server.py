@@ -32,7 +32,7 @@ def test_server_name_is_scitex_ui():
     # Arrange
     # Act
     # Assert
-    assert mcp.name == "scitex-ui"
+    assert mcp.name == "scitex-sdk-ui"
 
 
 def test_list_tools_includes_ui_skills_list():
@@ -168,7 +168,7 @@ def test_ui_skills_list_package_is_scitex_ui():
     # Act
     payload = json.loads(raw)
     # Assert
-    assert payload["package"] == "scitex-ui"
+    assert payload["package"] == "scitex-sdk"
 
 
 def test_ui_skills_list_skills_is_list():
