@@ -36,6 +36,14 @@ for (const theme of ["light", "dark"]) {
       await page.keyboard.press("Control+k");
       await expect(input).toBeFocused();
       await expect(hint).toHaveText("Esc");
+      await expect(page.locator(".stx-filter-field__clear")).toBeHidden();
+      await input.fill("worker");
+      await expect(page.locator(".stx-filter-field__clear")).toBeVisible();
+      await page.locator(".stx-filter-field__clear").click();
+      await expect(input).toHaveValue("");
+      await expect(input).toBeFocused();
+      await expect(hint).toHaveText("Esc");
+      await expect(page.locator(".stx-filter-field__clear")).toBeHidden();
       await input.fill("worker");
       await page.evaluate(() => {
         const input = document.querySelector('input')!;

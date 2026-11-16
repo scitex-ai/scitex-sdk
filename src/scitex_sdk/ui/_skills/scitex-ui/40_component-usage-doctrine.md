@@ -396,3 +396,8 @@ and the actual host frame; source checks do not claim full cascade analysis.
 FilterField keeps the field border square and uses a 16px input font at widths
 up to 767px (14px on wider screens). Apps must not override this chrome.
 The owning browser controls are in `tests/browser/filter-field.spec.ts`.
+
+The renderer also owns one labeled clear button, visible for nonempty input.
+It clears, emits the input event and returns focus to the field. The SDK hides
+the duplicate native WebKit search cancel control; apps must not add a second
+clear button. Escape still clears and blurs.

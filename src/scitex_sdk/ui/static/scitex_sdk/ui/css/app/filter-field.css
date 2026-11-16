@@ -37,6 +37,7 @@
 .stx-filter-field > .stx-filter-field__hint {
   box-sizing: border-box;
   position: static;
+  min-width: calc(6ch + 10px);
   transform: none;
   flex-shrink: 0;
   margin: 0;
@@ -57,3 +58,17 @@
 @media (max-width: 767px) {
   .stx-filter-field { font-size: 16px; }
 }
+
+/* The renderer owns one clear action across browsers. */
+.stx-filter-field__input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+.stx-filter-field__clear {
+  flex-shrink: 0;
+  padding: 1px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.stx-filter-field__clear[hidden] { display: none; }
