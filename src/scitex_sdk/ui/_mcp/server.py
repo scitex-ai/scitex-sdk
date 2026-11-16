@@ -94,10 +94,9 @@ def ui_skills_list() -> str:
         "skills": ["01_python-api", "02_cli", ...]}`.
     """
     try:
-        from pathlib import Path
+        from scitex_sdk._bundled_skills import list_bundled_skills
 
-        skills_dir = Path(__file__).parent.parent / "_skills" / "scitex-ui"
-        names = sorted(p.stem for p in skills_dir.glob("*.md") if p.name != "SKILL.md")
+        names = list_bundled_skills()["scitex-ui"]
         return _json_mod.dumps(
             {"success": True, "package": "scitex-sdk", "skills": names},
             indent=2,
@@ -119,27 +118,15 @@ def ui_skills_get(name: str) -> str:
         "name": <name>, "content": <markdown>}`, or an error envelope.
     """
     try:
-        from pathlib import Path
+        from scitex_sdk._bundled_skills import read_bundled_skill
 
-        skills_dir = Path(__file__).parent.parent / "_skills" / "scitex-ui"
-        target = skills_dir / f"{name}.md"
-        if not target.exists():
-            available = sorted(
-                p.stem for p in skills_dir.glob("*.md") if p.name != "SKILL.md"
-            )
-            return _json_mod.dumps(
-                {
-                    "success": False,
-                    "error": f"unknown skill {name!r}; available: {available}",
-                },
-                indent=2,
-            )
+        content = read_bundled_skill("scitex-ui", name)
         return _json_mod.dumps(
             {
                 "success": True,
                 "package": "scitex-sdk",
                 "name": name,
-                "content": target.read_text(encoding="utf-8"),
+                "content": content,
             },
             indent=2,
         )

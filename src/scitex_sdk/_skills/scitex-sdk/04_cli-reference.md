@@ -22,3 +22,9 @@ accepts `-h/--help`; `--json` propagates to subcommands that honour it.
 
 Config resolves per component group: `config.yaml` →
 `$SCITEX_<GROUP>_CONFIG` → `~/.scitex/<group>/config.yaml` → defaults.
+
+App/UI MCP skill tools use the same SDK bundled catalog as
+`list_bundled_skills()`. Pass a listed skill ID without `.md`, or `SKILL` for
+that component's overview. Unknown IDs return the available bundled names;
+absolute paths, traversal and aliases are rejected. These readers do not
+consult user skills or external plugin resources.
