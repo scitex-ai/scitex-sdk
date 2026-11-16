@@ -84,3 +84,5 @@ scitex-sdk app dev-install . --server http://127.0.0.1:8000
 
 Python API examples live in [03_python-api.md](03_python-api.md) and
 the detailed [19_files-sdk.md](19_files-sdk.md).
+
+- [Package navigation](25_package-navigation.md): shared indices, pruned trees and breadcrumbs from Dev/leaf metadata.
