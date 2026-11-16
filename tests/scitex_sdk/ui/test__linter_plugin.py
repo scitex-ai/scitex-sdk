@@ -10,13 +10,21 @@ import re
 import shutil
 import subprocess
 import sys
-from importlib.metadata import entry_points
+from importlib.metadata import PackageNotFoundError, entry_points, version
 from pathlib import Path
 
 import pytest
 
 import scitex_sdk.ui._linter_plugin as provider_module
 from scitex_sdk.ui._linter_plugin import get_plugin
+
+
+def _installed_ui_version():
+    """Installed predecessor release from real metadata, or None."""
+    try:
+        return version("scitex-ui")
+    except PackageNotFoundError:
+        return None
 
 
 def test_get_plugin_returns_dict_with_expected_keys():
@@ -133,7 +141,7 @@ def test_replacement_identifies_only_the_complete_predecessor_provider():
             distribution="scitex-ui",
             entry_point="ui",
             value="scitex_ui._linter_plugin:get_plugin",
-            rule_ids=tuple(f"STX-UI{number}" for number in range(101, 108)),
+            rule_ids=provider_module.predecessor_rule_ids(_installed_ui_version()),
         ),
     )
 
@@ -293,9 +301,12 @@ def test_installed_replacement_covers_only_the_predecessor_contract():
     # Act
     receipt = forward["provider_replacements"][0]
     # Assert
-    # The receipt covers the replaced predecessor contract only (101-107);
-    # additive drift-pack rules (108+) are enforced, not replaced.
-    assert set(receipt["rule_ids"]) == {f"STX-UI{number}" for number in range(101, 108)}
+    # The receipt covers the installed predecessor's contract only (101-107
+    # from scitex-ui 0.14.0); additive drift-pack rules (108+) are enforced,
+    # not replaced.
+    assert set(receipt["rule_ids"]) == set(
+        provider_module.predecessor_rule_ids(_installed_ui_version())
+    )
 
 
 def test_installed_replacement_is_strictly_narrower_than_enforced_rules():
