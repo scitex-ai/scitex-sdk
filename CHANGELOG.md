@@ -4,6 +4,12 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Declare the UI linter provider replacement for the installed scitex-ui
+  release's complete advertised rule set (UI101-105 up to 0.12.1, UI101-106
+  in 0.13.0, UI101-107 from 0.14.0). A stale scitex-ui next to the SDK no
+  longer makes scitex-dev refuse to run any linter; the SDK still never
+  requires the retired distribution.
+
 ## [0.3.24] - 2026-11-12
 
 - Require Config 0.3.8 or newer so minimum-dependency installations on Python
