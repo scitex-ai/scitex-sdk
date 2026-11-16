@@ -392,3 +392,7 @@ content/root wrapper: that prohibition also applies inside canonical stylesheets
 The static detector recognizes literal wrapper selectors and thin top-painted
 pseudo-elements. Browser contract tests must verify dynamically generated styles
 and the actual host frame; source checks do not claim full cascade analysis.
+
+FilterField keeps the field border square and uses a 16px input font at widths
+up to 767px (14px on wider screens). Apps must not override this chrome.
+The owning browser controls are in `tests/browser/filter-field.spec.ts`.

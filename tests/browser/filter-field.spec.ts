@@ -56,12 +56,14 @@ for (const theme of ["light", "dark"]) {
         const hint = root.querySelector('kbd')!;
         return { iconBeforeInput: icon.right < input.left, right: root.getBoundingClientRect().right,
           hintRight: hint.getBoundingClientRect().right, hintOpacity: getComputedStyle(hint).opacity,
+          radius: getComputedStyle(root).borderRadius,
           font: getComputedStyle(root.querySelector('input')!).fontSize };
       });
       expect(geometry.iconBeforeInput).toBe(true);
       expect(geometry.hintRight).toBeLessThanOrEqual(geometry.right);
       expect(geometry.hintOpacity).toBe("0.6");
-      expect(geometry.font).toBe("14px");
+      expect(geometry.font).toBe(width < 768 ? "16px" : "14px");
+      expect(geometry.radius).toBe("0px");
     });
   }
 }
