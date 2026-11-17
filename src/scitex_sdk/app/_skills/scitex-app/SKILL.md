@@ -79,7 +79,7 @@ scitex.app.get_files(...)
 ```bash
 scitex-sdk app init . --name my_app
 scitex-sdk app validate .
-scitex-sdk app dev-install . --server http://127.0.0.1:8000
+scitex-sdk app install-dev . --server http://127.0.0.1:8000
 ```
 
 Python API examples live in [03_python-api.md](03_python-api.md) and
