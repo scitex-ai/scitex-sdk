@@ -21,7 +21,8 @@ tags: [scitex-sdk]
 5. Verify installed artifacts and the intended host separately before
    adoption, submission or release.
 
-The current creator at `scitex-sdk gui serve` still offers starter cards;
-this guide does not claim that UI has been replaced. Detailed creation and
-validation mechanics belong to the scitex-app component skill; UI mounting
-and shared shell behavior belong to the scitex-ui component skill.
+The creator at `scitex-sdk gui serve` starts from the user's description and
+creates a plain workspace with that implementation brief. Feature development
+comes next. Older installed/hosted versions may still show starter cards.
+Detailed creation and validation mechanics belong to the scitex-app component
+skill; UI mounting and shared shell behavior belong to the scitex-ui skill.
