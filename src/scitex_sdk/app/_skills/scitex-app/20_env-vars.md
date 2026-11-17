@@ -26,7 +26,7 @@ export SCITEX_WORKING_DIR=/home/user/projects
 |----------|---------|---------|
 | `SCITEX_API_TOKEN` | JWT token for cloud API authentication | — |
 | `SCITEX_API_URL` | Cloud API base URL | `http://127.0.0.1:8000` |
-| `SCITEX_SERVER_URL` | Server URL for `app dev-install` and `app submit` | `http://127.0.0.1:8000` |
+| `SCITEX_SERVER_URL` | Server URL for `app install-dev` and `app submit` | `http://127.0.0.1:8000` |
 
 `SCITEX_API_TOKEN` is the trigger for automatic cloud backend selection in `get_files()`. When set, `get_files()` routes to the cloud backend instead of the local filesystem.
 
