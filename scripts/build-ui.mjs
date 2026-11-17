@@ -15,6 +15,7 @@ const staticRoot = fileURLToPath(
 );
 
 const entries = [
+  ["app/creator-wizard", "app/creator-wizard"],
   ["app/action-bar/auto-mount", "app/action-bar"],
   ["app/app-header/auto-mount", "app/app-header"],
   ["app/app-help/auto-mount", "app/app-help"],

@@ -98,7 +98,7 @@ def _project_picker_available() -> bool:
 
 
 def index(request):
-    """The wizard page: starter cards, create form, validate/publish tools."""
+    """The wizard page: user brief, create form, validate/publish tools."""
     return render(
         request,
         "scitex_sdk_creator/wizard.html",
@@ -164,28 +164,38 @@ def api_create(request):
     if err is not None:
         return err
     assert data is not None
-    label = (data.get("label") or "").strip()
-    description = (data.get("description") or "").strip()
+    label = data.get("label", "")
+    description = data.get("description", "")
     starter_key = data.get("starter", "")
     errors = validate_create_input(label, description, starter_key)
+    target = data.get("target_dir")
+    overwrite = data.get("overwrite")
+    if target is not None and not isinstance(target, str):
+        errors.append("Target directory must be text or null.")
+    if overwrite is not None and not isinstance(overwrite, bool):
+        errors.append("Overwrite must be a boolean or null.")
     if errors:
         return JsonResponse({"success": False, "errors": errors}, status=400)
 
+    label = label.strip()
+    description = (description or "").strip()
+    overwrite = overwrite is True
     starter = STARTERS_BY_KEY[starter_key]
-    target = data.get("target_dir") or str(Path.cwd() / target_slug(label))
-    target_path = Path(target).expanduser()
-    if not data.get("overwrite") and target_path.exists() and any(
-        target_path.iterdir()
-    ):
+    target = target or str(Path.cwd() / target_slug(label))
+    try:
+        if "\x00" in target:
+            raise ValueError("Target directory must not contain NUL characters.")
+        target_path = Path(target).expanduser()
+        if (target_path.exists() or target_path.is_symlink()) and not target_path.is_dir():
+            raise ValueError(f"Target is not an existing directory: {target_path}.")
+        if not overwrite and target_path.exists() and any(target_path.iterdir()):
+            raise ValueError(
+                f"Target directory is not empty: {target_path}. "
+                "Pick an empty directory or set overwrite."
+            )
+    except (OSError, RuntimeError, ValueError) as error:
         return JsonResponse(
-            {
-                "success": False,
-                "errors": [
-                    f"Target directory is not empty: {target_path}. "
-                    "Pick an empty directory or set overwrite."
-                ],
-            },
-            status=400,
+            {"success": False, "errors": [str(error)]}, status=400
         )
 
     module = app_module_name(target_slug(label))
@@ -200,7 +210,7 @@ def api_create(request):
             "starter": starter.key,
             "ai_hint": f"{starter.brief} {description}".strip(),
         },
-        overwrite=bool(data.get("overwrite")),
+        overwrite=overwrite,
     )
     agents_md = target_path / "AGENTS.md"
     if agents_md.is_file():
