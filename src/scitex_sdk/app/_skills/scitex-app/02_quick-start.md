@@ -1,6 +1,7 @@
 # Start with the SDK workflow
 
-Read `scitex-sdk`'s workflow skill and app/UI contract. Published leaf GUIs
+Start with [what the user wants to build](../../../_skills/scitex-sdk/05_build-from-intent.md),
+then read the SDK workflow and app/UI contract. Published leaf GUIs
 belong to `src/<leaf_pkg>/_django` and own their configuration, manifest,
 views, URLs, templates and assets. Hub mounts these generically and supplies
 authorized capabilities. Standalone runs the same view implementation with
@@ -12,8 +13,13 @@ Django templates extend `scitex_sdk/app/app_shell.html`, fill the stable
 Preserve database labels, CSRF and project/path refusal behavior. Verify
 both mounting modes and installed artifacts before replacing a host route.
 
-Prefer the SciTeX SDK (app-maker) wizard over hand-writing this boilerplate:
-`scitex-sdk gui serve` (port 31301) scaffolds from a starter, validates,
-dev-installs and submits through `scitex_sdk.creator`, the SDK's own
-app-creation app. The CLI equivalents are `scitex-sdk app init`,
-`validate`, `install-dev`, `submit`.
+For a new application, `scitex-sdk app init ./sample_app --name sample_app
+--dry-run` previews the boilerplate plan. Create only after choosing an owned
+destination; preserve existing projects. The scaffold does not implement the
+user's requested domain feature. Existing leaf GUIs need no new scaffold.
+
+The optional creator, `scitex-sdk gui serve` (default port31301), still offers
+starter cards. Those briefs are implementation hints, not completed features.
+The CLI creation/validation tools are `scitex-sdk app init` and `validate`;
+`install-dev` and `submit` require the normal host/release workflow. Structural
+validation does not replace behavioral tests or actual visual verification.
