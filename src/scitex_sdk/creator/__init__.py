@@ -146,20 +146,23 @@ def target_slug(label: str) -> str:
 
 
 def validate_create_input(
-    label: str, description: str, starter_key: str
+    label: str, description: str | None, starter_key: str
 ) -> list[str]:
     """Validate wizard input without touching the filesystem.
 
     Pure so the JSON API and the tests share one implementation.
     Returns error strings (empty = valid).
     """
-    _ = description  # free text; length is capped at the hub, not here.
     errors = []
-    if not (label or "").strip():
+    if not isinstance(label, str):
+        errors.append("App name must be text.")
+    elif not label.strip():
         errors.append("Give your app a name.")
     elif len(label.strip()) > MAX_LABEL_LENGTH:
         errors.append(f"Keep the name under {MAX_LABEL_LENGTH} characters.")
-    if starter_key not in STARTERS_BY_KEY:
+    if description is not None and not isinstance(description, str):
+        errors.append("Description must be text or null.")
+    if not isinstance(starter_key, str) or starter_key not in STARTERS_BY_KEY:
         errors.append("Pick a starter template.")
     return errors
 

@@ -164,17 +164,26 @@ def api_create(request):
     if err is not None:
         return err
     assert data is not None
-    label = (data.get("label") or "").strip()
-    description = (data.get("description") or "").strip()
+    label = data.get("label", "")
+    description = data.get("description", "")
     starter_key = data.get("starter", "")
     errors = validate_create_input(label, description, starter_key)
+    target = data.get("target_dir")
+    overwrite = data.get("overwrite")
+    if target is not None and not isinstance(target, str):
+        errors.append("Target directory must be text or null.")
+    if overwrite is not None and not isinstance(overwrite, bool):
+        errors.append("Overwrite must be a boolean or null.")
     if errors:
         return JsonResponse({"success": False, "errors": errors}, status=400)
 
+    label = label.strip()
+    description = (description or "").strip()
+    overwrite = overwrite is True
     starter = STARTERS_BY_KEY[starter_key]
-    target = data.get("target_dir") or str(Path.cwd() / target_slug(label))
+    target = target or str(Path.cwd() / target_slug(label))
     target_path = Path(target).expanduser()
-    if not data.get("overwrite") and target_path.exists() and any(
+    if not overwrite and target_path.exists() and any(
         target_path.iterdir()
     ):
         return JsonResponse(
@@ -200,7 +209,7 @@ def api_create(request):
             "starter": starter.key,
             "ai_hint": f"{starter.brief} {description}".strip(),
         },
-        overwrite=bool(data.get("overwrite")),
+        overwrite=overwrite,
     )
     agents_md = target_path / "AGENTS.md"
     if agents_md.is_file():

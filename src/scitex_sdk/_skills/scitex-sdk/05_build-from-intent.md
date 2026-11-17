@@ -68,6 +68,17 @@ change does not establish that a different installed or hosted version has
 adopted the new interface. Reusable community workflows can be added as skills
 when their implementation and acceptance evidence exist.
 
+The creator's JSON endpoints validate field types before creation. App name
+and starter ID must be text; description may be text or null. Creation accepts
+a text or null target directory and a JSON boolean or null `overwrite` value.
+The string `"false"` is rejected with HTTP400, rather than treated as permission
+to replace files. Omitted/null overwrite retains the existing nonempty-target
+refusal; explicit boolean true keeps its existing replacement meaning.
+These checks do not add a filesystem transaction or host authorization.
+Owning source: `creator.validate_create_input` and `creator.views.api_create`;
+real request/refusal/preservation controls:
+`tests/integration/test_creator_field_types.py`.
+
 ## Implement and verify the brief
 
 Reuse SDK shell/header/project-scope primitives and leaf-owned data APIs.
