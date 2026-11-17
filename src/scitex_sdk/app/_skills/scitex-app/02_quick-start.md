@@ -18,8 +18,10 @@ For a new application, `scitex-sdk app init ./sample_app --name sample_app
 destination; preserve existing projects. The scaffold does not implement the
 user's requested domain feature. Existing leaf GUIs need no new scaffold.
 
-The optional creator, `scitex-sdk gui serve` (default port31301), still offers
-starter cards. Those briefs are implementation hints, not completed features.
-The CLI creation/validation tools are `scitex-sdk app init` and `validate`;
-`install-dev` and `submit` require the normal host/release workflow. Structural
-validation does not replace behavioral tests or actual visual verification.
+The optional creator, `scitex-sdk gui serve` (default port31301), starts with
+the user's description and creates a plain workspace containing that brief.
+It does not implement the requested feature. The CLI creation/validation tools
+are `scitex-sdk app init` and `validate`; `install-dev` and `submit` require
+the normal host/release workflow. Structural validation does not replace
+behavioral tests or actual visual verification. Installed/hosted adoption must
+be checked separately; older versions can still show starter cards.

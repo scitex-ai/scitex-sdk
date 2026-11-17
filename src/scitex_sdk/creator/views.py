@@ -105,7 +105,7 @@ def _project_picker_available() -> bool:
 
 
 def index(request):
-    """The wizard page: starter cards, create form, validate/publish tools."""
+    """The wizard page: user brief, create form, validate/publish tools."""
     return render(
         request,
         "scitex_sdk_creator/wizard.html",

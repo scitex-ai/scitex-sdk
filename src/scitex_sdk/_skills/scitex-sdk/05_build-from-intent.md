@@ -60,11 +60,13 @@ an application shell, not the form, analysis or viewer described above.
 Existing leaf GUIs remain in their leaf-owned `_django` package; the scaffold
 is not a migration instruction for those applications.
 
-The current `scitex-sdk gui serve` creator still presents starter cards. Their
-briefs describe intended work layered on the common scaffold; choosing a card
-does not implement that feature. This skill does not replace that interface
-or claim its starter UI has been removed. Reusable community workflows can be
-added as skills when their implementation and acceptance evidence exist.
+The `scitex-sdk gui serve` creator starts with the user's description and
+creates a plain workspace with that brief. It does not implement the requested
+feature. The existing starter catalog and API remain for compatible clients;
+the SDK creator no longer asks the user to choose a starter card. This source
+change does not establish that a different installed or hosted version has
+adopted the new interface. Reusable community workflows can be added as skills
+when their implementation and acceptance evidence exist.
 
 ## Implement and verify the brief
 
