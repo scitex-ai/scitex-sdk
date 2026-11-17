@@ -182,19 +182,20 @@ def api_create(request):
     overwrite = overwrite is True
     starter = STARTERS_BY_KEY[starter_key]
     target = target or str(Path.cwd() / target_slug(label))
-    target_path = Path(target).expanduser()
-    if not overwrite and target_path.exists() and any(
-        target_path.iterdir()
-    ):
+    try:
+        if "\x00" in target:
+            raise ValueError("Target directory must not contain NUL characters.")
+        target_path = Path(target).expanduser()
+        if (target_path.exists() or target_path.is_symlink()) and not target_path.is_dir():
+            raise ValueError(f"Target is not an existing directory: {target_path}.")
+        if not overwrite and target_path.exists() and any(target_path.iterdir()):
+            raise ValueError(
+                f"Target directory is not empty: {target_path}. "
+                "Pick an empty directory or set overwrite."
+            )
+    except (OSError, RuntimeError, ValueError) as error:
         return JsonResponse(
-            {
-                "success": False,
-                "errors": [
-                    f"Target directory is not empty: {target_path}. "
-                    "Pick an empty directory or set overwrite."
-                ],
-            },
-            status=400,
+            {"success": False, "errors": [str(error)]}, status=400
         )
 
     module = app_module_name(target_slug(label))

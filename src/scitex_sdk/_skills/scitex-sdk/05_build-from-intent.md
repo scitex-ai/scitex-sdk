@@ -74,7 +74,13 @@ a text or null target directory and a JSON boolean or null `overwrite` value.
 The string `"false"` is rejected with HTTP400, rather than treated as permission
 to replace files. Omitted/null overwrite retains the existing nonempty-target
 refusal; explicit boolean true keeps its existing replacement meaning.
-These checks do not add a filesystem transaction or host authorization.
+Creation also returns400 for existing file targets, file/dangling symlink
+targets, NUL-containing paths and errors while expanding or inspecting the
+target. Existing directory symlinks remain usable; these checks do not change
+aliases into separate copies. Refusal preserves the inspected target in the
+owned tests (`tests/integration/test_creator_target_refusal.py`). Filesystem
+state can change after inspection; these checks do not add a filesystem
+transaction, race protection, recovery or host authorization.
 Owning source: `creator.validate_create_input` and `creator.views.api_create`;
 real request/refusal/preservation controls:
 `tests/integration/test_creator_field_types.py`.
