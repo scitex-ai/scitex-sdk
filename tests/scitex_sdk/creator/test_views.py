@@ -9,6 +9,7 @@ dir through the real engine; api/validate-app runs the real validator.
 from __future__ import annotations
 
 import json
+import re
 
 import django
 import pytest
@@ -396,3 +397,11 @@ def test_creator_accepts_rendered_csrf_token(csrf_creator_client):
     )
     # Assert
     assert (response.status_code, json.loads(response.content)["ok"]) == (200, True)
+
+
+@pytest.mark.parametrize("pane_id", ["ws-ai-pane", "ws-worktree-pane", "ws-viewer-pane"])
+def test_index_declares_unused_shell_panes(client, pane_id):
+    """The brief form must not compete with unimplemented workspace panes."""
+    html = client.get("/").content.decode()
+    pane = re.search(r'<[^>]+id="' + re.escape(pane_id) + r'"[^>]*>', html)
+    assert pane is not None and "ws-pane-unused" in pane.group()
