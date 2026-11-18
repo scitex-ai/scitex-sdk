@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import inspect
 import scitex_logging as slogging
 import os
 from typing import Any, Dict, Iterator, List, Optional
@@ -35,6 +36,12 @@ class AnthropicChatBackend:
         temperature: float = 0.7,
         system: Optional[str] = None,
     ) -> Iterator[Dict[str, Any]]:
+        """Stream with the historical 0.7 temperature default left unsent.
+
+        Explicit non-default temperatures require an SDK method that exposes
+        that parameter. Current Anthropic Messages methods removed it; return
+        an error event before any request instead of silently ignoring it.
+        """
         try:
             import anthropic
         except ImportError as exc:
@@ -53,6 +60,17 @@ class AnthropicChatBackend:
             kwargs["system"] = system
 
         try:
+            if temperature != 0.7:
+                if "temperature" not in inspect.signature(client.messages.stream).parameters:
+                    client.close()
+                    yield {
+                        "type": "error",
+                        "error": "Anthropic SDK temperature is not supported; "
+                        "omit a non-default temperature or use a backend "
+                        "that supports sampling.",
+                    }
+                    return
+                kwargs["temperature"] = temperature
             with client.messages.stream(**kwargs) as stream:
                 for text in stream.text_stream:
                     yield {"type": "chunk", "text": text}

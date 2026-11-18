@@ -119,6 +119,28 @@ loopback SSE endpoint, checking wire model IDs, warnings and streamed events;
 external connections are blocked. These controls do not call a hosted model
 or establish provider availability or acceptance of a particular model ID.
 
+### Anthropic sampling compatibility
+
+The direct Anthropic backend retains its historical `temperature=0.7`
+compatibility default without sending a sampling parameter. That value is not
+a sampling control on this path. A non-default value, including `0.0`, is sent
+only when the installed SDK's `messages.stream` explicitly exposes the
+`temperature` parameter. Otherwise the backend returns an error event before
+making a request; it does not silently ignore the custom value or force an
+unsupported field into the request body.
+
+Anthropic SDK 2.10.0 does not expose this parameter; the
+[upstream migration guide](https://github.com/anthropics/anthropic-sdk-python/blob/main/MIGRATION.md)
+records its removal. Do not infer hosted API/model support from an older SDK
+accepting the argument. LiteLLM forwarding is unchanged, with support decided
+by its provider. Migrating the shared historical default to a distinct
+omitted-value contract remains separate interface work.
+
+The same integration test covers non-default, zero and compatibility-default
+temperatures through the actual installed provider SDK, and checks that a
+local refusal makes no HTTP request. `max_tokens` and `system` keep their
+existing forwarding behavior.
+
 ## Usage Examples
 
 ### Local development (default)

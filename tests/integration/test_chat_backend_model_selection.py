@@ -31,7 +31,7 @@ CASES = [
 ]
 
 PROBE = r'''
-import io, json, logging, os, sys, threading
+import inspect, io, json, logging, os, sys, threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 requests = []
@@ -41,7 +41,8 @@ class Endpoint(BaseHTTPRequestHandler):
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-        requests.append({'path': self.path, 'body': body})
+        requests.append({'path': self.path, 'body': body,
+                         'api_version': self.headers.get('anthropic-version')})
         events = [
             {'type': 'message_start', 'message': {'id': 'msg_owned',
              'type': 'message', 'role': 'assistant', 'model': body['model'],
@@ -101,6 +102,19 @@ try:
         output[name] = {'backend': type(backend).__name__,
                         'default': backend._default_model,
                         'request': requests[-1], 'events': events, 'warnings': warnings}
+    import anthropic
+    from anthropic.resources.messages import Messages
+    output['provider_version'] = anthropic.__version__
+    output['temperature_supported'] = 'temperature' in inspect.signature(Messages.stream).parameters
+    backend = get_chat_backend(model='parameter-owned')
+    for temperature in (0.0, 0.25, 1.0, 0.7):
+        before = len(requests)
+        events = list(backend.stream([{'role': 'user', 'content': 'owned prompt'}],
+                                    temperature=temperature, max_tokens=17,
+                                    system='owned system'))
+        output['temperature-'+str(temperature)] = {
+            'events': events, 'requests': len(requests)-before,
+            'request': requests[-1] if len(requests)>before else None}
     os.environ.pop('ANTHROPIC_API_KEY')
     os.environ['SCITEX_APP_LLM_MODEL'] = 'openai/owned-model'
     os.environ.pop('LLM_MODEL', None)
@@ -167,3 +181,22 @@ def test_selection_preserves_stream_protocol_and_warnings(selection, case):
 def test_litellm_selection_retains_provider_qualified_model(selection, explicit):
     assert selection["litellm-"+str(explicit)] == {
         "backend": "LiteLLMChatBackend", "default": explicit or "openai/owned-model"}
+
+
+@pytest.mark.parametrize("temperature", [0.0, 0.25, 1.0, 0.7])
+def test_temperature_is_forwarded_or_explicitly_refused(selection, temperature):
+    observed = selection["temperature-"+str(temperature)]
+    custom = temperature != 0.7
+    if custom and not selection["temperature_supported"]:
+        assert observed["requests"] == 0
+        assert len(observed["events"]) == 1
+        error = observed["events"][0]
+        assert error["type"] == "error"
+        assert "temperature" in error["error"] and "not supported" in error["error"]
+    else:
+        assert observed["requests"] == 1
+        body = observed["request"]["body"]
+        assert body.get("temperature") == (temperature if custom else None)
+        assert (body["max_tokens"], body["system"]) == (17, "owned system")
+        assert observed["events"] == [
+            {"type": "chunk", "text": "owned response"}, {"type": "done"}]
