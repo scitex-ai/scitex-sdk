@@ -1,10 +1,11 @@
 """Execute the actual release resolver shell with hostile inputs as data."""
 import os
-from pathlib import Path
 import re
 import subprocess
 
-WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/pypi-publish-and-github-release-on-tag.yml"
+from tests._checkout import REPO_ROOT
+
+WORKFLOW = REPO_ROOT / ".github/workflows/pypi-publish-and-github-release-on-tag.yml"
 
 
 def resolver_scripts():

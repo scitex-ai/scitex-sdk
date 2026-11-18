@@ -38,6 +38,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional, Protocol, cast, runtime_checkable
 
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
 __all__ = [
     "PROJECT_PROVIDER_META_NAME",
     "PROJECT_PROVIDER_SETTING",
@@ -173,8 +175,13 @@ class LocalProjectProvider:
 
 def host_project_provider() -> Optional[ProjectProvider]:
     """The host's registered provider (``settings.SCITEX_PROJECT_PROVIDER``), or None."""
-    from django.conf import settings
-    from django.utils.module_loading import import_string
+    try:
+        from django.conf import settings
+        from django.utils.module_loading import import_string
+    except ModuleNotFoundError as error:
+        if error.name != "django":
+            raise
+        raise ImportError(GUI_INSTALL_HINT) from error
 
     dotted = getattr(settings, PROJECT_PROVIDER_SETTING, "")
     if not dotted:
@@ -192,8 +199,13 @@ def host_project_provider_url(request: Any = None, provider_url: str | None = No
     ``provider_url`` is contextualized too; calls without a request preserve
     the legacy URL exactly.
     """
-    from django.conf import settings
-    from django.urls import NoReverseMatch, reverse
+    try:
+        from django.conf import settings
+        from django.urls import NoReverseMatch, reverse
+    except ModuleNotFoundError as error:
+        if error.name != "django":
+            raise
+        raise ImportError(GUI_INSTALL_HINT) from error
 
     target = provider_url if provider_url is not None else getattr(settings, PROJECT_PROVIDER_URL_SETTING, "")
     if not target:
@@ -276,7 +288,12 @@ def project_listing_view(
     ``POST {"id": ...}`` remembers an accessible project (403 otherwise).
     ``provider`` may be a factory taking the request.
     """
-    from django.http import HttpResponseNotAllowed, JsonResponse
+    try:
+        from django.http import HttpResponseNotAllowed, JsonResponse
+    except ModuleNotFoundError as error:
+        if error.name != "django":
+            raise
+        raise ImportError(GUI_INSTALL_HINT) from error
 
     def resolve_provider(request: Any) -> ProjectProvider:
         return provider if isinstance(provider, ProjectProvider) else provider(request)
@@ -404,7 +421,12 @@ def scoped_project_listing_view(
     provider's support.
     ``provider`` may be a factory taking the request.
     """
-    from django.http import HttpResponseNotAllowed, JsonResponse
+    try:
+        from django.http import HttpResponseNotAllowed, JsonResponse
+    except ModuleNotFoundError as error:
+        if error.name != "django":
+            raise
+        raise ImportError(GUI_INSTALL_HINT) from error
 
     def resolve_provider(request: Any) -> ProjectProvider:
         return provider if isinstance(provider, ProjectProvider) else provider(request)
