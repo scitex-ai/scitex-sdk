@@ -193,7 +193,7 @@ percentages or hosted visual acceptance.
 
 The Quick Start's resource behavior is covered by the
 [bundled-skills controls](tests/scitex_sdk/test__bundled_skills.py).
-The [CLI controls](tests/test_cli_root.py),
+The [CLI controls](tests/scitex_sdk/test_cli_root.py),
 [Web descriptor controls](tests/scitex_sdk/_web/test__api.py) and
 [read-only Web controls](tests/scitex_sdk/_web/test__views.py) cover their
 respective discovery and admission boundaries.
