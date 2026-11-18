@@ -28,7 +28,7 @@ from pathlib import Path
 
 import click
 
-from ._gui_address import _server_address
+from ._web._address import _server_address
 
 PACKAGE = "scitex-sdk"
 

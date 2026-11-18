@@ -19,7 +19,7 @@ from typing import Optional
 
 import scitex_logging as slogging
 
-from scitex_sdk._gui_address import _server_address, _url_host
+from scitex_sdk._web._address import _server_address, _url_host
 
 log = slogging.getLogger(__name__)
 

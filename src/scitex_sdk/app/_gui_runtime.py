@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
 
-from scitex_sdk._gui_address import _server_address
+from scitex_sdk._web._address import _server_address
 
 PathLike = Union[str, Path]
 

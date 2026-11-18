@@ -85,7 +85,7 @@ Use the unbracketed bind host `::1`, for example
 an IPv6 socket, passes a bracketed address to Django's parser, and permits the
 corresponding bracketed HTTP Host header. IPv4 and hostname behavior is unchanged.
 
-Owners: `_gui_address.py`, `app/embed.py::_port_is_free`,
+Owners: `_web/_address.py`, `app/embed.py::_port_is_free`,
 `app/_gui_runtime.py::status`, and `app/_standalone.py`. Actual IPv6 loopback
 socket controls, real Django command parsing before launch, allowed-host checks
 and CLI dry-run examples are covered in `tests/integration/test_gui_ipv6.py`.
