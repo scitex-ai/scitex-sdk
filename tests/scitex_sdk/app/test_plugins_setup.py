@@ -22,7 +22,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-SDK_SRC = Path(__file__).resolve().parents[3] / "src"
+from tests._checkout import REPO_ROOT
+
+SDK_SRC = REPO_ROOT / "src"
 
 PROBE = """
 import sys, json
