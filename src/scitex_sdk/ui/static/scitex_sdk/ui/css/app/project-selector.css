@@ -98,7 +98,7 @@
 
   background: var(--bg-surface, #f8f7f5);
   border: 1px solid var(--border-default, #999);
-  border-radius: var(--radius-md, 4px);
+  border-radius: 0;
   box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
 }
 
