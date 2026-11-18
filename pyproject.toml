@@ -119,7 +119,7 @@ packages = ["src/scitex_sdk"]
 # Select real project inputs directly, including the release/frontend gates.
 only-include = [
     "src/scitex_sdk", "scripts", "tests", "docs", "examples", ".github",
-    "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml", ".gitignore",
+    "README.md", "LICENSE", "CLA.md", "CONTRIBUTING.md", "CHANGELOG.md", "pyproject.toml", ".gitignore",
     "package.json", "package-lock.json",
     ".readthedocs.yaml",
 ]

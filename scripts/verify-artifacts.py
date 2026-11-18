@@ -63,12 +63,28 @@ def verify(source: Path, wheel: Path, sdist: Path, tag: str | None = None) -> di
     with tarfile.open(sdist) as archive:
         members = archive.getmembers()
         actual_sdist = {}
+        package_roots = set()
         for member in members:
             parts = Path(member.name).parts
             if member.isfile() and len(parts) > 3 and parts[1:3] == ("src", "scitex_sdk"):
+                package_roots.add(parts[0])
                 file = archive.extractfile(member)
                 assert file is not None
                 actual_sdist[str(Path(*parts[3:]))] = file.read()
+        if len(package_roots) != 1:
+            raise ValueError("sdist must have exactly one SDK source root")
+        root = package_roots.pop()
+        for document in ("CLA.md", "CONTRIBUTING.md"):
+            matches = [
+                member for member in members
+                if Path(member.name).parts == (root, document)
+            ]
+            if len(matches) != 1 or not matches[0].isfile():
+                raise ValueError(f"sdist must contain one regular {document} at its source root")
+            file = archive.extractfile(matches[0])
+            assert file is not None
+            if file.read() != (source / document).read_bytes():
+                raise ValueError(f"sdist {document} bytes differ from source")
     if expected != actual_sdist:
         raise ValueError("sdist package members or bytes differ from source")
     frontend = json.loads(expected["package.json"])
