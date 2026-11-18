@@ -113,7 +113,7 @@ observer to undo a shell mutation or duplicate the shell's viewport geometry.
 The changed CSS and mobile runtime URLs use the SDK `app_static` content hash
 so an ordinary reload receives their current bytes.
 
-Real Chromium regressions in `tests/browser/shell-frame.spec.ts` cover varied
+Real Chromium regressions in `tests/integration/browser/shell-frame.spec.ts` cover varied
 header/viewport heights, declared-unused panes, native wheel scrolling,
 nested/direct sidebar ownership and mobile breakpoint transitions. Source changes reach
 an installed fleet only after its reviewed SDK release is deployed; a local
