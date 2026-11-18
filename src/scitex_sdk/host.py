@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
 
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
 
 class AccessError(Exception):
     def __init__(self, message: str, status: int = 400):
@@ -45,8 +47,13 @@ class StoreAccess:
 
 
 def _provider(setting):
-    from django.conf import settings
-    from django.utils.module_loading import import_string
+    try:
+        from django.conf import settings
+        from django.utils.module_loading import import_string
+    except ModuleNotFoundError as error:
+        if error.name != "django":
+            raise
+        raise ImportError(GUI_INSTALL_HINT) from error
 
     value = getattr(settings, setting, None)
     if not value:
@@ -60,7 +67,12 @@ def authenticated_user(request):
     user = getattr(request, "user", None)
     if getattr(user, "is_authenticated", False):
         return user
-    from django.conf import settings
+    try:
+        from django.conf import settings
+    except ModuleNotFoundError as error:
+        if error.name != "django":
+            raise
+        raise ImportError(GUI_INSTALL_HINT) from error
 
     if not getattr(settings, "SCITEX_API_AUTHENTICATOR", None):
         return None
@@ -75,7 +87,12 @@ def project_access(
     ``remember=False`` resolves explicit projects with the same authorization
     and write checks without storing a new active-project selection.
     """
-    from django.conf import settings
+    try:
+        from django.conf import settings
+    except ModuleNotFoundError as error:
+        if error.name != "django":
+            raise
+        raise ImportError(GUI_INSTALL_HINT) from error
 
     from scitex_sdk.app import project_context
 

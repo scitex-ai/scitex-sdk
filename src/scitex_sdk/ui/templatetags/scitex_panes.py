@@ -14,8 +14,15 @@ builds the phone tab bar and exposes ``window.stxPanes.show("plot")``.
 
 from __future__ import annotations
 
-from django import template
-from django.utils.html import format_html, format_html_join
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
+try:
+    from django import template
+    from django.utils.html import format_html, format_html_join
+except ModuleNotFoundError as error:
+    if error.name != "django":
+        raise
+    raise ImportError(GUI_INSTALL_HINT) from error
 
 from .scitex_static import versioned_static
 

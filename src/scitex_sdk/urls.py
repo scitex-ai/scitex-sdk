@@ -13,8 +13,15 @@ from __future__ import annotations
 import re
 from importlib import import_module
 
-from django.core.exceptions import ImproperlyConfigured
-from django.urls import URLResolver, include, path
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
+try:
+    from django.core.exceptions import ImproperlyConfigured
+    from django.urls import URLResolver, include, path
+except ModuleNotFoundError as error:
+    if error.name != "django":
+        raise
+    raise ImportError(GUI_INSTALL_HINT) from error
 
 
 class NamespaceCollision(ImproperlyConfigured):

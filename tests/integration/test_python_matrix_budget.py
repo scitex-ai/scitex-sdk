@@ -1,9 +1,10 @@
 """Keep all Python gates while bounding cold-install disk fan-out."""
 
-from pathlib import Path
 
 import pytest
 import yaml
+
+from tests._checkout import REPO_ROOT
 
 
 @pytest.mark.parametrize(
@@ -15,7 +16,7 @@ import yaml
 )
 def test_python_matrices_keep_all_versions_and_one_inflight_leg(filename, job):
     # Arrange
-    root = Path(__file__).resolve().parents[1]
+    root = REPO_ROOT
     workflow = yaml.safe_load((root / ".github/workflows" / filename).read_text())
     configured = workflow["jobs"][job]
     strategy = configured["strategy"]
