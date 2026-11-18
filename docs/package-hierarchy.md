@@ -55,3 +55,36 @@ project scope or proof of live availability. Hosts must enforce access and
 escape labels when rendering them. Existing document identities and links are
 unchanged. No API here opens documents, imports discovered leaf providers,
 assigns unlisted indices or changes a service.
+
+## Bind records to their declaring package
+
+Before composing a tree, call `validate_hierarchy_provider(nodes,
+distribution=owner)` for each explicitly selected declaration. `owner` is the
+canonical owning distribution from the caller's metadata/admission process.
+The SDK does not discover, import or authenticate that provider for you.
+
+```python
+from scitex_sdk.hierarchy import get_hierarchy_nodes, validate_hierarchy_provider
+
+owned = validate_hierarchy_provider(
+    get_hierarchy_nodes(), distribution="scitex-sdk"
+)
+assert [node.distribution for node in owned] == ["scitex-sdk"]
+```
+
+A provider must declare its own package node and cannot claim another
+package's record. Only the umbrella distribution `scitex` may include root or
+group records without a distribution. Empty declarations, duplicate IDs or
+indices, noncanonical owner names and untyped rows fail explicitly. The result
+is an immutable tuple of the original records in numeric index order; missing
+parents are permitted at this partial-declaration stage. A group-only umbrella
+declaration is not a substitute for its own package record.
+
+This ownership check does not verify allocated index values against an external
+inventory, prove code provenance, authorize provider execution or grant access.
+After checking each provider, combine the selected records and call
+`validate_hierarchy` to check the complete tree, including missing parents and
+cross-provider duplicate IDs/indices. Neither function enables hosted search
+or replaces the host's admission and permission checks. Behavioral controls
+for this boundary live in
+[`test___init___provider_ownership.py`](../tests/scitex_sdk/hierarchy/test___init___provider_ownership.py).
