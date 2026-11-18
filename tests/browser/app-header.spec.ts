@@ -110,7 +110,8 @@ for (const theme of ["light", "dark"]) {
         const option = page.getByRole("option", { name: "All Projects", exact: true });
         await expect(option).toHaveCSS("font-size", "14px");
         await expect(option).toHaveCSS("font-family", metrics.title.font);
-        await expect(page.locator(".stx-app-project-selector__search")).toHaveCSS("margin", "4px");
+        await expect(page.locator(".stx-app-project-selector__filter")).toHaveCSS("margin", "4px");
+        await expect(page.locator(".stx-app-project-selector__search")).toHaveCSS("margin", "0px");
         await expect(page.locator(".stx-app-project-selector__list")).toHaveCSS("padding", "4px");
         if (width === 390) expect((await option.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       });
