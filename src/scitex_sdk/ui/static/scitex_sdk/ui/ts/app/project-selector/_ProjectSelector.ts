@@ -22,6 +22,7 @@
 
 import { BaseComponent } from "../../_base/BaseComponent";
 import { gettext } from "../../_base/gettext";
+import { createFilterIcon } from "../../_base/filter-icon";
 import { shellTranslate } from "../../_base/i18n";
 import type { ShellStringKey } from "../../_base/i18n";
 import { fuzzyFilter } from "./fuzzy";
@@ -137,11 +138,14 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
     this.list.setAttribute("role", "listbox");
 
     if (config.searchable !== false) {
+      const filter = document.createElement("div");
+      filter.className = `${CLS}__filter`;
+      filter.appendChild(createFilterIcon(`${CLS}__filter-icon`));
       this.search = document.createElement("input");
       this.search.type = "search";
       this.search.className = `${CLS}__search`;
-      this.search.placeholder = gettext("Search projects");
-      this.search.setAttribute("aria-label", gettext("Search projects"));
+      this.search.placeholder = gettext("Filter projects with keywords");
+      this.search.setAttribute("aria-label", gettext("Filter projects with keywords"));
       this.search.setAttribute("role", "combobox");
       this.search.setAttribute("aria-autocomplete", "list");
       this.search.setAttribute("aria-controls", this.list.id);
@@ -153,7 +157,8 @@ export class ProjectSelector extends BaseComponent<ProjectSelectorConfig> {
       this.search.addEventListener("compositionstart", () => { this.compositionActive = true; });
       this.search.addEventListener("compositionend", () => { this.compositionActive = false; });
       this.search.addEventListener("keydown", (e) => this.onSearchKey(e));
-      this.panel.appendChild(this.search);
+      filter.appendChild(this.search);
+      this.panel.appendChild(filter);
     }
     this.panel.appendChild(this.list);
 

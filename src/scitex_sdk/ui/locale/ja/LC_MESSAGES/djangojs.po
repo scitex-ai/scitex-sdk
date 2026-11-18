@@ -28,8 +28,8 @@ msgid "Select project"
 msgstr "プロジェクトを選択してください"
 
 #: static/scitex_sdk/ui/ts/app/project-selector/_ProjectSelector.ts
-msgid "Search projects"
-msgstr "プロジェクトを検索"
+msgid "Filter projects with keywords"
+msgstr "キーワードでプロジェクトを絞り込む"
 
 #: static/scitex_sdk/ui/ts/app/project-selector/_ProjectSelector.ts
 msgid "No projects"
