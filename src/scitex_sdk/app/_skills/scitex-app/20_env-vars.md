@@ -97,15 +97,26 @@ which would silently change which model you talk to. If both are set they are
 not merged: the prefixed one wins and the conflict is logged, so the pick is
 never silent.
 
-The intended model-environment contract above is currently implemented by
-`_resolve_default_model()` on the LiteLLM selection path. The direct Anthropic
-selection path in `app/_chat/_backends.py::get_chat_backend` currently uses its
-hard-coded default when the explicit `model` argument is absent; it bypasses
-both environment names and their conflict warning. This remains an
-implementation gap, not a supported exception to the intended contract.
-An explicit `get_chat_backend(model=...)` value takes priority on either path.
-The existing `tests/scitex_sdk/app/_chat/test__backends.py` controls test the
-resolver itself; they do not establish that every backend selection uses it.
+`app/_chat/_backends.py::get_chat_backend` uses this resolver on both the
+direct Anthropic and LiteLLM selection paths when no nonempty explicit model
+is supplied. The direct Anthropic client expects a bare model ID: an optional
+leading `anthropic/` is removed from the resolved environment value. LiteLLM
+retains the provider-qualified value. Backend priority remains direct
+Anthropic when its SDK and a nonempty `ANTHROPIC_API_KEY` are available;
+changing the model environment variable does not change that priority.
+
+A nonempty explicit `get_chat_backend(model=...)` value takes priority on
+either path, is forwarded unchanged, and bypasses the environment resolver
+and its warnings. Use a bare Anthropic ID for an explicit direct-client model.
+A per-request `backend.stream(..., model=...)` value also retains its existing
+priority over the backend's default model.
+
+Behavioral controls: `tests/scitex_sdk/app/_chat/test__backends.py` exercises
+resolver precedence and warnings. `test__backend_model_selection.py` exercises
+actual factory selection and the real Anthropic client against an owned
+loopback SSE endpoint, checking wire model IDs, warnings and streamed events;
+external connections are blocked. These controls do not call a hosted model
+or establish provider availability or acceptance of a particular model ID.
 
 ## Usage Examples
 
