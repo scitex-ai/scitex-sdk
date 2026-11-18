@@ -346,6 +346,9 @@ Use an empty SDK mount; keep result filtering in the leaf's input handler:
 ```
 
 The SDK renderer owns the icon, input geometry, placeholder, and keyboard hint.
+`data-stx-filter-field` is a presence marker: assigning it a value still mounts
+the SDK renderer and does not permit child markup or inline styles. The owning
+`mountFilterFields` renderer and `test__filter_contract.py` cover this boundary.
 Do not hand-author `stx-filter-field*` children or override their styles. Only
 `ui/static/scitex_sdk/ui/css/app/filter-field.css` in the SDK owns these selectors.
 Recognizable local filter containers with keyboard hints also fork the
