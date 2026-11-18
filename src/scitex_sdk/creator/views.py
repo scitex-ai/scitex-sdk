@@ -27,6 +27,7 @@ import re
 from pathlib import Path
 
 from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+from scitex_sdk.ui.branding import shell_context
 
 try:
     from django.http import JsonResponse
@@ -113,8 +114,10 @@ def index(request):
             "starters": _starter_payload(),
             "default_starter": DEFAULT_STARTER,
             "sdk_version": _sdk_version(),
-            # Standalone shell <title>: "SDK", like the leaf tiles.
-            "app_label": "SDK",
+            # The creator implements its brief form, not workspace side panes.
+            **shell_context(
+                "SDK", panes={"ai": "unused", "files": "unused", "viewer": "unused"}
+            ),
             "project_picker_available": _project_picker_available(),
         },
     )
