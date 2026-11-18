@@ -33,12 +33,20 @@ loop — whenever daphne cancelled a slow request. Running native-async both
 removes that deadlock and avoids the per-request sync↔async mode switch.
 """
 
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
+try:
+    from django.templatetags.static import static
+except ModuleNotFoundError as error:
+    if error.name != "django":
+        raise
+    raise ImportError(GUI_INSTALL_HINT) from error
+
 from asgiref.sync import (
     iscoroutinefunction,
     markcoroutinefunction,
     sync_to_async,
 )
-from django.templatetags.static import static
 
 from .context_processors import element_inspector_enabled
 
