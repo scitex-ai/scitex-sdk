@@ -56,13 +56,28 @@ export SCITEX_SERVER_URL="https://scitex.example.com"
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `DJANGO_SECRET_KEY` | Django secret key for standalone mode | `"scitex-standalone-dev-key"` |
-| `DJANGO_DEBUG` | Django debug mode | `"true"` |
-| `SCITEX_UI_STATIC` | Path to scitex-ui static files | auto-detected |
+| `DJANGO_DEBUG` | True only when the lowercased value equals `"true"` | `"true"` |
+| `SCITEX_ALLOWED_HOSTS` | Additional comma-separated allowed hostnames | empty |
 
 ```bash
-export DJANGO_SECRET_KEY="your-production-secret-key"
+export DJANGO_SECRET_KEY="your-local-development-secret-key"
 export DJANGO_DEBUG="false"
 ```
+
+These settings are read only when `_configure_django()` configures fresh
+settings. An already-configured embedding host retains its own secret, debug,
+host and static settings. The SDK shell is bundled as `scitex_sdk.ui`.
+`SCITEX_UI_STATIC` has no reader in this launcher; use the explicit
+`extra_staticfiles_dirs` argument for additional static directories instead.
+
+`working_dir` sets the resolved `SCITEX_WORKING_DIR`; otherwise an existing
+environment value is retained, then the current directory is used. The later
+`extra_env` overlay can override it. See [Standalone Mode](05_standalone.md).
+
+Owner: `app/_standalone.py::run_standalone` and `_configure_django`.
+Fresh-settings/host-preservation and no-bind server-option controls live in
+`tests/scitex_sdk/app/test__standalone_scitex_ui_guard.py`; hostname controls
+live in `test__standalone_allowed_hosts.py`.
 
 ## LLM / Chat
 
@@ -81,6 +96,16 @@ it — the generic name can collide with another tool in the same environment,
 which would silently change which model you talk to. If both are set they are
 not merged: the prefixed one wins and the conflict is logged, so the pick is
 never silent.
+
+The intended model-environment contract above is currently implemented by
+`_resolve_default_model()` on the LiteLLM selection path. The direct Anthropic
+selection path in `app/_chat/_backends.py::get_chat_backend` currently uses its
+hard-coded default when the explicit `model` argument is absent; it bypasses
+both environment names and their conflict warning. This remains an
+implementation gap, not a supported exception to the intended contract.
+An explicit `get_chat_backend(model=...)` value takes priority on either path.
+The existing `tests/scitex_sdk/app/_chat/test__backends.py` controls test the
+resolver itself; they do not establish that every backend selection uses it.
 
 ## Usage Examples
 
@@ -108,10 +133,13 @@ export SCITEX_API_TOKEN="your-jwt-token"
 export SCITEX_API_URL="http://192.168.1.100:8000"
 ```
 
-### Production standalone app
+### Local standalone development with debug disabled
 
 ```bash
 export DJANGO_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(50))')"
 export DJANGO_DEBUG="false"
 export SCITEX_WORKING_DIR="/data/user_projects"
 ```
+
+These environment settings still launch Django’s development server. They do
+not constitute a production deployment configuration.

@@ -7,7 +7,8 @@ tags: [scitex-app-standalone]
 
 # Standalone Mode
 
-`scitex_sdk.app.embed.run_standalone()` launches any SciTeX app locally with the full workspace shell — same UX as scitex-hub, no server required.
+`scitex_sdk.app.embed.run_standalone()` starts a local Django development
+server with the SDK workspace shell. It does not require a SciTeX Hub server.
 
 `embed` is the public host-embedding surface (`scitex_sdk.app.embed`) — import from there, not from the private `scitex_sdk.app._standalone` / `scitex_sdk.app._django` implementation modules.
 
@@ -25,7 +26,7 @@ def run_standalone(
     extra_installed_apps: Optional[list[str]] = None,
     extra_staticfiles_dirs: Optional[list[str]] = None,
     extra_env: Optional[dict[str, str]] = None,
-) -> None
+) -> None: ...
 ```
 
 ### Parameters
@@ -36,8 +37,8 @@ def run_standalone(
 | `port` | `8050` | TCP port for the Django server |
 | `host` | `"127.0.0.1"` | Host to bind (use `"0.0.0.0"` for LAN access) |
 | `open_browser` | `True` | Open browser tab automatically after 1.5 s |
-| `hot_reload` | `False` | Enable Django `--reload` (file watching) |
-| `working_dir` | `None` | Sets `SCITEX_WORKING_DIR`; defaults to `cwd` |
+| `hot_reload` | `False` | Enable the Django autoreloader (file watching) |
+| `working_dir` | `None` | Sets the resolved `SCITEX_WORKING_DIR`; otherwise retains an existing value, then falls back to `cwd` |
 | `desktop` | `False` | Launch as native window via `pywebview` if installed |
 | `extra_installed_apps` | `None` | Additional Django app strings to add to `INSTALLED_APPS` |
 | `extra_staticfiles_dirs` | `None` | Additional static file directories |
@@ -90,42 +91,50 @@ look".
 
 ### Django settings configured
 
-**ONLY IF DJANGO IS NOT ALREADY CONFIGURED.** `_configure_django()` opens with
-`if django.conf.settings.configured: return`, so if your app sets
-`DJANGO_SETTINGS_MODULE` and calls `django.setup()` before `run_standalone()`,
-**none of the settings below apply to you** — your own settings module supplies
-all of them, and the SDK contributes nothing.
+The following settings apply only when Django settings are not already
+configured. `_configure_django()` returns immediately when
+`django.conf.settings.configured` is true, so an embedding host keeps its own
+settings. Setting `DJANGO_SETTINGS_MODULE` alone is not the guard: the helper
+checks the settings object's configured state.
 
-That is the shape every embedded leaf uses today, so for those apps this list is
-not what you get. Measured 2026-08-23 with scitex-scholar: their `_server.py`
-calls `django.setup()` and then `run_standalone()`, and the running process
-reports their own `ALLOWED_HOSTS`, not the SDK's. I had assumed the opposite and
-told them so; the one-line check below is what settled it.
+Selected settings for a fresh standalone process:
 
-```python
-import django.conf
-print(django.conf.settings.configured)      # True before run_standalone -> SDK is inert
-print(django.conf.settings.ALLOWED_HOSTS)   # whose list did you actually get?
-```
+- `INSTALLED_APPS`: `django.contrib.staticfiles`, `scitex_sdk.app`,
+  `<app_module>` and the bundled `scitex_sdk.ui`, followed by explicit
+  `extra_installed_apps` entries. These are SDK modules, not separate legacy
+  `scitex-app` or `scitex-ui` installations. The launcher raises
+  `ScitexUiRequiredError` before configuration if the SDK UI module is missing.
+- `ROOT_URLCONF`: `<app_module>.urls`; `STATIC_URL`: `/static/`.
+- `STATICFILES_DIRS`: the app's existing `static/` directory, the existing
+  `_standalone_static/` directory if present, and `extra_staticfiles_dirs`.
+  Django also discovers installed apps' static assets.
+- `DATABASES`: `{}`. Read-only apps and chat streaming can run without a
+  database; session history has additional requirements below.
+- `SECRET_KEY`: `DJANGO_SECRET_KEY`, or `scitex-standalone-dev-key` when absent.
+- `DEBUG`: true only when `DJANGO_DEBUG.lower() == "true"`; the default is
+  `"true"`. `"1"` and `"true "` are false.
+- `ALLOWED_HOSTS`: loopback, names implied by the bound `host`, and
+  comma-separated `SCITEX_ALLOWED_HOSTS` entries.
+- `SCITEX_APP_MODE`: `"standalone"`; the project provider is
+  `scitex_sdk.app.project_context.StandaloneProjectProvider`.
 
-If Django is unconfigured at call time, `run_standalone()` calls
-`django.conf.settings.configure()` with:
+The settings helper configures only once. Calling `run_standalone()` again is
+not a no-op: it still applies its environment updates and reaches server
+startup. `working_dir` first sets a resolved `SCITEX_WORKING_DIR`; when omitted,
+an existing value is retained, otherwise the current directory is used.
+`extra_env` is applied afterward and can override that value.
 
-- `INSTALLED_APPS`: `django.contrib.staticfiles`, `scitex_app`, `<app_module>`, `scitex_ui` (the shell — `run_standalone()` requires scitex-ui installed and raises `ScitexUiRequiredError` at startup if it is missing)
-- `ROOT_URLCONF`: `<app_module>.urls`
-- `STATIC_URL`: `/static/`
-- `STATICFILES_DIRS`: app's own `static/` + `_standalone_static/` shell assets
-- `DATABASES`: `{}` (no DB required for read-only apps)
-- `SECRET_KEY`: from `DJANGO_SECRET_KEY` env or `"scitex-standalone-dev-key"`
-- `DEBUG`: from `DJANGO_DEBUG` env (default `"true"`)
+`DJANGO_DEBUG=false` does not turn this launcher into a production server.
+`_run_server()` invokes Django's development `runserver` with `--insecure` to
+serve static assets, and adds `--noreload` when `hot_reload=False`. Use the
+host's deployment settings and server for production hosting.
 
-- `ALLOWED_HOSTS`: loopback, the bound `host`, and `SCITEX_ALLOWED_HOSTS` (comma-separated)
-
-Settings configure only once. Note this cuts two ways, and the second is the one
-that surprises people: calling `run_standalone()` twice is a harmless no-op, but
-configuring Django *yourself* first makes the SDK's settings silently inert —
-no error, no warning, and a `serve --host` that binds fine and then 400s if your
-own `ALLOWED_HOSTS` does not include the address.
+Owning implementation: `app/_standalone.py::run_standalone`,
+`_configure_django` and `_run_server`; public aliases live in `app/embed.py`.
+Behavioral controls: `tests/scitex_sdk/app/test__standalone_scitex_ui_guard.py`,
+`test__standalone_allowed_hosts.py` and `test_embed.py`. The fresh-settings
+controls exercise real Django configuration and stop the server before bind;
+they do not establish a live deployment or rendered UI acceptance.
 
 ### Chat, in a profile with no database
 
@@ -137,20 +146,24 @@ urlpatterns += chat.chat_stream_urlpatterns   # streaming only, NO database
 urlpatterns += chat.chat_urlpatterns          # + session history, needs one
 ```
 
-`chat_urlpatterns` bundles the session CRUD routes and every one of those
-queries the ORM, so mounting it here is a 500 per request, not a degraded mode.
-Until 0.21.0 it was the only list published — a trap with no correct exit.
-`chat_stream_urlpatterns` is the exit, and it is the one this profile wants.
+`chat_urlpatterns` bundles session CRUD routes that need the ORM. Without a
+usable database they raise `chat.ChatSessionsRequireADatabaseError`; with a
+database but no registered models app they raise
+`chat.ChatSessionsAppNotInstalledError`. Unhandled, these are server errors.
+Use `chat_stream_urlpatterns` for the launcher’s database-free settings.
 
-Session history needs BOTH a database AND the models' app registered. Those two
-requirements come apart (a host can have one without the other), so since 0.22.0
-the views name which one is missing. Catch `chat.ChatSessionsUnavailableError`
-for "can these work here at all"; its two subclasses say which fix applies.
+Session history requires both a usable database and the models’ app registered.
+Catch `chat.ChatSessionsUnavailableError` when a host needs to handle either
+missing prerequisite; its subclasses distinguish the required fixes.
+Behavioral controls live in
+`tests/scitex_sdk/app/_chat/test__django_mount_points.py`,
+`test__django_db_free.py`, `test__session_views_database_guard.py` and
+`test__session_views_app_registration.py`.
 
 ### Requirements
 
-- `django` (always required)
-- `scitex_ui` (optional, provides the workspace shell sidebar/panel)
+- `scitex-sdk[gui]` supplies the Django dependencies; the UI shell is bundled
+  as `scitex_sdk.ui` and required by this launcher
 - `pywebview` (optional, only for `desktop=True`)
 
 ### Testing the `gui` command's real CLI path
