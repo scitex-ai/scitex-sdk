@@ -3,12 +3,19 @@
 from pathlib import Path
 from uuid import UUID
 
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
 from scitex_sdk.host import CapabilityUnavailable, StoreAccess
 from scitex_sdk.ui import project_scope
 
 
 def _root():
-    from django.conf import settings
+    try:
+        from django.conf import settings
+    except ModuleNotFoundError as error:
+        if error.name != "django":
+            raise
+        raise ImportError(GUI_INSTALL_HINT) from error
 
     return Path(settings.SCITEX_LOCAL_PROJECT_ROOT).resolve()
 
@@ -32,7 +39,12 @@ class LocalProjectStorage:
 
 class LocalProjectStore:
     def store_access(self, project_id, request):
-        from django.conf import settings
+        try:
+            from django.conf import settings
+        except ModuleNotFoundError as error:
+            if error.name != "django":
+                raise
+            raise ImportError(GUI_INSTALL_HINT) from error
 
         if LocalProjectStorage().project_path(project_id, request) is None:
             raise CapabilityUnavailable("Project not available")

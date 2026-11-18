@@ -31,10 +31,17 @@ advertises the provider to client-side pickers (``hostProjectProvider()``).
 
 from __future__ import annotations
 
-from django import template
-from django.core.exceptions import ImproperlyConfigured
-from django.template.loader import render_to_string
-from django.utils.html import format_html
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
+try:
+    from django import template
+    from django.core.exceptions import ImproperlyConfigured
+    from django.template.loader import render_to_string
+    from django.utils.html import format_html
+except ModuleNotFoundError as error:
+    if error.name != "django":
+        raise
+    raise ImportError(GUI_INSTALL_HINT) from error
 
 from scitex_sdk.ui.project_scope import (
     PROJECT_PROVIDER_META_NAME,

@@ -15,10 +15,17 @@ from __future__ import annotations
 import hashlib
 import os
 
-from django import template
-from django.contrib.staticfiles import finders
-from django.contrib.staticfiles.storage import staticfiles_storage
-from django.templatetags.static import static
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
+try:
+    from django import template
+    from django.contrib.staticfiles import finders
+    from django.contrib.staticfiles.storage import staticfiles_storage
+    from django.templatetags.static import static
+except ModuleNotFoundError as error:
+    if error.name != "django":
+        raise
+    raise ImportError(GUI_INSTALL_HINT) from error
 
 register = template.Library()
 
