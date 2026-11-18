@@ -59,4 +59,4 @@ Try it: `pip install -e examples/hello_world_app` on a hub, restart, open
 - `scitex_modules` (returns a hub `ModuleConfig`) and `scitex_hub.apps`
   (urlpatterns for store-published `/apps/u/<module>/`) are older, narrower
   hooks; a new app needs only `scitex.apps`.
-- Dev-install (`scitex-sdk app dev-install`) is per-user preview, not install.
+- Dev-install (`scitex-sdk app install-dev`) is per-user preview, not install.

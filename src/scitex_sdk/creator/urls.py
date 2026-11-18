@@ -15,7 +15,14 @@ collide with another app's route names. Client fetch URLs are RELATIVE
 
 from __future__ import annotations
 
-from django.urls import path
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
+try:
+    from django.urls import path
+except ModuleNotFoundError as error:
+    if error.name != "django":
+        raise
+    raise ImportError(GUI_INSTALL_HINT) from error
 
 from . import views
 
