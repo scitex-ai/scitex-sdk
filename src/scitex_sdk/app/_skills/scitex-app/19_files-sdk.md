@@ -110,6 +110,14 @@ Returns list of relative path strings. Only files, not directories.
 
 ### exists() / delete() / rename() / copy()
 
+For the built-in cloud backend, `exists()` returns `False` only when the API
+responds with HTTP 404. Authentication, permission, other HTTP failures and
+transport errors propagate; they are not evidence that a file is absent.
+An API that deliberately conceals a resource with 404 is still observed as
+absent by this client. The server owns that policy.
+See `app/sdk/_cloud_files.py::CloudFilesBackend.exists` and the actual HTTP
+controls in `tests/integration/test_cloud_file_existence.py`.
+
 ```python
 if files.exists("data/config.yaml"):
     files.delete("data/old.csv")
