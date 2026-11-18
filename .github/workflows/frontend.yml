@@ -1,8 +1,8 @@
 name: frontend
 
 on:
+  # Include feature-branch bases so stacked pull requests receive original checks.
   pull_request:
-    branches: [main, develop]
   push:
     branches: [main, develop]
   workflow_dispatch:
