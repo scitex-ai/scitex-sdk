@@ -121,7 +121,7 @@ only-include = [
     "src/scitex_sdk", "scripts", "tests", "docs", "examples", ".github",
     "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml", ".gitignore",
     "package.json", "package-lock.json", "tsconfig.json", "eslint.config.mjs",
-    "vitest.config.ts", "playwright.header.config.ts", ".readthedocs.yaml",
+    ".readthedocs.yaml",
 ]
 
 [tool.pytest.ini_options]
