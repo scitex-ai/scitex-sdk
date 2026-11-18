@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import Iterable, Optional, Union
 
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
 __all__ = [
     "JS_CATALOG_DOMAIN",
     "JS_CATALOG_ELEMENT_PREFIX",
@@ -44,9 +46,14 @@ def js_catalog(
     Django's ``JavaScriptCatalog`` takes them. ``language`` defaults to the
     active language.
     """
-    from django.utils.translation import get_language
-    from django.utils.translation.trans_real import DjangoTranslation
-    from django.views.i18n import JavaScriptCatalog
+    try:
+        from django.utils.translation import get_language
+        from django.utils.translation.trans_real import DjangoTranslation
+        from django.views.i18n import JavaScriptCatalog
+    except ModuleNotFoundError as error:
+        if error.name != "django":
+            raise
+        raise ImportError(GUI_INSTALL_HINT) from error
 
     package_list = _as_package_list(packages)
     resolved_language = language or get_language() or "en"

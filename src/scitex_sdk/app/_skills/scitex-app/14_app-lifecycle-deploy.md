@@ -21,7 +21,7 @@ scitex-sdk app validate .
 
 # 4. Dev-install
 export SCITEX_API_TOKEN="your-jwt-token"
-scitex-sdk app dev-install . --server http://127.0.0.1:8000
+scitex-sdk app install-dev . --server http://127.0.0.1:8000
 
 # 5. Open http://127.0.0.1:8000/ and check your tab appears
 ```

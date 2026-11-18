@@ -28,8 +28,8 @@ Auto-detection order:
 ```python
 from scitex_sdk.app.sdk import get_files
 
-# Local filesystem (default)
-files = get_files("./my_project")
+# Explicit local storage, even if an API token is inherited
+files = get_files("./my_project", backend="local")
 
 # Cloud (SCITEX_API_TOKEN must be set)
 files = get_files()
@@ -38,7 +38,26 @@ files = get_files()
 files = get_files(backend="s3", bucket="my-bucket")
 ```
 
-Raises `KeyError` if a named backend is not registered.
+`root` alone does not select local storage: a nonempty token still selects
+cloud, where the built-in factory treats `root` as an app namespace, not a
+filesystem directory. `SCITEX_API_URL` alone does not select cloud.
+
+Explicit names must already be registered. The built-in `local` and
+`filesystem` names are registered at import time; a host can replace any
+registered factory. Explicit `backend="cloud"` raises `KeyError` until that
+name has been registered; token-based automatic selection registers the
+built-in factory when needed. Backend construction makes no HTTP request and
+is not proof of credentials, permissions or server availability.
+
+The App MCP file tools use a different default: `backend="local"` pins local
+storage. Their explicit `backend="cloud"` route requires a nonempty token and
+registers the cloud factory; it refuses a missing token instead of falling
+back. See `app/_mcp/server.py::_resolve_files`.
+
+Owner and behavioral evidence: `app/sdk/__init__.py::get_files`,
+`app/sdk/_cloud_files.py::cloud_files_factory`,
+`tests/scitex_sdk/app/sdk/test___init___files_local.py` and
+`tests/scitex_sdk/app/_mcp/test_server.py`.
 
 ## FilesBackend Protocol
 
@@ -55,7 +74,11 @@ class FilesBackend(Protocol):
     def copy(self, src_path: str, dest_path: str) -> None: ...
 ```
 
-All `path` arguments are relative to the backend's root namespace. Path traversal (`../`) is blocked.
+All `path` arguments are relative to the backend's root namespace.
+`FileSystemBackend` resolves paths and refuses escapes from its root (including
+symlink escapes); see `tests/scitex_sdk/app/sdk/test__filesystem.py`.
+Cloud paths are forwarded to the service; this client does not establish
+server-side traversal protection or authorization.
 
 ### read()
 
@@ -86,6 +109,14 @@ py_files   = files.list("src", extensions=[".py"])
 Returns list of relative path strings. Only files, not directories.
 
 ### exists() / delete() / rename() / copy()
+
+For the built-in cloud backend, `exists()` returns `False` only when the API
+responds with HTTP 404. Authentication, permission, other HTTP failures and
+transport errors propagate; they are not evidence that a file is absent.
+An API that deliberately conceals a resource with 404 is still observed as
+absent by this client. The server owns that policy.
+See `app/sdk/_cloud_files.py::CloudFilesBackend.exists` and the actual HTTP
+controls in `tests/integration/test_cloud_file_existence.py`.
 
 ```python
 if files.exists("data/config.yaml"):
