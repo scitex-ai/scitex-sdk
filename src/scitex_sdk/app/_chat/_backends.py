@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import inspect
 import scitex_logging as slogging
 import os
 from typing import Any, Dict, Iterator, List, Optional
@@ -35,6 +36,12 @@ class AnthropicChatBackend:
         temperature: float = 0.7,
         system: Optional[str] = None,
     ) -> Iterator[Dict[str, Any]]:
+        """Stream with the historical 0.7 temperature default left unsent.
+
+        Explicit non-default temperatures require an SDK method that exposes
+        that parameter. Current Anthropic Messages methods removed it; return
+        an error event before any request instead of silently ignoring it.
+        """
         try:
             import anthropic
         except ImportError as exc:
@@ -53,6 +60,17 @@ class AnthropicChatBackend:
             kwargs["system"] = system
 
         try:
+            if temperature != 0.7:
+                if "temperature" not in inspect.signature(client.messages.stream).parameters:
+                    client.close()
+                    yield {
+                        "type": "error",
+                        "error": "Anthropic SDK temperature is not supported; "
+                        "omit a non-default temperature or use a backend "
+                        "that supports sampling.",
+                    }
+                    return
+                kwargs["temperature"] = temperature
             with client.messages.stream(**kwargs) as stream:
                 for text in stream.text_stream:
                     yield {"type": "chunk", "text": text}
@@ -159,6 +177,9 @@ def get_chat_backend(
 
     The default model comes from ``SCITEX_APP_LLM_MODEL``; see
     :func:`_resolve_default_model` for the deprecated ``LLM_MODEL`` alias.
+    The direct Anthropic client receives the resolved environment model
+    without its optional ``anthropic/`` provider prefix. A nonempty explicit
+    ``model`` is forwarded unchanged and bypasses environment resolution.
     """
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if api_key:
@@ -167,7 +188,7 @@ def get_chat_backend(
 
             return AnthropicChatBackend(
                 api_key=api_key,
-                default_model=model or "claude-sonnet-4-20250514",
+                default_model=model or _resolve_default_model().removeprefix("anthropic/"),
             )
         except ImportError:
             pass

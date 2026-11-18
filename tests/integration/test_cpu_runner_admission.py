@@ -1,11 +1,12 @@
 """CPU workflows respect organization admission and host quarantine labels."""
-from pathlib import Path
 
 import pytest
 import yaml
 
+from tests._checkout import REPO_ROOT
 
-WORKFLOWS = Path(__file__).resolve().parents[1] / '.github' / 'workflows'
+
+WORKFLOWS = REPO_ROOT / '.github' / 'workflows'
 ADMISSION = 'scitex-ai/.github/.github/workflows/runner-admission.yml@d7d96c34d68cdfbb5503a933591f7748b5aa30ee'
 DESTINATION = " ".join('''${{ needs.runner-admission.outputs.native_authorized == 'true'
     && fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}')

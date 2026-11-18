@@ -123,7 +123,7 @@ Shell sizing and mobile gestures own only direct utility sidebars, including
 the host's Chat/Console and Editor utility wrappers. A nested app Details pane
 keeps its own collapse, dimensions and ARIA state. The shell must neither clear
 that class on a breakpoint nor restore it from utility preferences.
-`tests/browser/shell-frame.spec.ts` exercises real wheel scrolling, varied
+`tests/integration/browser/shell-frame.spec.ts` exercises real wheel scrolling, varied
 header and viewport heights, direct/wrapped utilities and nested sidebar state.
 These cases run in the existing `frontend / header-browser` CI job. The two
 shell stylesheets and mobile runtime use `app_static` URLs, so changed asset

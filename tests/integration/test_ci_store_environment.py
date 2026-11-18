@@ -2,12 +2,16 @@
 import importlib.util
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
-GUARD = Path(__file__).resolve().parents[1] / "scripts/ci-store-environment.py"
+import pytest
+
+from tests._checkout import REPO_ROOT
+
+GUARD = REPO_ROOT / "scripts/ci-store-environment.py"
 
 
 def test_child_startup_removes_hostile_selectors_before_imports():
@@ -49,20 +53,38 @@ def test_explicit_owned_sqlite_fixture_still_operates(tmp_path):
     # Arrange
     database = tmp_path / "fixture.sqlite3"
     code = """
-import os, sqlite3, sys
+import sys, time
+started = time.monotonic()
+def stage(name):
+    print(f"sdk-sqlite-control: {name} +{time.monotonic() - started:.6f}s", file=sys.stderr, flush=True)
+stage("python-started")
+import os, sqlite3
 from pathlib import Path
+stage("imports-ready")
 assert 'PGSERVICE' not in os.environ
+stage("connect-start")
 with sqlite3.connect(sys.argv[1]) as connection:
+    stage("connection-ready")
     connection.execute('CREATE TABLE owned_fixture(value TEXT)')
+    stage("table-ready")
     connection.execute("INSERT INTO owned_fixture VALUES ('fixture')")
+    stage("insert-complete")
     assert connection.execute('SELECT value FROM owned_fixture').fetchone() == ('fixture',)
+    stage("verified-before-commit")
+stage("commit-complete")
 print(Path(os.environ['PGPASSFILE']).parent)
 """
     # Act
-    child = subprocess.run([sys.executable, "-I", "-S", str(GUARD), "--",
-                            sys.executable, "-I", "-c", code, str(database)],
-                           env=dict(os.environ, PGSERVICE="hostile-service"),
-                           capture_output=True, text=True, timeout=10)
+    try:
+        child = subprocess.run([sys.executable, "-I", "-S", str(GUARD), "--",
+                                sys.executable, "-I", "-c", code, str(database)],
+                               env=dict(os.environ, PGSERVICE="hostile-service", SCITEX_SDK_CI_TRACE="1"),
+                               capture_output=True, text=True, timeout=10)
+    except subprocess.TimeoutExpired as error:
+        raise AssertionError(
+            "Owned SQLite control exceeded its 10-second limit; "
+            f"last child diagnostics: {error.stderr!r}"
+        ) from error
     if child.returncode:
         raise AssertionError(child.stderr)
     shutil.rmtree(Path(child.stdout.strip()))
@@ -144,3 +166,30 @@ def test_actual_bash_phase_cannot_reintroduce_service_from_inherited_startup(tmp
     shutil.rmtree(Path(child.stdout.strip()))
     # Assert
     assert child.returncode == 0
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_stage_trace_is_opt_in_and_preserves_floor_stdout_and_exit(enabled):
+    # Arrange
+    environment = dict(os.environ, PGSERVICE="synthetic-hostile-service")
+    environment.pop("SCITEX_SDK_CI_TRACE", None)
+    if enabled:
+        environment["SCITEX_SDK_CI_TRACE"] = "1"
+    code = (
+        "import json,os;from pathlib import Path;"
+        "assert 'PGSERVICE' not in os.environ;"
+        "print(json.dumps({'root':str(Path(os.environ['PGPASSFILE']).parent),"
+        "'value':'owned-child'}));raise SystemExit(23)"
+    )
+    # Act
+    child = subprocess.run(
+        [sys.executable, "-I", "-S", str(GUARD), "--", sys.executable, "-I", "-c", code],
+        env=environment, capture_output=True, text=True, timeout=10, check=False,
+    )
+    observed = json.loads(child.stdout)
+    shutil.rmtree(Path(observed["root"]))
+    expected = ["sdk-store-control: guard-started", "sdk-store-control: floor-ready"] if enabled else []
+    # Assert: diagnostic output cannot replace the refusal floor or child status.
+    assert (child.returncode, observed["value"], child.stderr.splitlines()) == (
+        23, "owned-child", expected,
+    )
