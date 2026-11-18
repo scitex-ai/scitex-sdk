@@ -17,9 +17,9 @@ import webbrowser
 from pathlib import Path
 from typing import Optional
 
-from scitex_sdk._gui_address import _server_address, _url_host
-
 import scitex_logging as slogging
+
+from scitex_sdk._gui_address import _server_address, _url_host
 
 log = slogging.getLogger(__name__)
 
