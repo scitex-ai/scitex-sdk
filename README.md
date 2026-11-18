@@ -209,10 +209,14 @@ command you intend to run with `--help`. App/UI Django settings, such as
 
 The [UI TypeScript configuration](src/scitex_sdk/ui/tsconfig.json) sits beside
 its sources for editor discovery; npm and CI use that same file. It ships in
-both the source distribution and wheel with the UI sources. The root
-ESLint configuration remains the native lint-discovery entry point. Run
-`npm run typecheck` from the repository root, or pass the UI configuration
-explicitly to `tsc -p`.
+both the source distribution and wheel with the UI sources.
+[ESLint configuration](src/scitex_sdk/ui/eslint.config.mjs) also sits beside
+those sources. npm and CI select it explicitly; its base path preserves the
+existing repository-relative file patterns and rule selections. Run
+`npm run typecheck` and `npm run lint` from the repository root. For direct
+commands, pass the UI configuration with `tsc -p` or `eslint --config`.
+Editors that use the repository root as ESLint's working directory must
+select that ESLint configuration path explicitly.
 
 In a virtual environment with pip 25.1 or newer, install the declared
 contributor group from the checkout:
