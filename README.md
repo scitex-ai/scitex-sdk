@@ -34,6 +34,26 @@
 | A leaf application needs both standalone and hosted operation. | Use `scitex_sdk.app` contracts and host adapters; keep domain logic in the leaf. |
 | Shared interface rules need an implementation owner. | SDK-owned auditors and hooks register with the `scitex-dev` dispatcher. |
 
+## Quick Start
+
+After [installation](#installation), inspect the bundled frontend and skill
+namespaces without starting a server:
+
+```python
+from scitex_sdk import get_frontend_package_dir, list_bundled_skills
+
+frontend = get_frontend_package_dir()
+skills = list_bundled_skills()
+print(frontend / "package.json")
+print(sorted(skills))
+```
+
+The frontend directory contains the `@scitex/sdk` package manifest. The skill
+namespaces are `scitex-app`, `scitex-sdk` and `scitex-ui`; this helper reads
+bundled package resources, independently of user skill discovery.
+For app development, follow the [App/UI contract](src/scitex_sdk/_docs/APP_DEVELOPER_GUIDE.md)
+and the [SDK workflow skill](src/scitex_sdk/_skills/scitex-sdk/SKILL.md).
+
 ## Installation
 
 Install the declared runtime capabilities:
@@ -76,26 +96,6 @@ extras install their optional dependencies. The `cli` and `project` extras,
 and consequently `all`, require `scitex-dev>=0.62.6` for the declared provider
 replacement SPI. Contributor dependencies use a separate dependency group;
 see [Development checks](#development-checks).
-
-## Quick Start
-
-After [installation](#installation), inspect the bundled frontend and skill
-namespaces without starting a server:
-
-```python
-from scitex_sdk import get_frontend_package_dir, list_bundled_skills
-
-frontend = get_frontend_package_dir()
-skills = list_bundled_skills()
-print(frontend / "package.json")
-print(sorted(skills))
-```
-
-The frontend directory contains the `@scitex/sdk` package manifest. The skill
-namespaces are `scitex-app`, `scitex-sdk` and `scitex-ui`; this helper reads
-bundled package resources, independently of user skill discovery.
-For app development, follow the [App/UI contract](src/scitex_sdk/_docs/APP_DEVELOPER_GUIDE.md)
-and the [SDK workflow skill](src/scitex_sdk/_skills/scitex-sdk/SKILL.md).
 
 ## Architecture
 
