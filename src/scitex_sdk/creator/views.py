@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Views for the SciTeX SDK (app-maker) wizard.
 
-``index`` is the server-rendered wizard (starter cards + forms); every
+``index`` is the server-rendered brief-first wizard and creation form; every
 mutation is a JSON API wired to the SDK-owned appmaker engine
 (``scitex_sdk.app.appmaker`` — the implementation consolidates into the SDK
 gradually, per the facade pattern):
@@ -164,7 +164,7 @@ def api_validate_input(request):
 
 @require_POST
 def api_create(request):
-    """Scaffold a new app from a starter into a fresh directory."""
+    """Create a workspace from a brief, retaining the legacy starter API."""
     from scitex_sdk.app.appmaker import init_app
 
     data, err = _json_body(request)
