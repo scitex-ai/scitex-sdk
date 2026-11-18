@@ -108,7 +108,7 @@ artifacts = [
 ]
 
 [tool.hatch.build.hooks.custom]
-path = "hatch_build.py"
+path = "scripts/hatch_build.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/scitex_sdk"]
@@ -119,7 +119,7 @@ packages = ["src/scitex_sdk"]
 # Select real project inputs directly, including the release/frontend gates.
 only-include = [
     "src/scitex_sdk", "scripts", "tests", "docs", "examples", ".github",
-    "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml", ".gitignore", "hatch_build.py",
+    "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml", ".gitignore",
     "package.json", "package-lock.json", "tsconfig.json", "eslint.config.mjs",
     "vitest.config.ts", "playwright.header.config.ts", ".readthedocs.yaml",
 ]
