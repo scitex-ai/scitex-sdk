@@ -31,7 +31,7 @@ def get_frontend_package_dir() -> Path:
 
 
 def __getattr__(name: str):
-    if name in {"app", "ui", "project"}:
+    if name in {"app", "ui", "project", "hierarchy"}:
         module = importlib.import_module(f"{__name__}.{name}")
         globals()[name] = module
         return module
@@ -42,6 +42,7 @@ __all__ = [
     "__version__",
     "app",
     "get_frontend_package_dir",
+    "hierarchy",
     "list_bundled_skills",
     "ui",
 ]
