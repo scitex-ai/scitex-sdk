@@ -20,28 +20,72 @@ accepts `-h/--help`; `--json` propagates to subcommands that honour it.
 - `list-python-apis` — public API tree for both components (`--json`).
 - `install-shell-completion`, `print-shell-completion` — TAB completion.
 
-## Configuration reader scope
+## GUI configuration
 
-The root, App and UI group entrypoints do not implement the advertised generic
-`config.yaml` / `SCITEX_<GROUP>_CONFIG` / `~/.scitex/<group>/config.yaml`
-resolution chain. Wiring the shared ecosystem configuration contract remains
-an implementation gap. Creating those files or setting a configuration-path
-variable alone does not establish that a command consumes it.
+`gui serve` and `gui open` read the selected SDK configuration for `host` and
+`port`. Select one file, without merging files, in this order:
 
-Use the actual command's declared options and environment readers:
+1. `scitex-sdk gui --config PATH serve` (or `open`).
+2. A nonempty `SCITEX_SDK_CONFIG` path.
+3. An existing `.scitex/sdk/config.yaml` in the nearest Git project, using
+   `scitex_config._ecosystem.local_state.path` discovery.
+4. `$SCITEX_DIR/sdk/config.yaml`, defaulting to `~/.scitex/sdk/config.yaml`.
 
-- `gui serve --dry-run --json` shows the default host127.0.0.1/port31301;
-  `--host` and `--port` select explicit values. The selected GUI command does
-  not consume those YAML files or a `SCITEX_SDK_CONFIG` path.
-- `app install-dev . --dry-run` previews its server without contacting it.
-  `--server` overrides `SCITEX_SERVER_URL`, then the default
-  `http://127.0.0.1:8000`. Real installation additionally requires the normal
-  authorization and validation workflow.
-- Other SDK commands, runtime helpers, linters and peers can have their own
-  readers; check the owning implementation rather than extending these two
-  command-specific results into a package-wide configuration claim.
+The shared resolver walks up to the nearest Git boundary. It does not select
+an outer project's configuration across a nested Git repository. An arbitrary
+`./config.yaml` is not read automatically; select it explicitly with `--config`
+when intended. Reading does not create or rewrite the configuration file.
 
-Owning readers: `cli.py::gui_serve` and
-`app/_cli/_app.py::app_install_dev`. Both remain unchanged by this guide.
-The root/App/UI callbacks set Click context and dispatch commands; mentioning
-configuration paths in help is not a loader or a precedence test.
+```yaml
+gui:
+  host: localhost
+  port: 31302
+```
+
+Each value uses the owning `PriorityConfig` cascade: explicit `--host`/`--port`,
+then the selected YAML `gui` key, then `SCITEX_SDK_GUI_HOST` /
+`SCITEX_SDK_GUI_PORT`, then the command defaults `127.0.0.1` / `31301`.
+The YAML port must be an unquoted integer; environment ports are converted to
+integers. Effective ports must be 1–65535. Hosts must be nonempty strings
+without surrounding whitespace.
+
+Only `gui.host` and `gui.port` are supported in this reader. Other keys inside
+`gui` refuse, including `force` and `allow_remote`. Other root sections are not
+consumed by this reader. File configuration cannot authorize a non-loopback
+bind: `--allow-remote` still has to be passed on the command line. Process
+control flags keep their existing command-line behavior.
+
+Missing default files use the command/environment/default cascade without creation. A missing explicitly
+selected file, broken explicit symlink, malformed YAML or invalid GUI schema
+refuses without falling back to another file. An empty or null document uses
+the remaining value cascade. The selected GUI schema is validated before
+applying command overrides; an override does not hide an invalid GUI schema.
+`gui --help`, command help, `status` and `stop` do not load the GUI YAML file,
+so those recovery paths remain usable with damaged configuration.
+
+```bash
+scitex-sdk gui --config ./sdk.yaml serve --dry-run --json
+scitex-sdk gui open --port 31303 --dry-run --json
+```
+
+Owners: `_gui_config.py::resolve_gui_options`, `cli.py::{gui_serve,gui_open}`;
+shared parsing, path discovery and value precedence remain in `scitex-config`.
+Actual subprocess CLI controls, including guards and read-only symlinks, live
+in `tests/integration/test_gui_configuration.py`; existing command contracts
+live in `tests/scitex_sdk/test_cli_gui.py` and `test_cli_root.py`.
+An already-running wizard follows the existing reuse behavior; new host/port
+settings apply to a new launch. Dry-run tests do not start a server or
+establish a rendered/deployed GUI.
+
+## Configuration scope still incomplete
+
+This GUI reader does not implement a generic YAML chain for the root, App or
+UI groups or their other commands. That integration remains outstanding;
+creating their conventional files does not establish consumption.
+
+For `app install-dev . --dry-run`, `--server` overrides `SCITEX_SERVER_URL`,
+then the default `http://127.0.0.1:8000`; the GUI configuration above does not
+select that server. Actual installation still requires the normal validation
+and authorization workflow. Other SDK helpers and peers have their own
+readers: inspect the owning implementation before extending these scoped
+contracts into package-wide configuration claims.

@@ -98,10 +98,11 @@ def main(
 ) -> None:
     """scitex-sdk (vX.Y.Z) — app contract + UI shell + SciTeX SDK wizard.
 
-    Configuration: a shared config.yaml loader is not wired into these groups.
-    The intended ~/.scitex/<group>/config.yaml / SCITEX_<GROUP>_CONFIG
-    integration remains open. Use each command's declared options and
-    environment variables; see `scitex-sdk app --help` and `scitex-sdk ui --help`.
+    Configuration: GUI serve/open read host/port from `gui --config PATH`,
+    SCITEX_SDK_CONFIG, project .scitex/sdk/config.yaml, then the user SDK file.
+    Values prefer command options, YAML, SCITEX_SDK_GUI_HOST/PORT, then defaults.
+    Other App/UI group configuration integration remains open; use their
+    declared command options and environment variables.
     """
     ctx.ensure_object(dict)
     ctx.obj["json"] = as_json
@@ -144,9 +145,19 @@ def _print_help_recursive(ctx: click.Context) -> None:
 
 
 @main.group("gui", invoke_without_command=True)
+@click.option(
+    "--config", "config_path", metavar="PATH", help="SDK GUI YAML file for serve/open."
+)
 @click.pass_context
-def gui(ctx: click.Context) -> None:
-    """Serve the SciTeX SDK wizard (open/serve/status/stop)."""
+def gui(ctx: click.Context, config_path: str | None) -> None:
+    """Serve the SciTeX SDK wizard (open/serve/status/stop).
+
+    Serve/open read gui.host and gui.port. --config overrides SCITEX_SDK_CONFIG,
+    then shared project/user .scitex/sdk/config.yaml discovery applies.
+    Status/stop and help do not load this file. Safety flags remain CLI-only.
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["sdk_gui_config_path"] = config_path
     if ctx.invoked_subcommand is not None:
         return
     click.echo(
@@ -168,7 +179,9 @@ def gui(ctx: click.Context) -> None:
 @click.option("--hot-reload", is_flag=True, help="Enable Django auto-reload.")
 @click.option("--dry-run", is_flag=True, help="Print the launch without starting it.")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
+@click.pass_context
 def gui_serve(
+    ctx: click.Context,
     port: int,
     host: str,
     allow_remote: bool,
@@ -184,6 +197,9 @@ def gui_serve(
       $ scitex-sdk gui serve --port 31301
       $ scitex-sdk gui serve --dry-run
     """
+    from ._gui_config import resolve_gui_options
+
+    host, port = resolve_gui_options(ctx, host=host, port=port)
     _guard_bind(host, allow_remote)
     if dry_run:
         payload = {"would_serve": True, "host": host, "port": port, "force": force}
@@ -219,7 +235,9 @@ def gui_serve(
 @click.option("--no-browser", is_flag=True, help="Start the server but do not open a tab.")
 @click.option("--dry-run", is_flag=True, help="Print the launch without starting it.")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON.")
+@click.pass_context
 def gui_open(
+    ctx: click.Context,
     port: int,
     host: str,
     allow_remote: bool,
@@ -234,6 +252,9 @@ def gui_open(
       $ scitex-sdk gui open
       $ scitex-sdk gui open --no-browser
     """
+    from ._gui_config import resolve_gui_options
+
+    host, port = resolve_gui_options(ctx, host=host, port=port)
     _guard_bind(host, allow_remote)
     if dry_run:
         payload = {"would_open": True, "host": host, "port": port}
@@ -258,6 +279,10 @@ def gui_open(
         ]
         if allow_remote:
             command.append("--allow-remote")
+        config_path = (ctx.obj or {}).get("sdk_gui_config_path")
+        if config_path is not None:
+            # This is a gui-group option, before the child's serve verb.
+            command[4:4] = ["--config", config_path]
         with log_path.open("ab") as log:
             subprocess.Popen(
                 command,
