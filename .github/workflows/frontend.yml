@@ -58,7 +58,7 @@ jobs:
           on_disk=$(find src/scitex_sdk/ui/static/scitex_sdk/ui/ts \
                          src/scitex_sdk/ui/static/scitex_sdk/ui/react \
                          \( -name '*.ts' -o -name '*.tsx' \) | wc -l)
-          npx tsc -p tsconfig.json --listFiles --noEmit >listed.txt 2>/dev/null || true
+          npx tsc -p src/scitex_sdk/ui/tsconfig.json --listFiles --noEmit >listed.txt 2>/dev/null || true
           loaded=$(grep -c "$PWD/src/scitex_sdk/ui/static" listed.txt || true)
           rm -f listed.txt
           echo "source files on disk: $on_disk / loaded by tsc: $loaded"

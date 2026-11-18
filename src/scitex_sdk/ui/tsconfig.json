@@ -27,10 +27,10 @@
     "types": []
   },
   "include": [
-    "src/scitex_sdk/ui/static/scitex_sdk/ui/ts/**/*.ts",
-    "src/scitex_sdk/ui/static/scitex_sdk/ui/ts/**/*.tsx",
-    "src/scitex_sdk/ui/static/scitex_sdk/ui/react/**/*.ts",
-    "src/scitex_sdk/ui/static/scitex_sdk/ui/react/**/*.tsx"
+    "static/scitex_sdk/ui/ts/**/*.ts",
+    "static/scitex_sdk/ui/ts/**/*.tsx",
+    "static/scitex_sdk/ui/react/**/*.ts",
+    "static/scitex_sdk/ui/react/**/*.tsx"
   ],
-  "exclude": ["node_modules", "src/scitex_sdk/ui/static/scitex_sdk/ui/vendor"]
+  "exclude": ["../../../node_modules", "static/scitex_sdk/ui/vendor"]
 }

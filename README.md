@@ -20,7 +20,7 @@
   <a href="https://github.com/scitex-ai/scitex-sdk/actions/workflows/python-package.yml"><img src="https://img.shields.io/github/actions/workflow/status/scitex-ai/scitex-sdk/python-package.yml?label=tests&amp;branch=develop" alt="tests"></a>
   <a href="https://github.com/scitex-ai/scitex-sdk/actions/workflows/python-package.yml"><img src="https://img.shields.io/github/actions/workflow/status/scitex-ai/scitex-sdk/python-package.yml?label=install-check&amp;branch=develop" alt="install-check"></a>
   <a href="https://github.com/scitex-ai/scitex-sdk/actions/workflows/frontend.yml"><img src="https://img.shields.io/github/actions/workflow/status/scitex-ai/scitex-sdk/frontend.yml?label=quality&amp;branch=develop" alt="quality"></a>
-  <a href="#development-checks"><img src="https://img.shields.io/badge/cov-not%20published-lightgrey?label=cov" alt="cov: not published"></a>
+  <a href="#development-checks"><img src="https://img.shields.io/badge/coverage-not%20published-lightgrey?label=cov" alt="cov: not published"></a>
 </p>
 <!-- scitex-badges:end -->
 
@@ -206,6 +206,13 @@ command you intend to run with `--help`. App/UI Django settings, such as
 `SCITEX_UI_ELEMENT_INSPECTOR`, are distinct from environment variables.
 
 ## Development checks
+
+The [UI TypeScript configuration](src/scitex_sdk/ui/tsconfig.json) sits beside
+its sources for editor discovery; npm and CI use that same file. It ships in
+both the source distribution and wheel with the UI sources. The root
+ESLint configuration remains the native lint-discovery entry point. Run
+`npm run typecheck` from the repository root, or pass the UI configuration
+explicitly to `tsc -p`.
 
 In a virtual environment with pip 25.1 or newer, install the declared
 contributor group from the checkout:

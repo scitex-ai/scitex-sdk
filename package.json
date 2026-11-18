@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Contributor build and test tooling for scitex-sdk",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p src/scitex_sdk/ui/tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run --config scripts/vitest.config.ts",
     "build:ui": "node scripts/build-ui.mjs",
