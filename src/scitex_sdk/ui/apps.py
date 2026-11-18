@@ -10,7 +10,7 @@ feature context processors; middleware gates their visibility at runtime.
 SCITEX_UI_AUTOWIRE_INSPECTOR=False explicitly disables automatic registration.
 """
 
-from django.apps import AppConfig
+from .._django_app import AppConfig
 
 _MIDDLEWARE = "scitex_sdk.ui.middleware.ElementInspectorMiddleware"
 _CONTEXT_PROCESSOR = "scitex_sdk.ui.context_processors.element_inspector"
