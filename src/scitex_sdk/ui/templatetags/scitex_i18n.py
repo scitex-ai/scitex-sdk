@@ -5,8 +5,15 @@ from __future__ import annotations
 
 import sys
 
-from django import template
-from django.utils.html import json_script
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
+try:
+    from django import template
+    from django.utils.html import json_script
+except ModuleNotFoundError as error:
+    if error.name != "django":
+        raise
+    raise ImportError(GUI_INSTALL_HINT) from error
 
 from scitex_sdk.ui.i18n import js_catalog, js_catalog_element_id
 

@@ -7,14 +7,14 @@
 Usage (standalone / local):
     from scitex_sdk.app.sdk import get_files
 
-    files = get_files("./my_project")
+    files = get_files("./my_project", backend="local")
     content = files.read("recipes/my_recipe.yaml")
     files.write("output/result.png", png_bytes)
 
 Usage (cloud, auto-detected via SCITEX_API_TOKEN):
     files = get_files()  # routes through cloud REST API
 
-Usage (remote local, via SCITEX_API_URL):
+Usage (remote server, token selects cloud and URL selects its endpoint):
     import os
     os.environ["SCITEX_API_TOKEN"] = "your-token"
     os.environ["SCITEX_API_URL"] = "https://scitex.ai"
@@ -76,9 +76,14 @@ def get_files(
 
     1. If ``backend`` is specified, use that (``local``/``filesystem`` select
        the filesystem backend; a custom name must be registered first).
-    2. If ``SCITEX_API_TOKEN`` env var is set and "cloud" backend
-       is registered, use cloud.
+    2. If ``SCITEX_API_TOKEN`` is nonempty, use "cloud". Auto-register
+       the built-in cloud factory if a host has not already registered one.
     3. Otherwise, use filesystem (default).
+
+    Passing ``root`` alone does not pin local storage. ``SCITEX_API_URL``
+    configures the cloud client endpoint; it does not select a backend.
+    Explicit names must already be registered; only token-based automatic
+    selection registers the built-in cloud factory.
 
     Parameters
     ----------

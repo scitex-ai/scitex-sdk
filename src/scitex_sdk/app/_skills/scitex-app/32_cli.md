@@ -1,13 +1,13 @@
 ---
 description: |
   [TOPIC] CLI Reference
-  [DETAILS] scitex-sdk app CLI — file operations, app lifecycle (init/validate/dev-install/submit), MCP server, and Python API introspection..
+  [DETAILS] scitex-sdk app CLI — file operations, app lifecycle (init/validate/install-dev/submit), MCP server, and Python API introspection..
 tags: [scitex-app-cli]
 ---
 
 # CLI Reference
 
-Entry point: `scitex-app` (installed via `pip install scitex-sdk[gui,chat,mcp,cli]`)
+Entry point: `scitex-sdk app` (installed via `pip install scitex-sdk[gui,chat,mcp,cli]`)
 
 `click` and `rich` are base dependencies, always installed. For chat/cloud/django/mcp features: `pip install scitex-sdk[gui,chat,mcp,cli]`.
 
@@ -69,7 +69,9 @@ scitex-sdk app validate /path/to/my_app
 scitex-sdk app install-dev [APP_DIR] [OPTIONS]
 ```
 
-Validate locally, then call the SciTeX Cloud install-dev API. App appears in workspace sidebar immediately.
+Validate locally, then request development installation on the selected server.
+On success, the CLI reports any returned module name. Verify sidebar availability
+on the host using the account associated with the token.
 
 | Option | Default | Env var | Purpose |
 |--------|---------|---------|---------|
@@ -77,11 +79,19 @@ Validate locally, then call the SciTeX Cloud install-dev API. App appears in wor
 | `--token`, `-t` | — | `SCITEX_API_TOKEN` | JWT access token (required) |
 | `--owner`, `-o` | auto-detected | — | Gitea username |
 | `--repo`, `-r` | from manifest | — | Gitea repo name |
+| `--dry-run` | false | — | Print the path and server without validating or contacting the server |
+| `--yes`, `-y` | false | — | Suppress interactive confirmation |
 
 ```bash
 scitex-sdk app install-dev .
 scitex-sdk app install-dev . --server http://my-server:8000
+scitex-sdk app install-dev . --dry-run
 ```
+
+The old `scitex-sdk app dev-install` spelling is a hidden migration error:
+it exits 2 and asks you to use `install-dev`; it does not install an app.
+`--dry-run` requires an existing path but does not require a token or validate
+its manifest. Run `scitex-sdk app validate .` separately for local validation.
 
 ### app submit
 

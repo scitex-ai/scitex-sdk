@@ -129,12 +129,16 @@ class CloudFilesBackend:
         return result.get("files", [])
 
     def exists(self, path: str) -> bool:
-        """Check if a file exists via REST API."""
+        """Return False for HTTP 404; propagate other API or transport errors."""
         try:
             download(self._app, path, project=self._project)
             return True
-        except Exception:
-            return False
+        except Exception as exc:
+            response = getattr(exc, "response", None)
+            # Error responses are falsy in requests; check identity, not truth.
+            if response is not None and getattr(response, "status_code", None) == 404:
+                return False
+            raise
 
     def delete(self, path: str) -> None:
         """Delete a file via REST API."""

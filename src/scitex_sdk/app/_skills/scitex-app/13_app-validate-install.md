@@ -85,7 +85,7 @@ sidebar immediately, visible only to your account.
 
 ```bash
 export SCITEX_API_TOKEN="your-jwt-token"   # from Profile → Settings → API Tokens
-scitex-sdk app dev-install . --server http://127.0.0.1:8000
+scitex-sdk app install-dev . --server http://127.0.0.1:8000
 ```
 
 **Expected output:**

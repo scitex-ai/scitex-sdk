@@ -98,9 +98,10 @@ def main(
 ) -> None:
     """scitex-sdk (vX.Y.Z) — app contract + UI shell + SciTeX SDK wizard.
 
-    Config is loaded per component group with the SciTeX precedence chain:
-    config.yaml -> $SCITEX_<GROUP>_CONFIG -> ~/.scitex/<group>/config.yaml
-    -> defaults (see `scitex-sdk app --help` and `scitex-sdk ui --help`).
+    Configuration: a shared config.yaml loader is not wired into these groups.
+    The intended ~/.scitex/<group>/config.yaml / SCITEX_<GROUP>_CONFIG
+    integration remains open. Use each command's declared options and
+    environment variables; see `scitex-sdk app --help` and `scitex-sdk ui --help`.
     """
     ctx.ensure_object(dict)
     ctx.obj["json"] = as_json

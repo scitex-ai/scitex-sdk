@@ -122,8 +122,10 @@ else:
         """SciTeX App SDK — write-once interface for local + cloud apps.
 
         \b
-        Config is loaded with the SciTeX precedence chain:
-          config.yaml -> $SCITEX_APP_CONFIG -> ~/.scitex/app/config.yaml -> defaults
+        Configuration: this group does not load a shared config.yaml chain.
+        Wiring SCITEX_APP_CONFIG and ~/.scitex/app/config.yaml remains open.
+        Use command options and their declared environment variables; for
+        install-dev, --server overrides SCITEX_SERVER_URL, then the default.
         """
         ctx.ensure_object(dict)
         ctx.obj["as_json"] = as_json
