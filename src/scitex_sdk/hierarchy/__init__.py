@@ -15,6 +15,7 @@ __all__ = [
     "get_hierarchy_nodes",
     "hierarchy_breadcrumbs",
     "validate_hierarchy",
+    "validate_hierarchy_provider",
 ]
 
 
@@ -28,6 +29,12 @@ def _text(value: object, field: str) -> None:
         raise ValueError(
             f"hierarchy {field} must be nonempty text without control characters"
         )
+
+
+def _distribution(value: str) -> None:
+    _text(value, "distribution")
+    if re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", value) is None:
+        raise ValueError("hierarchy distribution must use canonical spelling")
 
 
 @dataclass(frozen=True)
@@ -53,23 +60,16 @@ class HierarchyNode:
         if self.parent_id is not None:
             _text(self.parent_id, "parent_id")
         if self.distribution is not None:
-            _text(self.distribution, "distribution")
-            if re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", self.distribution) is None:
-                raise ValueError("hierarchy distribution must use canonical spelling")
+            _distribution(self.distribution)
             if self.id != f"package:{self.distribution}":
                 raise ValueError("hierarchy package id must match its distribution")
         elif self.id.startswith("package:"):
             raise ValueError("hierarchy package nodes need a distribution")
 
 
-def validate_hierarchy(nodes: Iterable[HierarchyNode]) -> tuple[HierarchyNode, ...]:
-    """Validate a complete declared tree and return stable numeric index order.
-
-    A nonempty tree has one ``scitex`` root at index ``0``. Root children have
-    one index component; each deeper child's index extends its parent's by one
-    component. Duplicate identities/indices, absent parents and cycles fail.
-    Unknown or uninstalled packages are never assigned synthetic indices.
-    """
+def _records(
+    nodes: Iterable[HierarchyNode],
+) -> tuple[tuple[HierarchyNode, ...], dict[str, HierarchyNode]]:
     rows = tuple(nodes)
     by_id: dict[str, HierarchyNode] = {}
     indices: set[str] = set()
@@ -82,6 +82,54 @@ def validate_hierarchy(nodes: Iterable[HierarchyNode]) -> tuple[HierarchyNode, .
             raise ValueError(f"duplicate hierarchy index: {node.index}")
         by_id[node.id] = node
         indices.add(node.index)
+    return rows, by_id
+
+
+def _ordered(nodes: Iterable[HierarchyNode]) -> tuple[HierarchyNode, ...]:
+    return tuple(sorted(nodes, key=lambda node: tuple(map(int, node.index.split(".")))))
+
+
+def validate_hierarchy_provider(
+    nodes: Iterable[HierarchyNode], *, distribution: str
+) -> tuple[HierarchyNode, ...]:
+    """Check one provider's record ownership before composing a complete tree.
+
+    The canonical owning distribution must declare its own package node and
+    cannot declare another distribution's package. Only the umbrella ``scitex``
+    may declare root/group records without a distribution. Duplicate IDs or
+    indices and untyped rows fail. Return stable numeric index order.
+
+    This checks a partial declaration, not ancestors or complete-tree integrity.
+    It neither discovers/imports providers nor proves code provenance, allocated
+    indices, host admission, permission or live availability. Compose admitted
+    declarations and call ``validate_hierarchy`` separately.
+    """
+    _distribution(distribution)
+    rows, _ = _records(nodes)
+    for node in rows:
+        if node.distribution is None:
+            if distribution != "scitex":
+                raise ValueError(f"hierarchy groups belong to scitex: {node.id}")
+        elif node.distribution != distribution:
+            raise ValueError(
+                f"hierarchy provider {distribution} cannot declare {node.distribution}"
+            )
+    if not any(node.distribution == distribution for node in rows):
+        raise ValueError(
+            f"hierarchy provider must declare its own package: {distribution}"
+        )
+    return _ordered(rows)
+
+
+def validate_hierarchy(nodes: Iterable[HierarchyNode]) -> tuple[HierarchyNode, ...]:
+    """Validate a complete declared tree and return stable numeric index order.
+
+    A nonempty tree has one ``scitex`` root at index ``0``. Root children have
+    one index component; each deeper child's index extends its parent's by one
+    component. Duplicate identities/indices, absent parents and cycles fail.
+    Unknown or uninstalled packages are never assigned synthetic indices.
+    """
+    rows, by_id = _records(nodes)
     roots = [node for node in rows if node.parent_id is None]
     if len(roots) != 1 or roots[0].id != "scitex" or roots[0].index != "0":
         raise ValueError("hierarchy needs one scitex root at index 0")
@@ -104,7 +152,7 @@ def validate_hierarchy(nodes: Iterable[HierarchyNode]) -> tuple[HierarchyNode, .
         expected = [] if parent.parent_id is None else parent.index.split(".")
         if len(parts) != len(expected) + 1 or parts[:-1] != expected:
             raise ValueError(f"hierarchy index does not extend parent: {node.id}")
-    return tuple(sorted(rows, key=lambda node: tuple(map(int, node.index.split(".")))))
+    return _ordered(rows)
 
 
 def hierarchy_breadcrumbs(

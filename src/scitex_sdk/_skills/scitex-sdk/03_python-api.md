@@ -42,3 +42,13 @@ contains the SDK's index; the bundled catalog deliberately excludes that index.
 
 The same catalog has a declared read-only `skills` Web route. A host must
 explicitly admit it; declaring the entry point does not mount or enable a URL.
+
+## Package navigation records
+
+Use `scitex_sdk.hierarchy` for navigation identities and numeric ordering.
+`validate_hierarchy_provider(nodes, distribution=owner)` checks one selected
+provider's record ownership; `validate_hierarchy(nodes)` separately validates
+the composed tree. Only the umbrella owns root/group declarations; each leaf
+owns its package record. Neither check discovers or imports providers, verifies
+code provenance, grants access or enables hosted search. See the owning API
+docstrings and source guide `docs/package-hierarchy.md` for these boundaries.
