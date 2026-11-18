@@ -77,6 +77,20 @@ An already-running wizard follows the existing reuse behavior; new host/port
 settings apply to a new launch. Dry-run tests do not start a server or
 establish a rendered/deployed GUI.
 
+## IPv6 loopback
+
+Use the unbracketed bind host `::1`, for example
+`scitex-sdk gui serve --host ::1`. URL output and persisted-state status use
+`http://[::1]:31301`; the stored host remains `::1`. The shared launcher probes
+an IPv6 socket, passes a bracketed address to Django's parser, and permits the
+corresponding bracketed HTTP Host header. IPv4 and hostname behavior is unchanged.
+
+Owners: `_web/_address.py`, `app/embed.py::_port_is_free`,
+`app/_gui_runtime.py::status`, and `app/_standalone.py`. Actual IPv6 loopback
+socket controls, real Django command parsing before launch, allowed-host checks
+and CLI dry-run examples are covered in `tests/integration/test_gui_ipv6.py`.
+Those controls do not establish full server rendering or hosted deployment.
+
 ## Configuration scope still incomplete
 
 This GUI reader does not implement a generic YAML chain for the root, App or

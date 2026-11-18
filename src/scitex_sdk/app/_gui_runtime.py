@@ -33,6 +33,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
 
+from scitex_sdk._web._address import _server_address
+
 PathLike = Union[str, Path]
 
 _STATE_FIELDS = ("pid", "port", "host", "project", "started_at")
@@ -151,7 +153,7 @@ def status(path: PathLike) -> dict:
     if not pid_alive(state.get("pid", -1)):
         clear_state(path)
         return {"running": False, "stale_state_cleared": True}
-    url = f"http://{state.get('host')}:{state.get('port')}"
+    url = f"http://{_server_address(str(state.get('host')), state.get('port'))}"
     return {"running": True, "url": url, **{k: state.get(k) for k in _STATE_FIELDS}}
 
 
