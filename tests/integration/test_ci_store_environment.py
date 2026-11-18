@@ -7,7 +7,9 @@ import shutil
 import subprocess
 import sys
 
-GUARD = Path(__file__).resolve().parents[1] / "scripts/ci-store-environment.py"
+from tests._checkout import REPO_ROOT
+
+GUARD = REPO_ROOT / "scripts/ci-store-environment.py"
 
 
 def test_child_startup_removes_hostile_selectors_before_imports():
