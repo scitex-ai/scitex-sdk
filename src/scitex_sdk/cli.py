@@ -496,13 +496,9 @@ def _register_components() -> None:
     except Exception:
         pass
 
-    try:
-        from scitex_dev.cli import docs_click_group, skills_click_group
+    from ._cli_dev import _register_dev_group
 
-        main.add_command(docs_click_group(package="scitex-sdk"))
-        main.add_command(skills_click_group(package="scitex-sdk"))
-    except ImportError:
-        pass
+    _register_dev_group(main, ui_commands)
 
 
 _register_components()

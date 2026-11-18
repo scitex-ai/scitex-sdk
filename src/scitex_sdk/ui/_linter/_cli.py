@@ -1,12 +1,12 @@
-"""CLI subcommand: ``scitex-sdk ui lint <path>``.
+"""SDK UI linter: ``scitex-sdk dev lint`` and ``scitex-sdk ui lint``.
 
 Walks ``<path>`` (file or directory tree) and prints UI-101..107
 violations in the standard ``path:line:col [RULE-ID] message`` format
 that `scitex-linter` and `flake8` use. Exit code 0 if no violations, 1
 otherwise — letting CI gate on the lint cleanly.
 
-Wired up by ``scitex_sdk.ui._cli:main`` as a ``click`` subcommand and
-re-exported via the ``scitex-ui`` console script.
+The UI component and root maintenance group share this Click command;
+rule ownership and scan behavior stay in this leaf implementation.
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ def _emit_coverage_json() -> None:
             summary="Lint a path against the scitex-sdk ui component rules.",
             description=(
                 "Defaults to treating TARGET as a CONSUMER repo, where UI-104 "
-                "fires on shell/primitive edits. Pass --treat-as-scitex-sdk ui when "
+                "fires on shell/primitive edits. Pass --treat-as-scitex-ui when "
                 "linting this package itself, where those edits are the point.",
                 "Rule coverage is reported explicitly: gaps are printed rather "
                 "than silently skipped, so a clean run means the rules ran, not "
@@ -100,7 +100,7 @@ def lint(target: Path, treat_as_consumer: bool, as_json: bool) -> None:
     Example:
       $ scitex-sdk ui lint src/my_app/static/my_app/
       $ scitex-sdk ui lint --json src/my_app/static/my_app/ > violations.jsonl
-      $ scitex-sdk ui lint --treat-as-scitex-sdk ui src/scitex_sdk/ui/   # ours own dev tree
+      $ scitex-sdk ui lint --treat-as-scitex-ui src/scitex_sdk/ui/   # ours own dev tree
     """
     violations = scan_path(target, treat_as_consumer=treat_as_consumer)
     if not violations:

@@ -14,11 +14,40 @@ accepts `-h/--help`; `--json` propagates to subcommands that honour it.
   (`--port 31301` default; `--dry-run` previews).
 - `ui` — UI shell: `lint`, `dev`, docs, skills, `mcp`,
   `list-python-apis` (see the scitex-ui skill).
-- `docs`, `skills` — package documentation and agent-facing skills
+- `dev` — SDK maintenance: `lint`, plus `docs` and `skills` when the optional
+  `scitex-dev` provider is installed.
+- `docs`, `skills` — retained package documentation and agent-facing skills
   (`skills list` / `skills get <name>`).
 - `mcp list-tools` — every MCP tool from both the app and ui servers.
 - `list-python-apis` — public API tree for both components (`--json`).
 - `install-shell-completion`, `print-shell-completion` — TAB completion.
+
+## Maintenance dispatch
+
+`scitex-sdk dev lint PATH [--json]` invokes the same SDK-owned UI linter as
+`scitex-sdk ui lint PATH`. Findings, exit codes, JSONL coverage notices and
+`treat-as-consumer` / `treat-as-scitex-ui` options are shared. This scans the
+UI file types and rules supported by that linter; it is not a Python or full
+project audit. A clean scan retains the explicit incomplete-coverage notice.
+
+With optional `scitex-dev` installed (for example via `scitex-sdk[cli]`),
+`scitex-sdk dev docs ...` and `scitex-sdk dev skills ...` use its existing
+package-scoped providers for `scitex-sdk`. The existing root `docs` and `skills`
+paths remain supported and use the identical command objects. `dev lint`
+remains available without `scitex-dev`; docs/skills provider availability is
+not implied by that fact. App/UI component command paths remain supported.
+
+```bash
+scitex-sdk dev lint ./src --json
+scitex-sdk dev skills get 04_cli-reference --json
+scitex-sdk dev docs --help
+```
+
+Owners: `_cli_dev.py::_register_dev_group` composes the command tree;
+`ui/_linter/_cli.py::lint` owns scan behavior; `scitex-dev` owns docs/skills
+providers. Actual subprocess equivalence, coverage/exit behavior, package
+resource reads and optional-provider absence controls live in
+`tests/integration/test_root_dev_namespace.py`.
 
 ## GUI configuration
 
