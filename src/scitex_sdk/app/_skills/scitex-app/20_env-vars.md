@@ -112,7 +112,8 @@ A per-request `backend.stream(..., model=...)` value also retains its existing
 priority over the backend's default model.
 
 Behavioral controls: `tests/scitex_sdk/app/_chat/test__backends.py` exercises
-resolver precedence and warnings. `test__backend_model_selection.py` exercises
+resolver precedence and warnings.
+`tests/integration/test_chat_backend_model_selection.py` exercises
 actual factory selection and the real Anthropic client against an owned
 loopback SSE endpoint, checking wire model IDs, warnings and streamed events;
 external connections are blocked. These controls do not call a hosted model
