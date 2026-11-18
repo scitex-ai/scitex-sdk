@@ -58,6 +58,19 @@ function gettext(msgid) {
   return translated || msgid;
 }
 
+// ts/_base/filter-icon.ts
+function createFilterIcon(className) {
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.classList.add(className);
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("aria-hidden", "true");
+  icon.setAttribute("focusable", "false");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", "M3 4h18l-7 8v7l-4 2v-9z");
+  icon.append(path);
+  return icon;
+}
+
 // ts/_base/i18n.ts
 var SHELL_STRINGS = {
   en: {
@@ -281,6 +294,9 @@ var ProjectSelector = class extends BaseComponent {
     this.list.id = `${this.uid}-list`;
     this.list.setAttribute("role", "listbox");
     if (config.searchable !== false) {
+      const filter = document.createElement("div");
+      filter.className = `${CLS}__filter`;
+      filter.appendChild(createFilterIcon(`${CLS}__filter-icon`));
       this.search = document.createElement("input");
       this.search.type = "search";
       this.search.className = `${CLS}__search`;
@@ -301,7 +317,8 @@ var ProjectSelector = class extends BaseComponent {
         this.compositionActive = false;
       });
       this.search.addEventListener("keydown", (e) => this.onSearchKey(e));
-      this.panel.appendChild(this.search);
+      filter.appendChild(this.search);
+      this.panel.appendChild(filter);
     }
     this.panel.appendChild(this.list);
     this.selectionError = document.createElement("div");

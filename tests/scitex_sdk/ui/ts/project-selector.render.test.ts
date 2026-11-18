@@ -54,6 +54,7 @@ function makeElement(tagName) {
   el.setAttribute = (k, v) => { el[k] = v; };
   el.getAttribute = (k) => (k in el ? el[k] : null);
   el.appendChild = (c) => { el.children.push(c); c.parentNode = el; return c; };
+  el.append = (...children) => children.forEach((child) => el.appendChild(child));
   el.contains = (n) => {
     if (n === el) return true;
     for (const c of el.children) {
@@ -71,6 +72,7 @@ function makeElement(tagName) {
 }
 const documentStub = makeEventTarget();
 documentStub.createElement = (t) => makeElement(t);
+documentStub.createElementNS = (_namespace, t) => makeElement(t);
 // gettext looks for json_script catalogs; the stub page has none.
 documentStub.querySelectorAll = () => [];
 globalThis.document = documentStub;
