@@ -60,11 +60,30 @@ an application shell, not the form, analysis or viewer described above.
 Existing leaf GUIs remain in their leaf-owned `_django` package; the scaffold
 is not a migration instruction for those applications.
 
-The current `scitex-sdk gui serve` creator still presents starter cards. Their
-briefs describe intended work layered on the common scaffold; choosing a card
-does not implement that feature. This skill does not replace that interface
-or claim its starter UI has been removed. Reusable community workflows can be
-added as skills when their implementation and acceptance evidence exist.
+The `scitex-sdk gui serve` creator starts with the user's description and
+creates a plain workspace with that brief. It does not implement the requested
+feature. The existing starter catalog and API remain for compatible clients;
+the SDK creator no longer asks the user to choose a starter card. This source
+change does not establish that a different installed or hosted version has
+adopted the new interface. Reusable community workflows can be added as skills
+when their implementation and acceptance evidence exist.
+
+The creator's JSON endpoints validate field types before creation. App name
+and starter ID must be text; description may be text or null. Creation accepts
+a text or null target directory and a JSON boolean or null `overwrite` value.
+The string `"false"` is rejected with HTTP400, rather than treated as permission
+to replace files. Omitted/null overwrite retains the existing nonempty-target
+refusal; explicit boolean true keeps its existing replacement meaning.
+Creation also returns400 for existing file targets, file/dangling symlink
+targets, NUL-containing paths and errors while expanding or inspecting the
+target. Existing directory symlinks remain usable; these checks do not change
+aliases into separate copies. Refusal preserves the inspected target in the
+owned tests (`tests/integration/test_creator_target_refusal.py`). Filesystem
+state can change after inspection; these checks do not add a filesystem
+transaction, race protection, recovery or host authorization.
+Owning source: `creator.validate_create_input` and `creator.views.api_create`;
+real request/refusal/preservation controls:
+`tests/integration/test_creator_field_types.py`.
 
 ## Implement and verify the brief
 
