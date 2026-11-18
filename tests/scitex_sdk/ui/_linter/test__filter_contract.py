@@ -24,6 +24,9 @@ from scitex_sdk.ui._linter._filter_contract import scan_filters
         "<div data-stx-filter-field>Filter agents</div>",
         '<div class="agents-filter"><svg class="stx-filter-field__icon"></svg><input></div>',
         '<div data-stx-filter-field style="padding:20px"></div>',
+        '<div data-stx-filter-field="true"><input></div>',
+        '<div data-stx-filter-field="agents">Custom filter</div>',
+        '<div data-stx-filter-field="0" style="padding:20px"></div>',
     ],
 )
 def test_handwritten_chrome_is_rejected(tmp_path, source):
@@ -53,10 +56,11 @@ def test_local_chrome_styles_are_rejected(tmp_path, source):
     assert len(findings) == 1
 
 
-def test_empty_mount_and_leaf_result_filtering_are_allowed(tmp_path):
+@pytest.mark.parametrize("marker", ["", '="true"', '="agents"'])
+def test_empty_mount_and_leaf_result_filtering_are_allowed(tmp_path, marker):
     # Arrange
     (tmp_path / "view.html").write_text(
-        '<div data-stx-filter-field data-filter-subject="agents" data-filter-id="agents-filter"></div><input placeholder="Search DOI"><kbd>Ctrl+P</kbd>'
+        f'<div data-stx-filter-field{marker} data-filter-subject="agents" data-filter-id="agents-filter"></div><input placeholder="Search DOI"><kbd>Ctrl+P</kbd>'
     )
     (tmp_path / "filter.js").write_text(
         'input.addEventListener("input", () => rows.filter(matches));'
@@ -95,14 +99,21 @@ def test_installed_project_dispatcher_reports_filter_error(tmp_path):
     assert [(f.rule, f.severity) for f in findings] == [("PS-SDK-FILTER", "E")]
 
 
-def test_existing_native_payload_command_checks_filters(tmp_path):
+@pytest.mark.parametrize(
+    ("filename", "content"),
+    [
+        ("fork.css", ".stx-filter-field__hint {color:red}"),
+        ("view.html", '<div data-stx-filter-field="true"><input></div>'),
+    ],
+)
+def test_existing_native_payload_command_checks_filters(tmp_path, filename, content):
     # Arrange
     payload = {
         "cwd": str(tmp_path),
         "tool_name": "Write",
         "tool_input": {
-            "file_path": "fork.css",
-            "content": ".stx-filter-field__hint {color:red}",
+            "file_path": filename,
+            "content": content,
         },
     }
     # Act
@@ -117,7 +128,7 @@ def test_existing_native_payload_command_checks_filters(tmp_path):
     assert (
         result.returncode,
         "PS-SDK-FILTER" in result.stderr + result.stdout,
-        (tmp_path / "fork.css").exists(),
+        (tmp_path / filename).exists(),
     ) == (2, True, False)
 
 
