@@ -283,8 +283,8 @@ var ProjectSelector = class extends BaseComponent {
       this.search = document.createElement("input");
       this.search.type = "search";
       this.search.className = `${CLS}__search`;
-      this.search.placeholder = gettext("Search projects");
-      this.search.setAttribute("aria-label", gettext("Search projects"));
+      this.search.placeholder = gettext("Filter projects with keywords");
+      this.search.setAttribute("aria-label", gettext("Filter projects with keywords"));
       this.search.setAttribute("role", "combobox");
       this.search.setAttribute("aria-autocomplete", "list");
       this.search.setAttribute("aria-controls", this.list.id);
