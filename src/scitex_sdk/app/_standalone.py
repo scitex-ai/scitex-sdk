@@ -490,6 +490,8 @@ def _configure_django(
             # inert no matter how complete it is.
             "django.middleware.locale.LocaleMiddleware",
             "django.middleware.common.CommonMiddleware",
+            # GUI requests keep Django's token/origin checks in standalone mode.
+            "django.middleware.csrf.CsrfViewMiddleware",
         ],
         USE_I18N=True,
         LANGUAGE_CODE=os.environ.get("SCITEX_LANGUAGE_CODE", "en-us"),

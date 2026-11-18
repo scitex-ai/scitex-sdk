@@ -176,3 +176,18 @@ inject a path via function arguments across a process boundary. Set
 -> `_`, e.g. `SCITEX_MY_APP_GUI_STATE` for `"my-app"`) before spawning
 the subprocess to point state at a tmp path instead of the developer's
 real runtime state -- keeps end-to-end CLI tests mock-free.
+
+## CSRF in fresh standalone settings
+
+The shared launcher includes Django's `CsrfViewMiddleware` when it creates
+fresh standalone settings. Unsafe GUI requests need the normal token/origin
+checks; the SDK creator sends the token rendered in its page. A successful
+page load or input-validation call does not authorize creation or publication.
+An already configured host keeps its own middleware and security settings;
+the launcher does not add or replace them.
+
+Owner: `app/_standalone.py::_configure_django`. Real fresh-settings controls in
+`tests/integration/test_standalone_csrf.py` verify a missing token returns403,
+a rendered token permits the input-validation request, and an explicitly
+configured host's middleware is preserved. These checks do not establish
+hosted authentication, project authorization or a package-wide API policy.
