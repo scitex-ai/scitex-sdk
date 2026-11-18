@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 """Tests for `scitex-sdk gui` (Click CliRunner, no server started).
 
-One assert per test. State isolation uses the documented env-var
-channel (SCITEX_SDK_GUI_STATE), not mocks — the sanctioned path for
-driving the real CLI without touching the developer's runtime state.
+State and configuration isolation use their real environment channels.
+Default-option tests pin an owned empty YAML file; integration controls
+exercise project/user discovery separately without touching user settings.
 """
 
 from __future__ import annotations
@@ -24,6 +24,25 @@ from scitex_sdk.cli import main
 def runner():
     # Arrange
     return CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def isolated_gui_configuration(tmp_path):
+    keys = ("SCITEX_SDK_CONFIG", "SCITEX_SDK_GUI_HOST", "SCITEX_SDK_GUI_PORT")
+    saved = {key: os.environ.get(key) for key in keys}
+    path = tmp_path / "default-gui.yaml"
+    path.write_text("gui: {}\n")
+    for key in keys:
+        os.environ.pop(key, None)
+    os.environ["SCITEX_SDK_CONFIG"] = str(path)
+    try:
+        yield
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
 
 
 @pytest.fixture
