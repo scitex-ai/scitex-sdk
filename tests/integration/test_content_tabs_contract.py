@@ -16,9 +16,10 @@ source/bundle parity for the file.
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[3]
+from tests._checkout import REPO_ROOT
+
+REPO = REPO_ROOT
 CSS = REPO / "src/scitex_sdk/ui/static/scitex_sdk/ui/css"
 CONTENT_TABS = CSS / "app/content-tabs.css"
 PANES = CSS / "app/panes.css"

@@ -159,6 +159,9 @@ def get_chat_backend(
 
     The default model comes from ``SCITEX_APP_LLM_MODEL``; see
     :func:`_resolve_default_model` for the deprecated ``LLM_MODEL`` alias.
+    The direct Anthropic client receives the resolved environment model
+    without its optional ``anthropic/`` provider prefix. A nonempty explicit
+    ``model`` is forwarded unchanged and bypasses environment resolution.
     """
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if api_key:
@@ -167,7 +170,7 @@ def get_chat_backend(
 
             return AnthropicChatBackend(
                 api_key=api_key,
-                default_model=model or "claude-sonnet-4-20250514",
+                default_model=model or _resolve_default_model().removeprefix("anthropic/"),
             )
         except ImportError:
             pass

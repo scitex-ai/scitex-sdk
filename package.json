@@ -7,9 +7,9 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "vitest run --config scripts/vitest.config.ts",
     "build:ui": "node scripts/build-ui.mjs",
-    "test:headers": "playwright test --config=playwright.header.config.ts",
+    "test:headers": "playwright test --config=scripts/playwright.header.config.ts",
     "test:headers:live": "node scripts/verify-header-fleet.mjs"
   },
   "dependencies": {

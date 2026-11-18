@@ -26,9 +26,16 @@ import os
 import re
 from pathlib import Path
 
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views.decorators.http import require_GET, require_POST
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
+try:
+    from django.http import JsonResponse
+    from django.shortcuts import render
+    from django.views.decorators.http import require_GET, require_POST
+except ModuleNotFoundError as error:
+    if error.name != "django":
+        raise
+    raise ImportError(GUI_INSTALL_HINT) from error
 
 from . import (
     DEFAULT_STARTER,

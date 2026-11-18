@@ -13,7 +13,14 @@ processor and the generic :func:`dev_features` processor are auto-wired by
 fallback, not a requirement.)
 """
 
-from django.conf import settings
+from scitex_sdk._gui_dependency import GUI_INSTALL_HINT
+
+try:
+    from django.conf import settings
+except ModuleNotFoundError as error:
+    if error.name != "django":
+        raise
+    raise ImportError(GUI_INSTALL_HINT) from error
 
 #: This module's public surface. Declared rather than inferred, because
 #: `from django.conf import settings` puts a LazySettings in module scope and

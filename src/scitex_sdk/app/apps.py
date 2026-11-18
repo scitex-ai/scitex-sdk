@@ -6,7 +6,7 @@ distinct label so both can install together without a duplicate-label
 failure. It carries no models of its own.
 """
 
-from django.apps import AppConfig
+from .._django_app import AppConfig
 
 
 class ScitexAppConfig(AppConfig):
