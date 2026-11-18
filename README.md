@@ -209,7 +209,7 @@ command you intend to run with `--help`. App/UI Django settings, such as
 
 The [UI TypeScript configuration](src/scitex_sdk/ui/tsconfig.json) sits beside
 its sources for editor discovery; npm and CI use that same file. It ships in
-the source distribution and is excluded from the runtime wheel. The root
+both the source distribution and wheel with the UI sources. The root
 ESLint configuration remains the native lint-discovery entry point. Run
 `npm run typecheck` from the repository root, or pass the UI configuration
 explicitly to `tsc -p`.
