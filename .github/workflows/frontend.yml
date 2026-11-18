@@ -103,7 +103,7 @@ jobs:
           on_disk=$(find src/scitex_sdk/ui/static/scitex_sdk/ui/ts \
                          src/scitex_sdk/ui/static/scitex_sdk/ui/react \
                          \( -name '*.ts' -o -name '*.tsx' \) | wc -l)
-          npx eslint . -f json >lint-report.json 2>/dev/null || true
+          npx eslint --config src/scitex_sdk/ui/eslint.config.mjs . -f json >lint-report.json 2>/dev/null || true
           linted=$(grep -o '"filePath":"[^"]*"' lint-report.json \
                    | grep -cE 'static/scitex_sdk/ui/(ts|react)/' || true)
           rm -f lint-report.json

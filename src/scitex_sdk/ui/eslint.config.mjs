@@ -46,6 +46,8 @@
 // Those get a DIRECTORY exemption with a reason. The remaining 29, across 16
 // files, are named individually.
 
+import { fileURLToPath } from "node:url";
+
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
@@ -65,7 +67,7 @@ const VENDOR_BOUNDARIES = [
   "src/scitex_sdk/ui/static/scitex_sdk/ui/ts/utils/_element-inspector/**",
 ];
 
-export default tseslint.config(
+const configurations = tseslint.config(
   {
     ignores: [
       // Generated bundles. Editing them is already forbidden by their banner;
@@ -224,3 +226,11 @@ export default tseslint.config(
     rules: { "@typescript-eslint/no-this-alias": "off" },
   },
 );
+
+// Preserve the existing root-relative globs for both explicit npm/CI lookup
+// and discovery from the UI directory. Rule and exemption blocks stay shared.
+const projectRoot = fileURLToPath(new URL("../../../", import.meta.url));
+export default configurations.map((configuration) => ({
+  ...configuration,
+  basePath: projectRoot,
+}));

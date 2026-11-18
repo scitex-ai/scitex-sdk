@@ -6,7 +6,7 @@
   "description": "Contributor build and test tooling for scitex-sdk",
   "scripts": {
     "typecheck": "tsc -p src/scitex_sdk/ui/tsconfig.json --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint --config src/scitex_sdk/ui/eslint.config.mjs .",
     "test": "vitest run --config scripts/vitest.config.ts",
     "build:ui": "node scripts/build-ui.mjs",
     "test:headers": "playwright test --config=scripts/playwright.header.config.ts",
