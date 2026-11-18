@@ -1,7 +1,7 @@
 ---
 description: |
   [TOPIC] Environment Variables
-  [DETAILS] All environment variables used by scitex-sdk app — storage, cloud API, standalone Django, and LLM configuration..
+  [DETAILS] Selected environment variables used by scitex-sdk app — storage, cloud API, standalone Django, and LLM configuration..
 tags: [scitex-app-env-vars]
 ---
 
@@ -26,9 +26,24 @@ export SCITEX_WORKING_DIR=/home/user/projects
 |----------|---------|---------|
 | `SCITEX_API_TOKEN` | JWT token for cloud API authentication | — |
 | `SCITEX_API_URL` | Cloud API base URL | `http://127.0.0.1:8000` |
-| `SCITEX_SERVER_URL` | Server URL for `app dev-install` and `app submit` | `http://127.0.0.1:8000` |
+| `SCITEX_SERVER_URL` | Server URL for `app install-dev` and `app submit` | `http://127.0.0.1:8000` |
 
-`SCITEX_API_TOKEN` is the trigger for automatic cloud backend selection in `get_files()`. When set, `get_files()` routes to the cloud backend instead of the local filesystem.
+A nonempty `SCITEX_API_TOKEN` selects cloud only when `get_files()` has no
+explicit backend. Passing a directory as `root` does not override this.
+Use `get_files("./project", backend="local")` to pin the built-in filesystem
+backend, even when a token is inherited. `SCITEX_API_URL` configures the HTTP
+client endpoint; setting it alone does not select cloud. `SCITEX_SERVER_URL`
+belongs to the install/submit CLI options, not the files client.
+
+The built-in client takes nonempty explicit `token`/`base_url` constructor
+values before environment values, strips trailing URL slashes, and otherwise
+uses the URL default above. Its lazy singleton captures those values at first
+use; later environment changes do not update an existing client. This is an
+internal implementation detail, not a new public client API.
+
+Owner: `app/sdk/__init__.py::get_files`, `app/sdk/_client.py::PlatformClient`
+and `get_client`, and `app/_cli/_app.py` Click options.
+See [Files SDK](19_files-sdk.md) for registration and MCP differences.
 
 ```bash
 export SCITEX_API_TOKEN="eyJhbGci..."
@@ -71,7 +86,9 @@ never silent.
 
 ### Local development (default)
 
-No environment variables needed. `get_files("./project")` uses local filesystem.
+`get_files("./project", backend="local")` selects the built-in filesystem
+backend regardless of an inherited API token. Without an explicit backend,
+local is the default only when the token is absent or empty.
 
 ### Cloud-connected development
 
@@ -80,7 +97,9 @@ export SCITEX_API_TOKEN="your-jwt-token"
 export SCITEX_API_URL="https://scitex.ai"
 ```
 
-Then `get_files()` (no arguments) routes through the cloud REST API.
+Then `get_files()` selects the cloud backend, registering its built-in factory
+if necessary. Selection does not contact the server or validate the token;
+a later file operation performs the HTTP request.
 
 ### Remote local server
 
