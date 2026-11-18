@@ -7,6 +7,9 @@ import sys
 
 import pytest
 
+from scitex_sdk.app._gui_runtime import state_path_env_var
+from scitex_sdk.cli import PACKAGE
+
 PROBE = r"""
 import json, runpy, sys
 def refuse(event, _args):
@@ -39,8 +42,9 @@ def scenario(tmp_path):
             del environment[key]
     environment.update(
         SCITEX_DIR=str(tmp_path / "user"),
-        SCITEX_SDK_GUI_STATE=str(tmp_path / "gui-state.json"),
     )
+
+    environment[state_path_env_var(PACKAGE)] = str(tmp_path / "gui-state.json")
 
     class Scenario:
         def __init__(self):
