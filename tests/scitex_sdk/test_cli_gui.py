@@ -17,7 +17,8 @@ import pytest
 click = pytest.importorskip("click")
 from click.testing import CliRunner
 
-from scitex_sdk.cli import main
+from scitex_sdk.app._gui_runtime import state_path, state_path_env_var
+from scitex_sdk.cli import PACKAGE, main
 
 
 @pytest.fixture
@@ -45,18 +46,20 @@ def isolated_gui_configuration(tmp_path):
                 os.environ[key] = value
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def isolated_state(tmp_path):
     # Arrange — real env-var swap (NM002-compliant), not monkeypatch.
-    original = os.environ.get("SCITEX_SDK_GUI_STATE")
-    os.environ["SCITEX_SDK_GUI_STATE"] = str(tmp_path / "gui.json")
+    name = state_path_env_var(PACKAGE)
+    original = os.environ.get(name)
+    os.environ[name] = str(tmp_path / "gui.json")
     try:
+        assert state_path(PACKAGE) == tmp_path / "gui.json"
         yield tmp_path / "gui.json"
     finally:
         if original is None:
-            os.environ.pop("SCITEX_SDK_GUI_STATE", None)
+            os.environ.pop(name, None)
         else:
-            os.environ["SCITEX_SDK_GUI_STATE"] = original
+            os.environ[name] = original
 
 
 def test_gui_help_exit_code_is_zero(runner):
