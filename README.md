@@ -119,6 +119,9 @@ supplies authorized host capabilities.
 Shared header and filter components are defined by the
 [header contract and browser checks](docs/ui/app-header-contract.md) and
 [filter contract](docs/ui/filter-field-contract.md).
+The [package hierarchy contract](docs/package-hierarchy.md) supplies stable
+leaf-owned records and breadcrumb validation; dispatcher and hosted-search
+adoption remain separate.
 
 Dev owns generic interface discovery and dispatch. The SDK supplies Web API
 descriptor checks through its `PS-SDK-WEB` project auditor and hooks. A host

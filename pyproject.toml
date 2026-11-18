@@ -74,6 +74,9 @@ scitex-sdk = "scitex_sdk"
 scitex-app = "scitex_sdk.app"
 scitex-ui = "scitex_sdk.ui"
 
+[project.entry-points."scitex_dev.hierarchy"]
+scitex-sdk = "scitex_sdk.hierarchy:get_hierarchy_nodes"
+
 [project.entry-points."scitex_dev.skills"]
 scitex-sdk = "scitex_sdk"
 scitex-app = "scitex_sdk.app"
