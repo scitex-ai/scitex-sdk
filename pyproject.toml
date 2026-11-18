@@ -112,6 +112,8 @@ path = "scripts/hatch_build.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/scitex_sdk"]
+# Contributor typechecking config stays in the sdist beside its UI sources.
+exclude = ["src/scitex_sdk/ui/tsconfig.json"]
 
 [tool.hatch.build.targets.sdist]
 # npm links node_modules/@scitex/sdk back to the source package. An unrestricted
@@ -120,7 +122,7 @@ packages = ["src/scitex_sdk"]
 only-include = [
     "src/scitex_sdk", "scripts", "tests", "docs", "examples", ".github",
     "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml", ".gitignore",
-    "package.json", "package-lock.json", "tsconfig.json", "eslint.config.mjs",
+    "package.json", "package-lock.json", "eslint.config.mjs",
     ".readthedocs.yaml",
 ]
 
