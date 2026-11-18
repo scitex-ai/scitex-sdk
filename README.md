@@ -131,17 +131,23 @@ observations. See [Web API contract enforcement](src/scitex_sdk/app/_skills/scit
 | Interface | Discover the SDK surface |
 |---|---|
 | Python | `scitex_sdk.app`, `scitex_sdk.ui`, `scitex_sdk.project`; `scitex-sdk list-python-apis --json` |
-| CLI | `scitex-sdk --help`, then `app --help` or `ui --help` |
+| CLI | `scitex-sdk --help`; `gui --help`, `dev --help`, `app --help` or `ui --help` |
 | MCP | `scitex-sdk mcp list-tools` for the tool catalog |
 | Web API | The `scitex.apis` entry point names an `ApiPlugin` data object; inspect its `openapi_fragment()` in a trusted SDK environment |
-| Skills | `scitex-sdk skills list --json` and the installed `scitex_dev.skills` providers |
+| Skills | `scitex-sdk dev skills list --json` and the installed `scitex_dev.skills` providers |
 
 <sub><b>Table 2.</b> SDK interface discovery; host admission and live availability are checked separately.</sub>
 
 The `scitex.cli` declaration exposes only `sdk`, using the same
 `scitex_sdk.cli:main` target as the public console script. App/UI remain
-subgroups of that command. Python, MCP, Web API and skill discovery use their
-own declarations and admission rules.
+subgroups of that command. `gui` launches the SDK creator; `dev lint` reuses
+the SDK-owned UI linter. With optional `scitex-dev` installed (`cli`, `project`
+or `all`), `dev docs` and `dev skills` use its package-scoped providers.
+The existing root `docs`/`skills` and `ui lint` routes remain available under
+the same dependency conditions. See the [maintenance composition](src/scitex_sdk/_cli_dev.py)
+and its [actual command/resource controls](tests/integration/test_root_dev_namespace.py).
+Python, MCP, Web API and skill discovery use their own declarations and
+admission rules.
 
 The SDK declares an opt-in read-only Web `skills` operation over its bundled
 SDK/App/UI documentation. Python callers can use `list_bundled_skills()`
@@ -160,11 +166,44 @@ Settings are consumed by the feature that reads them. For example, the
 
 <sub><b>Table 3.</b> Environment variables declared by the App CLI.</sub>
 
-The root/App/UI command-group callbacks do not consume a generic YAML
-configuration chain. Standalone launchers and individual features have their
-own readers and options; inspect the command you intend to run with `--help`.
-App/UI Django settings, such as `SCITEX_UI_ELEMENT_INSPECTOR`, are distinct
-from environment variables.
+### SDK creator GUI configuration
+
+`scitex-sdk gui serve` and `gui open` read only GUI `host` and `port` from a
+selected YAML file, for example `sdk.yaml`:
+
+```yaml
+gui:
+  host: 127.0.0.1
+  port: 31301
+```
+
+Preview the resolved launch without binding a port or opening a browser:
+
+```bash
+scitex-sdk gui --config ./sdk.yaml serve --dry-run --json
+```
+
+File selection prefers `gui --config PATH`, then a nonempty
+`SCITEX_SDK_CONFIG`, then the nearest Git project's `.scitex/sdk/config.yaml`,
+then the user SDK configuration selected by `scitex-config` (under
+`SCITEX_DIR/sdk/config.yaml` when that root is set). One file is selected;
+project and user files are not merged. Host/port values prefer explicit CLI
+options, then that file, then `SCITEX_SDK_GUI_HOST` / `SCITEX_SDK_GUI_PORT`,
+then command defaults. An explicitly selected missing or invalid file fails
+instead of silently falling back.
+
+Help, `gui status` and `gui stop` do not read this YAML file. Remote binding,
+force, browser and process-control options remain explicit CLI choices;
+YAML cannot enable them. The [owning reader](src/scitex_sdk/_gui_config.py) and
+[real CLI controls](tests/integration/test_gui_configuration.py) cover file
+selection, value precedence, malformed inputs and these safety boundaries.
+The [creator lifecycle control](tests/integration/test_creator_cli_lifecycle.py)
+separately exercises foreground startup, HTTP/CSRF, status and owned stop.
+
+This GUI reader does not configure every root/App/UI feature. Other commands
+and standalone launchers have their own readers and options; inspect the
+command you intend to run with `--help`. App/UI Django settings, such as
+`SCITEX_UI_ELEMENT_INSPECTOR`, are distinct from environment variables.
 
 ## Development checks
 
