@@ -15,6 +15,14 @@ For SDK CLI + Django GUI development, run
 succeeds. From a reviewed checkout, `pip install -e '.[gui,cli]'` works too.
 Contributor tools use `pip install -e . --group dev`, with pip>=25.1.
 
+The core App/UI facades and `scitex_sdk.ui.project_scope.ProjectEntry` remain
+usable without Django. The creator, host/local helpers,
+`ui.project_scope`, `ui.i18n` and namespace URL helpers use a shared `[gui]`
+install hint when Django itself is missing, retaining the original cause.
+Those guards preserve missing-peer and Django configuration errors. Chat
+adapters use separate guards and require independent dependency validation.
+Host settings and capabilities are configured separately.
+
 Verify the install and the current source:
 
 - `scitex-sdk --help` lists `app`, `gui`, `ui`, `docs`, `skills`, `mcp`,
