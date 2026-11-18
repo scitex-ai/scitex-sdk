@@ -28,6 +28,8 @@ from pathlib import Path
 
 import click
 
+from ._gui_address import _server_address
+
 PACKAGE = "scitex-sdk"
 
 
@@ -204,7 +206,7 @@ def gui_serve(
     if dry_run:
         payload = {"would_serve": True, "host": host, "port": port, "force": force}
         click.echo(
-            json.dumps(payload) if as_json else f"Would serve at http://{host}:{port}"
+            json.dumps(payload) if as_json else f"Would serve at http://{_server_address(host, port)}"
         )
         return
     try:
@@ -259,7 +261,7 @@ def gui_open(
     if dry_run:
         payload = {"would_open": True, "host": host, "port": port}
         click.echo(
-            json.dumps(payload) if as_json else f"Would open http://{host}:{port}"
+            json.dumps(payload) if as_json else f"Would open http://{_server_address(host, port)}"
         )
         return
     current = _gui_status()

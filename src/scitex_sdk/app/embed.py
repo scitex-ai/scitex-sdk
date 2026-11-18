@@ -93,7 +93,8 @@ def gui_port_holder(port: int, package: Optional[str] = None) -> "_gr.PortHolder
 
 def _port_is_free(host: str, port: int) -> bool:
     """True when `host:port` can be bound right now."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    with socket.socket(family, socket.SOCK_STREAM) as sock:
         try:
             sock.bind((host, port))
         except OSError:

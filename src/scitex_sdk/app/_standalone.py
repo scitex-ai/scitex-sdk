@@ -17,6 +17,8 @@ import webbrowser
 from pathlib import Path
 from typing import Optional
 
+from scitex_sdk._gui_address import _server_address, _url_host
+
 import scitex_logging as slogging
 
 log = slogging.getLogger(__name__)
@@ -112,7 +114,7 @@ def run_standalone(
 
     django.setup()
 
-    url = f"http://{host}:{port}/"
+    url = f"http://{_server_address(host, port)}/"
 
     if open_browser and not desktop:
         threading.Timer(1.5, webbrowser.open, args=[url]).start()
@@ -282,6 +284,7 @@ def _allowed_hosts(host: str, extra_hosts: str = "") -> list[str]:
     # carrying the real interface address in its Host header was refused with
     # 400 (measured 2026-09-02 by scholar on 1.9.0 and by figrecipe on 0.34.6).
     for contributed in hosts_to_allow(host):
+        contributed = _url_host(contributed)
         if contributed not in hosts:
             hosts.append(contributed)
     hosts.extend(h.strip() for h in extra_hosts.split(",") if h.strip())
@@ -543,7 +546,7 @@ def _run_server(host: str, port: int, hot_reload: bool) -> None:
     noreload = [] if hot_reload else ["--noreload"]
     # This launcher is a development server, including when DEBUG is false.
     # Use Django's explicit staticfiles option rather than forcing debug mode.
-    call_command("runserver", f"{host}:{port}", "--insecure", *noreload)
+    call_command("runserver", _server_address(host, port), "--insecure", *noreload)
 
 
 # EOF
