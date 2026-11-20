@@ -70,7 +70,7 @@ class _AbsentFastMCP:
 if FastMCP is None:  # optional extra absent — see FASTMCP_AVAILABLE
     mcp = _AbsentFastMCP()
 else:
-    mcp = FastMCP("scitex-ui")
+    mcp = FastMCP("scitex-sdk-ui")
 
 
 def _json(obj):
@@ -86,20 +86,19 @@ def _json(obj):
 # §5 — skills introspection tools (per audit-mcp-tools convention)
 @mcp.tool()
 def ui_skills_list() -> str:
-    """List the names of every skill page shipped by scitex-ui.
+    """List the names of every skill page shipped by scitex-sdk (ui).
 
     Returns
     -------
-        JSON string with `{"success": true, "package": "scitex-ui",
+        JSON string with `{"success": true, "package": "scitex-sdk",
         "skills": ["01_python-api", "02_cli", ...]}`.
     """
     try:
-        from pathlib import Path
+        from scitex_sdk._bundled_skills import list_bundled_skills
 
-        skills_dir = Path(__file__).parent.parent / "_skills" / "scitex-ui"
-        names = sorted(p.stem for p in skills_dir.glob("*.md") if p.name != "SKILL.md")
+        names = list_bundled_skills()["scitex-ui"]
         return _json_mod.dumps(
-            {"success": True, "package": "scitex-ui", "skills": names},
+            {"success": True, "package": "scitex-sdk", "skills": names},
             indent=2,
         )
     except Exception as e:
@@ -115,31 +114,19 @@ def ui_skills_get(name: str) -> str:
 
     Returns
     -------
-        JSON string with `{"success": true, "package": "scitex-ui",
+        JSON string with `{"success": true, "package": "scitex-sdk",
         "name": <name>, "content": <markdown>}`, or an error envelope.
     """
     try:
-        from pathlib import Path
+        from scitex_sdk._bundled_skills import read_bundled_skill
 
-        skills_dir = Path(__file__).parent.parent / "_skills" / "scitex-ui"
-        target = skills_dir / f"{name}.md"
-        if not target.exists():
-            available = sorted(
-                p.stem for p in skills_dir.glob("*.md") if p.name != "SKILL.md"
-            )
-            return _json_mod.dumps(
-                {
-                    "success": False,
-                    "error": f"unknown skill {name!r}; available: {available}",
-                },
-                indent=2,
-            )
+        content = read_bundled_skill("scitex-ui", name)
         return _json_mod.dumps(
             {
                 "success": True,
-                "package": "scitex-ui",
+                "package": "scitex-sdk",
                 "name": name,
-                "content": target.read_text(encoding="utf-8"),
+                "content": content,
             },
             indent=2,
         )
@@ -207,7 +194,7 @@ def ui_list_components() -> str:
 
 @mcp.tool()
 def ui_get_static_dir() -> str:
-    """Return the absolute path to scitex-ui's static asset directory.
+    """Return the absolute path to scitex-sdk UI's static asset directory.
 
     Returns
     -------
@@ -224,7 +211,7 @@ def ui_get_static_dir() -> str:
 
 @mcp.tool()
 def ui_get_docs_path() -> str:
-    """Return the absolute path to scitex-ui's bundled documentation directory.
+    """Return the absolute path to scitex-sdk UI's bundled documentation directory.
 
     Returns
     -------

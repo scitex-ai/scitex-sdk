@@ -16,7 +16,7 @@ except ImportError as exc:
         "scitex_sdk.app._mcp.server needs fastmcp: pip install scitex-sdk[all]"
     ) from exc
 
-mcp = FastMCP("scitex-app")
+mcp = FastMCP("scitex-sdk-app")
 
 
 def _json(obj):
@@ -318,20 +318,19 @@ def app_validate(app_dir: str = ".") -> str:
 # §5 — skills introspection tools (per audit-mcp-tools convention)
 @mcp.tool()
 def app_skills_list() -> str:
-    """List the names of every skill page shipped by scitex-app.
+    """List the names of every skill page shipped by scitex-sdk (app).
 
     Returns
     -------
-        JSON string with `{"success": true, "package": "scitex-app",
+        JSON string with `{"success": true, "package": "scitex-sdk",
         "skills": ["01_files-sdk", "02_backend-sdk", ...]}`.
     """
     try:
-        from pathlib import Path
+        from scitex_sdk._bundled_skills import list_bundled_skills
 
-        skills_dir = Path(__file__).parent.parent / "_skills" / "scitex-app"
-        names = sorted(p.stem for p in skills_dir.glob("*.md") if p.name != "SKILL.md")
+        names = list_bundled_skills()["scitex-app"]
         return _json_mod.dumps(
-            {"success": True, "package": "scitex-app", "skills": names},
+            {"success": True, "package": "scitex-sdk", "skills": names},
             indent=2,
         )
     except Exception as e:
@@ -347,31 +346,19 @@ def app_skills_get(name: str) -> str:
 
     Returns
     -------
-        JSON string with `{"success": true, "package": "scitex-app",
+        JSON string with `{"success": true, "package": "scitex-sdk",
         "name": <name>, "content": <markdown>}`, or an error envelope.
     """
     try:
-        from pathlib import Path
+        from scitex_sdk._bundled_skills import read_bundled_skill
 
-        skills_dir = Path(__file__).parent.parent / "_skills" / "scitex-app"
-        target = skills_dir / f"{name}.md"
-        if not target.exists():
-            available = sorted(
-                p.stem for p in skills_dir.glob("*.md") if p.name != "SKILL.md"
-            )
-            return _json_mod.dumps(
-                {
-                    "success": False,
-                    "error": f"unknown skill {name!r}; available: {available}",
-                },
-                indent=2,
-            )
+        content = read_bundled_skill("scitex-app", name)
         return _json_mod.dumps(
             {
                 "success": True,
-                "package": "scitex-app",
+                "package": "scitex-sdk",
                 "name": name,
-                "content": target.read_text(encoding="utf-8"),
+                "content": content,
             },
             indent=2,
         )

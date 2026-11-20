@@ -191,7 +191,7 @@ def test_app_skills_list_returns_envelope_payload_package_scitex_app():
     # Act
     payload = json.loads(raw)
     # Assert
-    assert payload["package"] == "scitex-app"
+    assert payload["package"] == "scitex-sdk"
 
 
 def test_app_skills_list_returns_envelope_isinstance_payload_skills_list():
