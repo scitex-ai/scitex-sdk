@@ -42,3 +42,14 @@ contains the SDK's index; the bundled catalog deliberately excludes that index.
 
 The same catalog has a declared read-only `skills` Web route. A host must
 explicitly admit it; declaring the entry point does not mount or enable a URL.
+
+
+## Request-bound host capabilities
+
+`scitex_sdk.host.project_access(request)` authorizes a hosted workspace through
+session identity, or the host's explicit `SCITEX_API_AUTHENTICATOR` callback.
+The host validates credential activity, expiry, owner and permissions and returns
+an authenticated user, or `None`. The SDK binds a confirmed user to this request
+before asking the project/storage providers; those providers still decide project
+and write access. An authenticated session takes precedence. Standalone mode uses
+its configured local providers. Resource reads can pass `remember=False`.
