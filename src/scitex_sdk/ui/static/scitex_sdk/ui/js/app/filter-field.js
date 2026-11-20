@@ -25,19 +25,37 @@ var FilterField = class {
     this.input.autocomplete = "off";
     this.input.placeholder = `Filter ${subject} with keywords`;
     this.input.setAttribute("aria-label", `Filter ${subject}`);
+    this.clearButton = document.createElement("button");
+    this.clearButton.type = "button";
+    this.clearButton.className = "stx-filter-field__clear";
+    this.clearButton.textContent = "\xD7";
+    this.clearButton.setAttribute("aria-label", `Clear ${subject} filter`);
+    this.clearButton.title = "Clear filter";
+    this.clearButton.hidden = true;
     this.hint = document.createElement("kbd");
     this.hint.className = "stx-filter-field__hint";
-    element.append(this.icon, this.input, this.hint);
+    element.append(this.icon, this.input, this.clearButton, this.hint);
     element.setAttribute("data-stx-filter-field-mounted", "");
     this.input.addEventListener("focus", this.onFocus);
     this.input.addEventListener("blur", this.onBlur);
     this.input.addEventListener("keydown", this.onKey);
+    this.input.addEventListener("input", this.onInput);
+    this.clearButton.addEventListener("click", this.onClear);
     document.addEventListener("keydown", this.onShortcut, true);
     this.updateHint();
   }
   input;
   hint;
   icon;
+  clearButton;
+  onInput = () => {
+    this.clearButton.hidden = !this.input.value;
+  };
+  onClear = () => {
+    this.input.value = "";
+    this.input.dispatchEvent(new Event("input", { bubbles: true }));
+    this.input.focus();
+  };
   onFocus = () => this.updateHint();
   onBlur = () => this.updateHint();
   onKey = (event) => {
@@ -67,9 +85,12 @@ var FilterField = class {
     this.input.removeEventListener("focus", this.onFocus);
     this.input.removeEventListener("blur", this.onBlur);
     this.input.removeEventListener("keydown", this.onKey);
+    this.input.removeEventListener("input", this.onInput);
+    this.clearButton.removeEventListener("click", this.onClear);
     document.removeEventListener("keydown", this.onShortcut, true);
     this.input.remove();
     this.icon.remove();
+    this.clearButton.remove();
     this.hint.remove();
     this.element.removeAttribute("data-stx-filter-field-mounted");
     this.element.classList.remove("stx-filter-field");
