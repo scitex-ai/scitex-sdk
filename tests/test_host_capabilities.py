@@ -474,3 +474,55 @@ def test_revocation_during_path_resolution_denies_without_capability(hosted, tmp
         marker.write_text("backend-effect", encoding="utf-8")
     # Assert
     assert outcome == "AccessError:403" and cap is None and not marker.exists() and projects.selections == []
+
+
+def test_host_api_identity_can_resolve_the_authorized_project(hosted):
+    # Arrange
+    anonymous, owner = request(False), SimpleNamespace(is_authenticated=True)
+    # Act
+    with override_settings(SCITEX_API_AUTHENTICATOR=lambda req: owner):
+        capability = project_access(anonymous, remember=False)
+    # Assert
+    assert capability.id == "owned"
+
+
+def test_host_api_identity_is_bound_to_the_request_before_provider_resolution(hosted):
+    # Arrange
+    anonymous, owner = request(False), SimpleNamespace(is_authenticated=True)
+    # Act
+    with override_settings(SCITEX_API_AUTHENTICATOR=lambda req: owner):
+        project_access(anonymous, remember=False)
+    # Assert
+    assert anonymous.user is owner
+
+
+@pytest.mark.parametrize("identity", [None, SimpleNamespace(is_authenticated=False), object()])
+def test_unconfirmed_host_identity_cannot_reach_the_workspace(hosted, identity):
+    # Arrange
+    anonymous = request(False)
+    # Act
+    with override_settings(SCITEX_API_AUTHENTICATOR=lambda req: identity):
+        failure = _attempt_project_access(anonymous)
+    # Assert
+    assert failure.status == 401
+
+
+def test_host_api_identity_cannot_fall_back_from_an_inaccessible_project(hosted):
+    # Arrange
+    anonymous, owner = request(False, "foreign"), SimpleNamespace(is_authenticated=True)
+    # Act
+    with override_settings(SCITEX_API_AUTHENTICATOR=lambda req: owner):
+        failure = _attempt_project_access(anonymous)
+    # Assert
+    assert failure.status == 404
+
+
+def test_session_project_access_does_not_call_the_api_authenticator(hosted):
+    # Arrange
+    def refuse_call(req):
+        raise AssertionError("A session identity must take precedence")
+    # Act
+    with override_settings(SCITEX_API_AUTHENTICATOR=refuse_call):
+        capability = project_access(request())
+    # Assert
+    assert capability.id == "owned"
