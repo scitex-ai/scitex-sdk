@@ -9,6 +9,8 @@ Renders nothing unless the app is project-scoped or explicitly opts into
 provider renders an empty slot by default — shared primitives must not
 crash provider-less hosts (see the cross-app header-consistency adoption
 rule, amended 2026-10-24 after the SAC v0.34/v0.35 pipeline breakage).
+An explicit standalone host renders its configured project provider without a
+session login. Hosted anonymous requests retain their empty picker.
 Pass ``strict=True`` to opt back into the loud failure
 (``ImproperlyConfigured`` naming the missing host wiring) where a host
 wants the missing configuration to surface at render time. User-scoped
@@ -31,10 +33,17 @@ advertises the provider to client-side pickers (``hostProjectProvider()``).
 
 from __future__ import annotations
 
-from django import template
-from django.core.exceptions import ImproperlyConfigured
-from django.template.loader import render_to_string
-from django.utils.html import format_html
+try:
+    from django import template
+    from django.conf import settings
+    from django.core.exceptions import ImproperlyConfigured
+    from django.template.loader import render_to_string
+    from django.utils.html import format_html
+except ImportError as exc:
+    raise ImportError(
+        "The SDK project picker requires GUI dependencies. "
+        "Install them with: pip install 'scitex-sdk[gui]'"
+    ) from exc
 
 from scitex_sdk.ui.project_scope import (
     PROJECT_PROVIDER_META_NAME,
@@ -61,7 +70,11 @@ def is_project_scope(scope) -> bool:
     return normalized == SCOPE_PROJECT
 
 
-def _signed_in(context) -> bool:
+def _provider_visible(context) -> bool:
+    # Explicit standalone mode uses the configured local provider rather than
+    # a session login. Visibility grants no project or storage capability.
+    if getattr(settings, "SCITEX_APP_MODE", "hub") == "standalone":
+        return True
     request = context.get("request")
     user = getattr(request, "user", None)
     return request is None or bool(getattr(user, "is_authenticated", True))
@@ -90,7 +103,7 @@ def scitex_project_picker(
     if project_scope and supports_scoped_capability(host_project_provider()):
         allow_user_scope = True
     strict = strict is True
-    if (not project_scope and not allow_user_scope) or not _signed_in(context):
+    if (not project_scope and not allow_user_scope) or not _provider_visible(context):
         return ""
     if current_scope is not None:
         if current_scope not in (SCOPE_USER, SCOPE_PROJECT):
@@ -166,7 +179,7 @@ def _picker_tag(parser, token):
 @register.simple_tag(takes_context=True)
 def scitex_project_provider_meta(context):
     url = host_project_provider_url(context.get("request"))
-    if not url or context.get("request") is None or not _signed_in(context):
+    if not url or context.get("request") is None or not _provider_visible(context):
         return ""
     scoped = supports_scoped_capability(host_project_provider())
     # Includes and inherited host/leaf templates share the outer render frame.

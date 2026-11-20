@@ -396,3 +396,33 @@ def test_malformed_page_view_pair_is_rejected(scope_value, project):
     # Assert
     with pytest.raises(ValueError):
         _render_source(source, {"view_scope": scope_value, "view_project": project})
+
+
+@pytest.mark.parametrize("mode, visible", [("hub", False), ("standalone", True), ("unknown", False)])
+def test_anonymous_picker_requires_explicit_standalone_mode(mode, visible):
+    # Arrange
+    from types import SimpleNamespace
+    from django.test import RequestFactory, override_settings
+
+    request = RequestFactory().get("/?project=alice/paper")
+    request.user = SimpleNamespace(is_authenticated=False)
+    # Act
+    with override_settings(SCITEX_APP_MODE=mode):
+        html = _render({"app_scope": "project", "request": request})
+    # Assert
+    assert ('data-stx-project-picker' in html) is visible
+
+
+def test_standalone_provider_meta_is_available_without_a_session():
+    # Arrange
+    from types import SimpleNamespace
+    from django.test import RequestFactory, override_settings
+
+    request = RequestFactory().get("/")
+    request.user = SimpleNamespace(is_authenticated=False)
+    source = "{% load scitex_project_picker %}{% scitex_project_provider_meta %}"
+    # Act
+    with override_settings(SCITEX_APP_MODE="standalone", SCITEX_PROJECT_PROVIDER_URL="/project-list/"):
+        html = _render_source(source, {"request": request})
+    # Assert
+    assert '<meta name="stx-project-provider" content="/project-list/"' in html

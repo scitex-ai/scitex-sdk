@@ -4,6 +4,10 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Render project pickers and provider metadata in explicitly configured standalone
+  mode without requiring a login session. Hosted anonymous renders still hide
+  these controls; provider, project and storage authorization are unchanged.
+
 - Declare the UI linter provider replacement for the installed scitex-ui
   release's complete advertised rule set (UI101-105 up to 0.12.1, UI101-106
   in 0.13.0, UI101-107 from 0.14.0). A stale scitex-ui next to the SDK no
