@@ -75,6 +75,7 @@ __all__ = [
     "i18n",
     "plugins",
     "project_context",
+    "package_navigation",
 ]
 
 
@@ -92,7 +93,7 @@ def __getattr__(name: str):
 
             globals()[name] = value
             return value
-        if name in {"i18n", "plugins", "project_context"}:
+        if name in {"i18n", "plugins", "project_context", "package_navigation"}:
             from importlib import import_module
 
             value = import_module(f"{__name__}.{name}")
