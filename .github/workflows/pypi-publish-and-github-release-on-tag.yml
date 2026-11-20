@@ -83,15 +83,22 @@ jobs:
           printf '%s\n' "RUNNER_TOOL_CACHE=$tool_cache" \
             "AGENT_TOOLSDIRECTORY=$tool_cache" >> "$GITHUB_ENV"
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
+        id: python
         with:
           python-version: ${{ matrix.python-version }}
       - name: Create an isolated test environment
+        env:
+          SDK_SETUP_PYTHON: ${{ steps.python.outputs.python-path }}
         run: |
-          python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
-          python -m venv "$RUNNER_TEMP/scitex-sdk-release-tests-${{ matrix.python-version }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          if [ ! -x "$SDK_SETUP_PYTHON" ]; then
+            echo "::error::setup-python did not provide the selected executable"
+            exit 1
+          fi
+          "$SDK_SETUP_PYTHON" -I -c 'import sys; assert sys.version_info[:2] == tuple(map(int, sys.argv[1].split(".")))' '${{ matrix.python-version }}'
+          "$SDK_SETUP_PYTHON" -I -S scripts/ci-store-environment.py -- \
+            "$SDK_SETUP_PYTHON" -m venv "$RUNNER_TEMP/scitex-sdk-release-tests-${{ matrix.python-version }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           printf '%s\n' "$RUNNER_TEMP/scitex-sdk-release-tests-${{ matrix.python-version }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/bin" >> "$GITHUB_PATH"
-          SDK_PHASE
 
       - name: Install dependencies
         run: |
@@ -162,11 +169,19 @@ jobs:
           printf '%s\n' "RUNNER_TOOL_CACHE=$tool_cache" \
             "AGENT_TOOLSDIRECTORY=$tool_cache" >> "$GITHUB_ENV"
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
+        id: python
         with:
           python-version: "3.12"
       - name: Build wheel + sdist
+        env:
+          SDK_SETUP_PYTHON: ${{ steps.python.outputs.python-path }}
         run: |
+          if [ ! -x "$SDK_SETUP_PYTHON" ]; then
+            echo "::error::setup-python did not provide the selected executable"
+            exit 1
+          fi
+          "$SDK_SETUP_PYTHON" -I -c 'import sys; assert sys.version_info[:2] == (3, 12)'
           python3 -I -S scripts/ci-store-environment.py -- bash -euo pipefail <<'SDK_PHASE'
           python -m pip install --upgrade pip build
           python -m build
