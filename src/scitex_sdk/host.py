@@ -82,10 +82,13 @@ def project_access(
     mode = getattr(settings, "SCITEX_APP_MODE", "hub")
     if mode not in {"hub", "standalone"}:
         raise CapabilityUnavailable("Host mode is invalid")
-    if mode == "hub" and not getattr(
-        getattr(request, "user", None), "is_authenticated", False
-    ):
-        raise AccessError("Authentication required", 401)
+    if mode == "hub":
+        user = authenticated_user(request)
+        if not getattr(user, "is_authenticated", False):
+            raise AccessError("Authentication required", 401)
+        # The host alone authenticates credentials. Bind its identity to this
+        # request so project, storage and store providers authorize the same user.
+        request.user = user
     resolution = project_context.resolve_active_project(request, remember=remember)
     if resolution.state == project_context.STATE_UNAVAILABLE:
         raise CapabilityUnavailable("Project provider is unavailable")

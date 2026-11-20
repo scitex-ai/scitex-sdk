@@ -45,3 +45,12 @@ app context and protocol advertisement. Repeated identical declarations in
 a composed host/leaf document emit once; conflicting authorities raise.
 Deduplication lasts for one outer Django template render, never a request
 or later document.
+
+
+An explicitly configured `SCITEX_APP_MODE="standalone"` shows the picker and
+provider metadata without a session login, using the registered local provider.
+Hosted anonymous requests still render neither. These controls only expose the
+configured provider; its listing, selection and storage authorization remain in
+force. Standalone endpoints serving this widget should use
+`scoped_project_listing_view`, which retains legacy providers while advertising
+supported tagged scope.

@@ -4,6 +4,27 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.25] - 2026-11-20
+
+- Render project pickers and provider metadata in explicitly configured standalone
+  mode without requiring a login session. Hosted anonymous renders still hide
+  these controls; provider, project and storage authorization are unchanged.
+- Honor the explicitly registered host API authenticator when authorizing a
+  project capability. Bind its confirmed identity to the current request before
+  project/storage resolution; preserve session precedence, standalone behavior,
+  inaccessible-project refusal and write checks. Credential validation and key
+  permissions remain the host's responsibility.
+
+- Declare the UI linter provider replacement for the installed scitex-ui
+  release's complete advertised rule set (UI101-105 up to 0.12.1, UI101-106
+  in 0.13.0, UI101-107 from 0.14.0). A stale scitex-ui next to the SDK no
+  longer makes scitex-dev refuse to run any linter; the SDK still never
+  requires the retired distribution.
+
+- Use the Node 24 Python setup action and verify its selected executable before
+  creating each CI/release environment. Preserve source, wheel, frontend and
+  strict access gates across Python 3.11–3.13.
+
 ## [0.3.24] - 2026-11-12
 
 - Require Config 0.3.8 or newer so minimum-dependency installations on Python

@@ -430,7 +430,7 @@ class JailScopedView:
         return JsonResponse({"error": FORBIDDEN_MESSAGE}, status=403)
 
     def _forbid(self, request, key, value):
-        import logging
+        import scitex_logging as logging
 
         logging.getLogger(__name__).warning(
             "[jail] rejecting out-of-jail %s=%r for user %s",
@@ -457,7 +457,7 @@ class JailScopedView:
                     f"with a mutable GET (got {type(request.GET).__name__})"
                 ) from exc
             if params.get(param) and params.get(param) != working_dir:
-                import logging
+                import scitex_logging as logging
 
                 logging.getLogger(__name__).warning(
                     "[jail] discarding client-supplied %s from user %s "
