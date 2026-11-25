@@ -132,7 +132,7 @@ describe("WorkspaceCommands interactions", () => {
     mounted.push(picker);
     await picker.ready;
     expect(picker.openCommandId).toBe(PROJECT_SELECTOR_OPEN);
-    const search = pickerNode.querySelector<HTMLInputElement>('input[aria-label="Search projects"]')!;
+    const search = pickerNode.querySelector<HTMLInputElement>('input[aria-label="Filter projects with keywords"]')!;
     const originalPanel = pickerNode.querySelector("[role=listbox]");
     const changed = vi.fn();
     pickerNode.addEventListener(PROJECT_SELECTOR_CHANGE, changed);
@@ -167,7 +167,7 @@ describe("WorkspaceCommands interactions", () => {
     const rebound = key(document.body, { key: "j", ctrlKey: true });
     expect([rebound.defaultPrevented, trigger(pickerNode).getAttribute("aria-expanded"), document.activeElement]).toEqual([true, "true", search]);
     expect(pickerNode.querySelector("[role=listbox]")).toBe(originalPanel);
-    expect(document.querySelectorAll('[aria-label="Search projects"]')).toHaveLength(1);
+    expect(document.querySelectorAll('[aria-label="Filter projects with keywords"]')).toHaveLength(1);
     expect(picker.getSelection()).toEqual({ scope: "project", id: "a" });
     expect(changed).not.toHaveBeenCalled();
     expect(fetchRequest).toHaveBeenCalledTimes(1);
@@ -360,7 +360,7 @@ describe("WorkspaceCommands interactions", () => {
     result(commandsNode, "workspace:open").click();
     expect(trigger(pickerNode).getAttribute("aria-expanded")).toBe("true");
     expect(document.activeElement).toBe(pickerNode.querySelector("input"));
-    expect(document.querySelectorAll('[aria-label="Search projects"]')).toHaveLength(1);
+    expect(document.querySelectorAll('[aria-label="Filter projects with keywords"]')).toHaveLength(1);
     expect(listProjects).toHaveBeenCalledTimes(1);
   });
 

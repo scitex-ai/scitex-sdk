@@ -3,6 +3,7 @@
   "completeness": "LOWER_BOUND",
   "completeness_reason": "Class names added from caller-supplied values cannot be derived statically. Treat this manifest as a lower bound: everything listed IS rendered by scitex-ui, but scitex-ui may render names not listed.",
   "unenumerable_sites": [
+    "_base/filter-icon.ts:4",
     "shell/workspace-files-tree/_handlers/ClipboardHandler.ts:234",
     "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:118",
     "shell/workspace-files-tree/_handlers/ContextMenuHandler.ts:136",
@@ -203,6 +204,8 @@
       "elements": [
         "__current",
         "__empty",
+        "__filter",
+        "__filter-icon",
         "__list",
         "__option",
         "__option-detail",

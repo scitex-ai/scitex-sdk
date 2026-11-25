@@ -3,6 +3,8 @@
 Bootstrap with ``python3 -I -S`` before pip/build/test startup. No peer imports,
 database connection, or persistence proof. Fixtures may explicitly override this
 refusal target after startup; no PG service selector survives the floor.
+Set SCITEX_SDK_CI_TRACE=1 for constant stage markers on stderr; stdout and
+child exit status retain their normal behavior.
 """
 import os
 import sys
@@ -34,10 +36,17 @@ def protect_environment(environment):
     return root
 
 
+def _trace_stage(stage):
+    if os.environ.get("SCITEX_SDK_CI_TRACE") == "1":
+        print(f"sdk-store-control: {stage}", file=sys.stderr, flush=True)
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 3 or sys.argv[1] != "--":
         raise SystemExit("usage: python3 -I -S ci-store-environment.py -- COMMAND [ARG ...]")
+    _trace_stage("guard-started")
     child_environment = os.environ.copy()
     protect_environment(child_environment)
+    _trace_stage("floor-ready")
     # exec preserves phase signal/exit behavior, including fail-loud test gates.
     os.execvpe(sys.argv[2], sys.argv[2:], child_environment)
