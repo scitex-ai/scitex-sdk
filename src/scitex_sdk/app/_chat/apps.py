@@ -13,7 +13,7 @@ companion and this config must never be installed together; Django fails
 loud on the duplicate label rather than shadowing either side.
 """
 
-from django.apps import AppConfig
+from ..._django_app import AppConfig
 
 
 class ScitexAppChatConfig(AppConfig):
