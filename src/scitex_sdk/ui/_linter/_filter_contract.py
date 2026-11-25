@@ -38,10 +38,7 @@ class _Markup(HTMLParser):
             attrs.get("class") or attrs.get("classname") or "",
         ).split()
         shared = any(c.startswith("stx-filter-field") for c in classes)
-        mount = "data-stx-filter-field" in attrs and attrs["data-stx-filter-field"] in {
-            None,
-            "",
-        }
+        mount = "data-stx-filter-field" in attrs
         scope = (
             mount
             or shared
