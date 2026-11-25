@@ -27,8 +27,9 @@ _MAIN_HELP = cli_help(
         "Provides the shell, primitives and app components that consuming "
         "SciTeX apps mount, plus the docs/skills/MCP surfaces every package "
         "exposes.",
-        "Config is loaded with the SciTeX precedence chain: config.yaml -> "
-        "$SCITEX_UI_CONFIG -> ~/.scitex/ui/config.yaml -> defaults.",
+        "Configuration: this group does not load a shared config.yaml chain. "
+        "Wiring SCITEX_UI_CONFIG and ~/.scitex/ui/config.yaml remains open. "
+        "Inspect each command's options and its owning configuration reader.",
     ),
     version_of="scitex-sdk",
 )
@@ -71,8 +72,9 @@ def main(ctx, help_recursive, as_json):
     """SciTeX UI — shared React/TypeScript components for the workspace.
 
     \b
-    Config is loaded with the SciTeX precedence chain:
-      config.yaml -> $SCITEX_UI_CONFIG -> ~/.scitex/ui/config.yaml -> defaults
+    Configuration: this group does not load a shared config.yaml chain.
+    Wiring SCITEX_UI_CONFIG and ~/.scitex/ui/config.yaml remains open.
+    Inspect each command's options and its owning configuration reader.
     """
     ctx.ensure_object(dict)
     ctx.obj["as_json"] = as_json
