@@ -1,5 +1,6 @@
 """Required runtime imports must resolve; SDK App/UI are not external peers."""
 import importlib
+
 import pytest
 
 CROSS_PACKAGE_IMPORTS = [
@@ -7,6 +8,7 @@ CROSS_PACKAGE_IMPORTS = [
     "scitex_dev._cli._completion",
     "scitex_dev.cli",
     "scitex_dev.ecosystem",
+    "scitex_dev.hooks",
     "scitex_dev.linter._rules._base",
     "scitex_dev.linter.spi",
     "scitex_dev.project",
