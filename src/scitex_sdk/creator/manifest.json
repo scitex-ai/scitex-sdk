@@ -4,13 +4,13 @@
   "label": "SDK",
   "pip_package": "scitex-sdk",
   "icon": "fas fa-wand-magic-sparkles",
-  "subtitle": "Scaffold a new SciTeX app from a starter",
+  "subtitle": "Describe and create a SciTeX app workspace",
   "about": "Create and validate leaf applications with the shared SciTeX SDK appmaker. Each application owns its Django GUI and runs standalone or as a Hub plugin.",
-  "description": "SciTeX SDK serves the appmaker engine (scaffold, validate, dev-install, publish) as a browser wizard. New app from starter (label, description, starter card), inline validation feedback, and publish/dev-install hooks against a SciTeX Cloud server. Served from the SDK via `scitex-sdk gui serve`; a host may mount this same Django app for its create-app tile.",
+  "description": "Create an app workspace from the user's description with the SDK appmaker, then validate, dev-install or submit through the existing SDK tools. The description is saved as the agent's implementation brief; creating the workspace does not implement the requested feature. Served by scitex-sdk gui serve or mounted by a host.",
   "author": "scitex-ai",
   "license": "AGPL-3.0-only",
   "capabilities": [
-    "Scaffold a new app from a starter (label, description, starter card)",
+    "Create a plain app workspace and preserve the user's implementation brief",
     "Validate a scaffolded app and show errors plus advisory notices",
     "Dev-install an app to a SciTeX Cloud server for immediate testing",
     "Submit an app for review and publication"

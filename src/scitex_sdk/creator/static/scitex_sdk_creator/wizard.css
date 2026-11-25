@@ -23,7 +23,7 @@
 /* One step = one card. */
 .stx-creator section {
   border: 1px solid color-mix(in srgb, currentcolor 18%, transparent);
-  border-radius: 12px;
+  border-radius: 0;
   padding: 20px 22px;
   margin: 0 0 18px;
   background: color-mix(in srgb, currentcolor 3%, transparent);
@@ -38,43 +38,6 @@
   opacity: 0.75;
   margin: 0 0 14px;
   max-width: 72ch;
-}
-
-/* Starter radio-cards. */
-.stx-starters {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-  margin: 12px 0 4px;
-}
-
-.stx-starter {
-  display: block;
-  border: 1px solid color-mix(in srgb, currentcolor 20%, transparent);
-  border-radius: 10px;
-  padding: 10px 12px;
-  cursor: pointer;
-}
-
-.stx-starter:has(input:checked) {
-  border-color: var(--role-primary-bg);
-  box-shadow: 0 0 0 1px var(--role-primary-bg);
-  background: var(--color-primary-subtle);
-}
-
-.stx-starter input {
-  margin-right: 6px;
-  accent-color: var(--role-primary-bg);
-}
-
-.stx-starter strong {
-  display: block;
-  margin-bottom: 2px;
-}
-
-.stx-starter span {
-  opacity: 0.7;
-  font-size: 13px;
 }
 
 /* Label column + flexible field column. */
@@ -111,18 +74,20 @@
 .stx-creator input[type="text"],
 .stx-creator input[type="password"],
 .stx-creator textarea {
+  border-radius: 8px;
   width: 100%;
   max-width: 560px;
   box-sizing: border-box;
   padding: 8px 10px;
   font: inherit;
   border: 1px solid color-mix(in srgb, currentcolor 25%, transparent);
-  border-radius: 8px;
+  border-radius: 0;
   background: color-mix(in srgb, currentcolor 6%, transparent);
   color: inherit;
 }
 
 .stx-creator textarea {
+  border-radius: 8px;
   min-height: 96px;
   resize: vertical;
 }
@@ -165,7 +130,7 @@
 .stx-result {
   margin-top: 12px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12.5px;
   white-space: pre-wrap;

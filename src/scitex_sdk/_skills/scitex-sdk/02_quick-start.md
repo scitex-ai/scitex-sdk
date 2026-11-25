@@ -1,20 +1,28 @@
 ---
-description: [app init, wizard, validate smoke path] See SKILL.md workflow; component detail in scitex-app / scitex-ui skills.
+description: [user outcome, capability discovery and validation boundaries] See SKILL.md and the intent-based workflow before selecting implementation tools.
 tags: [scitex-sdk]
 ---
 
-# Scaffold and validate a SciTeX app in five minutes
+# Start with what the user wants to build
 
-1. Scaffold: `scitex-sdk app init my-app` writes a complete app tree
-   (manifest, URLconf, Django app) into `./my-app`.
-2. Preview the SDK wizard: `scitex-sdk gui open` serves the creator UI
-   (open/serve/status/stop verbs; `--dry-run` previews without starting).
-3. Validate before dev-installing or publishing:
-   `scitex-sdk app validate ./my-app` checks the manifest and readiness.
-4. List the surface you just scaffolded against:
-   `scitex-sdk list-python-apis` (both components) and
-   `scitex-sdk mcp list-tools` (both MCP servers).
+1. Follow [Build from intent](05_build-from-intent.md): identify inputs,
+   outputs, project scope and a concrete acceptance example. Reuse supplied
+   context rather than making the user select a starter first.
+2. Inspect existing leaf capabilities and the app being extended. Use
+   `scitex-sdk list-python-apis --json` and `scitex-sdk skills list --json`
+   for discovery, then read the owning App/UI skills.
+3. Implement one useful interaction using shared SDK contracts. For a new
+   app, `scitex-sdk app init ./sample_app --name sample_app --dry-run`
+   previews boilerplate creation without writing. Scaffolding is optional
+   tooling, not an implementation of the user's requested feature.
+4. Exercise the behavioral acceptance example and refusal cases on owned
+   fixtures. `scitex-sdk app validate ./sample_app` checks a created app's
+   readiness; it does not prove feature correctness or visual acceptance.
+5. Verify installed artifacts and the intended host separately before
+   adoption, submission or release.
 
-Scaffolding mechanics belong to the scitex-app skill (`app init`,
-`app validate`, manifest contract); UI mounting to the scitex-ui skill
-(shared AppHeader, tabs, project picker).
+The creator at `scitex-sdk gui serve` starts from the user's description and
+creates a plain workspace with that implementation brief. Feature development
+comes next. Older installed/hosted versions may still show starter cards.
+Detailed creation and validation mechanics belong to the scitex-app component
+skill; UI mounting and shared shell behavior belong to the scitex-ui skill.
