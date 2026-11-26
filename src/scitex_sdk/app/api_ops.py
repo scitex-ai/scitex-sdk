@@ -313,7 +313,7 @@ def operation_of(plugin: ApiPlugin, route: ApiRoute) -> ApiOperation:
         response=route.response,
         errors=tuple(route.errors),
         item=None if verb in CRUD_VERBS else item,
-        read_only=route.read_only,
+        read_only=route.read_only if verb not in CRUD_VERBS else False,
         project_scoped=route.auth.project_scope == "project",
         paginated=route.pagination.style == "cursor",
         default_limit=route.pagination.default_limit or 20,

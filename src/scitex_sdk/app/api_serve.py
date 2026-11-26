@@ -49,10 +49,16 @@ import time
 import uuid
 from collections import OrderedDict
 
+import logging
+
 from .api_exec import ApiCaller, ApiProblem, ApiResult, execute, params_digest
+from .api_plugin import ApiPluginContractError
 from .api_ops import API_PREFIX, operation_of
 
 PROBLEM_JSON = "application/problem+json"
+_LOG = logging.getLogger(__name__)
+#: Plugins discovered but not mounted, with the reason (for host diagnostics).
+REFUSED: dict = {}
 
 
 class InMemoryIdempotencyStore:
@@ -72,6 +78,35 @@ class InMemoryIdempotencyStore:
             self._data[key] = (digest, status, body)
             while len(self._data) > self._capacity:
                 self._data.popitem(last=False)
+
+
+class CacheIdempotencyStore:
+    """Idempotency keys in the host's Django cache (shared across workers).
+
+    Keys live ``timeout`` seconds (default 24 h, the replay window clients
+    are promised). A host whose cache is per-process should use a shared
+    backend (Redis) for this to hold across workers.
+    """
+
+    def __init__(self, timeout: int = 24 * 3600, alias: str = "default"):
+        self.timeout = timeout
+        self.alias = alias
+
+    def _key(self, key) -> str:
+        import hashlib
+
+        return "scitex-api-idem:" + hashlib.sha256(repr(key).encode()).hexdigest()
+
+    def get(self, key):
+        from django.core.cache import caches
+
+        value = caches[self.alias].get(self._key(key))
+        return tuple(value) if value is not None else None
+
+    def put(self, key, digest, status, body):
+        from django.core.cache import caches
+
+        caches[self.alias].set(self._key(key), (digest, status, body), self.timeout)
 
 
 def _hook(name: str, *, required: bool = False):
@@ -304,6 +339,17 @@ def admitted_plugins(refs=None) -> list:
 
         module, _, attr = ref.target.partition(":")
         plugin = getattr(import_module(module), attr)
+        try:
+            from .api_ops import operations
+
+            operations(plugin)
+        except ApiPluginContractError as exc:
+            # Refused, not mounted: a plugin off the operation grammar would be
+            # served with a shape no client was promised. Logged loudly; the
+            # rest of the host keeps serving.
+            _LOG.warning("scitex.apis %s not mounted: %s", ref.name, exc)
+            REFUSED[ref.name] = str(exc)
+            continue
         admission = admit(
             ref,
             review_ref=(
@@ -370,7 +416,9 @@ def api_not_found_pattern():
 
 __all__ = [
     "PROBLEM_JSON",
+    "CacheIdempotencyStore",
     "InMemoryIdempotencyStore",
+    "REFUSED",
     "admitted_plugins",
     "api_not_found_pattern",
     "api_urlpatterns",

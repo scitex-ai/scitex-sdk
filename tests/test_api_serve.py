@@ -253,3 +253,29 @@ def test_discovery_admits_only_trusted_distributions(settings):
     admitted = admitted_plugins()
     # Assert
     assert admitted == []
+
+
+def test_a_plugin_off_the_operation_grammar_is_refused_not_mounted():
+    # Arrange
+    from scitex_sdk.app.api_plugin import ApiPluginRef
+    from scitex_sdk.app.api_serve import REFUSED, admitted_plugins
+
+    ref = ApiPluginRef(
+        name="scitex-sdk", target="scitex_sdk._web._api:plugin", distribution="scitex-sdk"
+    )
+    # Act
+    admitted = admitted_plugins([ref])
+    # Assert
+    assert (admitted, "scitex-sdk" in REFUSED) == ([], True)
+
+
+def test_the_cache_store_replays_through_the_django_cache():
+    # Arrange
+    from scitex_sdk.app.api_serve import CacheIdempotencyStore
+
+    store = CacheIdempotencyStore()
+    store.put(("a", "op", "k"), "d", 201, {"data": 1})
+    # Act
+    found = store.get(("a", "op", "k"))
+    # Assert
+    assert found == ("d", 201, {"data": 1})
