@@ -4,6 +4,17 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Add the host STORAGE GATE capability: `scitex_sdk.host.storage_budget(request,
+  project)` reads the host's storage/spend report (`StorageBudget`: used, quota,
+  per-file limit, spend level/percent, link) and
+  `require_storage_write(request, project, incoming_sizes=...)` asks the host to
+  admit a write before it happens, raising `StorageRefused` (402 spend controls /
+  413 quota, with the host's `code` and `link`). Hosts implement it through the
+  `SCITEX_STORAGE_GATE` setting (`budget(project_id, request)`,
+  `require_storage_write(project_id, request, *, incoming_sizes)`). A host without
+  a gate answers `CapabilityUnavailable`, so a leaf refuses to write rather than
+  assume it may. Read-only project access is refused (403) before the gate.
+
 ## [0.3.25] - 2026-11-20
 
 - Render project pickers and provider metadata in explicitly configured standalone

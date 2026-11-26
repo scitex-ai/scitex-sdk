@@ -6,8 +6,10 @@ views and rendering. Providers are trusted host settings, never request input.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 from uuid import UUID
 
 
@@ -19,6 +21,52 @@ class AccessError(Exception):
 
 class CapabilityUnavailable(Exception):
     """The host has not supplied the requested authorized capability."""
+
+
+class StorageRefused(AccessError):
+    """The host's storage quota or spend controls refuse a write.
+
+    ``status`` is 402 (spend controls) or 413 (quota); ``code`` is the host's
+    machine-readable reason and ``link`` where the user can act on it (raise a
+    cap, free space). A leaf shows ``str(exc)`` and ``link``; it never retries
+    around the refusal.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        status: int = 402,
+        *,
+        code: str = "",
+        link: Optional[str] = None,
+    ):
+        super().__init__(message, status)
+        self.code = code
+        self.link = link
+
+
+@dataclass(frozen=True)
+class StorageBudget:
+    """What the host reports about the storage behind one project.
+
+    Every field is optional: a host states what it knows and leaves the rest
+    ``None`` ("not reported"), which is different from zero. ``spend_level``
+    is the host's own word for the account's standing (for example ``ok``,
+    ``warning``, ``blocked``).
+    """
+
+    used_bytes: Optional[int] = None
+    quota_bytes: Optional[int] = None
+    max_file_bytes: Optional[int] = None
+    spend_level: Optional[str] = None
+    spend_percent: Optional[float] = None
+    link: Optional[str] = None
+
+    @property
+    def remaining_bytes(self) -> Optional[int]:
+        if self.used_bytes is None or self.quota_bytes is None:
+            return None
+        return max(0, self.quota_bytes - self.used_bytes)
 
 
 @dataclass(frozen=True)
@@ -139,12 +187,71 @@ def store_access(request, project_id: str) -> StoreAccess:
     return capability
 
 
+def _storage_gate():
+    return _provider("SCITEX_STORAGE_GATE")
+
+
+def storage_budget(request, project: ProjectAccess) -> StorageBudget:
+    """The host's storage/spend report for an AUTHORIZED project.
+
+    Read-only. The host decides whose account backs the project (owner,
+    organization). Raises :class:`CapabilityUnavailable` when the host does
+    not supply ``SCITEX_STORAGE_GATE`` or its answer is malformed.
+    """
+    if not isinstance(project, ProjectAccess):
+        raise TypeError("storage_budget needs the ProjectAccess from project_access")
+    try:
+        budget = _storage_gate().budget(project.id, request)
+    except CapabilityUnavailable:
+        raise
+    except Exception as exc:
+        raise CapabilityUnavailable("Storage budget is unavailable") from exc
+    if not isinstance(budget, StorageBudget):
+        raise CapabilityUnavailable("Storage budget is invalid")
+    return budget
+
+
+def require_storage_write(
+    request, project: ProjectAccess, *, incoming_sizes: Sequence[int]
+) -> None:
+    """Ask the host whether ``incoming_sizes`` bytes may be written to ``project``.
+
+    Call it BEFORE writing (or queuing a job that writes). Returns ``None`` when
+    allowed; raises :class:`StorageRefused` when the quota or spend controls
+    refuse, :class:`AccessError` 403 without write access, and
+    :class:`CapabilityUnavailable` when the host has no gate — a leaf must then
+    not write, because "nobody checked" is not "allowed".
+    """
+    if not isinstance(project, ProjectAccess):
+        raise TypeError(
+            "require_storage_write needs the ProjectAccess from project_access"
+        )
+    if not project.can_write:
+        raise AccessError("Write access required", 403)
+    sizes = [int(size) for size in incoming_sizes]
+    if any(size < 0 for size in sizes):
+        raise ValueError("incoming sizes must be non-negative")
+    gate = _storage_gate()
+    try:
+        gate.require_storage_write(project.id, request, incoming_sizes=sizes)
+    except (StorageRefused, CapabilityUnavailable):
+        raise
+    except AccessError:
+        raise
+    except Exception as exc:
+        raise CapabilityUnavailable("Storage gate is unavailable") from exc
+
+
 __all__ = [
     "AccessError",
     "CapabilityUnavailable",
     "ProjectAccess",
+    "StorageBudget",
+    "StorageRefused",
     "StoreAccess",
     "authenticated_user",
     "project_access",
+    "require_storage_write",
+    "storage_budget",
     "store_access",
 ]
