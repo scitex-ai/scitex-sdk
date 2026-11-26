@@ -993,9 +993,13 @@ class ApiRoute:
     handler: str = ""
     deprecation: Deprecation | None = None
     read_only: bool = False
+    summary: str = ""
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "path", _validate_path(self.path))
+        object.__setattr__(self, "summary", _require_text_or_empty(
+            self.summary, f"summary of route {self.path!r}"
+        ))
         if not isinstance(self.rate, RateLimit):
             raise ApiPluginContractError(
                 f"route {self.path!r} declares rate {self.rate!r}, a "
@@ -1590,6 +1594,8 @@ class ApiPlugin:
             "x-scitex-compute-cost": route.rate.compute_cost,
             "x-scitex-api-version": self.api_version,
         }
+        if route.summary:
+            operation["summary"] = route.summary
         if route.path_params:
             operation["parameters"] = [
                 {
