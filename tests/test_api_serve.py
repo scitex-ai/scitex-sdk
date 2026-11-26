@@ -189,11 +189,12 @@ def test_every_response_carries_a_request_id(api):
     assert len(response["X-Request-Id"]) == 32
 
 
-def test_without_a_caller_hook_the_api_is_unavailable(api, settings):
+def test_without_a_caller_hook_the_api_is_unavailable(api):
     # Arrange
-    settings.SCITEX_API_CALLER = None
+    no_caller = override_settings(SCITEX_API_CALLER=None)
     # Act
-    response = _get(api, "/api/v1/notes/notes")
+    with no_caller:
+        response = _get(api, "/api/v1/notes/notes")
     # Assert
     assert response.status_code == 503
 
@@ -244,13 +245,14 @@ def test_the_mcp_tool_obeys_the_same_scopes():
     assert result.body["code"] == "api.insufficient_scope"
 
 
-def test_discovery_admits_only_trusted_distributions(settings):
+def test_discovery_admits_only_trusted_distributions():
     # Arrange
     from scitex_sdk.app.api_serve import admitted_plugins
 
-    settings.SCITEX_API_TRUSTED_DISTRIBUTIONS = ()
+    nothing_trusted = override_settings(SCITEX_API_TRUSTED_DISTRIBUTIONS=())
     # Act
-    admitted = admitted_plugins()
+    with nothing_trusted:
+        admitted = admitted_plugins()
     # Assert
     assert admitted == []
 
@@ -261,7 +263,9 @@ def test_a_plugin_off_the_operation_grammar_is_refused_not_mounted():
     from scitex_sdk.app.api_serve import REFUSED, admitted_plugins
 
     ref = ApiPluginRef(
-        name="scitex-sdk", target="scitex_sdk._web._api:plugin", distribution="scitex-sdk"
+        name="scitex-sdk",
+        target="scitex_sdk._web._api:plugin",
+        distribution="scitex-sdk",
     )
     # Act
     admitted = admitted_plugins([ref])
