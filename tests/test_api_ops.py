@@ -181,3 +181,32 @@ def test_read_never_grants_write():
     result = scope_granted("notes:notes:write", granted)
     # Assert
     assert result is False
+
+
+LEAF_SOURCE = """
+from scitex_sdk.app.api_ops import ApiOperation, build_plugin
+from scitex_sdk.app.api_plugin import ApiField
+
+OPERATIONS = (
+    ApiOperation("leaf", "items", "list", "leafpkg._api:list_items",
+                 params=(ApiField("q", "string", False),), paginated=True),
+)
+PLUGIN = build_plugin("leaf", "Leaf API", "1", OPERATIONS)
+
+
+def list_items(call):
+    raise RuntimeError("never executed by the source reader")
+"""
+
+
+def test_the_source_reader_proves_an_operation_declaration(tmp_path):
+    # Arrange
+    from scitex_sdk.app._api_source import SourceReader
+
+    (tmp_path / "src" / "leafpkg").mkdir(parents=True)
+    (tmp_path / "src" / "leafpkg" / "__init__.py").write_text("")
+    (tmp_path / "src" / "leafpkg" / "_api.py").write_text(LEAF_SOURCE)
+    # Act
+    plugin = SourceReader(tmp_path).binding("leafpkg._api", "PLUGIN")
+    # Assert
+    assert [op.url for op in operations(plugin)] == ["/api/v1/leaf/items"]
