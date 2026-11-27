@@ -4,6 +4,8 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.26] - 2026-11-27
+
 - Add the host STORAGE GATE capability: `scitex_sdk.host.storage_budget(request,
   project)` reads the host's storage/spend report (`StorageBudget`: used, quota,
   per-file limit, spend level/percent, link) and
@@ -14,6 +16,28 @@ All notable changes to `scitex-sdk`.
   `require_storage_write(project_id, request, *, incoming_sizes)`). A host without
   a gate answers `CapabilityUnavailable`, so a leaf refuses to write rather than
   assume it may. Read-only project access is refused (403) before the gate.
+
+- Add the API OPERATION layer (`scitex_sdk.app.api_ops`): a leaf declares
+  `ApiOperation(package, resource, verb, handler, ...)` and the SDK derives the
+  normalised URL `/api/v1/<package>/<resource>[/{<resource>_id}][/<action>]`,
+  the scope `<package>:<resource>:<read|write>`, the MCP tool name
+  `<package>_<resource>_<verb>`, status codes (201 create, 202 job, 204
+  delete), cursor pagination and the project parameter (`owner/slug`), as
+  ordinary `ApiRoute`s of an `ApiPlugin`. `ApiRoute` gains an optional
+  `summary`.
+- Add generic serving (`scitex_sdk.app.api_serve`): one `api_urlpatterns()`
+  line mounts every admitted `scitex.apis` plugin at `api/v1/<id>/` in any
+  Django host, with no plugin-specific host code. Auth, scopes, rate limits,
+  metering and idempotency storage are host hooks (`SCITEX_API_CALLER`,
+  `SCITEX_API_RATE_LIMITER`, `SCITEX_API_METER`,
+  `SCITEX_API_IDEMPOTENCY_STORE`, `SCITEX_API_TRUSTED_DISTRIBUTIONS`). Errors
+  are RFC 9457 problem+json (never HTML or a login redirect); write operations
+  require `Idempotency-Key` and replay; session writes pass CSRF. A plugin off
+  the operation grammar is refused, not mounted.
+- Add the transport-neutral executor (`scitex_sdk.app.api_exec`) and MCP
+  generation (`scitex_sdk.app.api_mcp`): every operation is one FastMCP tool
+  whose input schema is the REST request schema, run through the same
+  executor, so REST and MCP map 1:1.
 
 ## [0.3.25] - 2026-11-20
 

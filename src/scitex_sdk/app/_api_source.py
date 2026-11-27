@@ -6,26 +6,43 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import api_plugin
+from . import api_ops, api_plugin
 
+#: The SDK modules whose constructors a declaration may call, by name. The
+#: operation layer's ``ApiOperation`` and ``build_plugin`` are pure,
+#: deterministic SDK data constructors (they return validated ``ApiPlugin``
+#: data), so evaluating them proves a declaration without consumer code.
+_SDK_CONSTRUCTORS = {
+    "scitex_sdk.app.api_plugin": {
+        name: getattr(api_plugin, name)
+        for name in (
+            "ApiPlugin",
+            "ApiRoute",
+            "ApiField",
+            "ApiSchema",
+            "ApiError",
+            "AuthScope",
+            "Idempotency",
+            "Pagination",
+            "RateLimit",
+            "Audit",
+            "Deprecation",
+            "OAuthProvider",
+        )
+    },
+    "scitex_sdk.app.api_ops": {
+        "ApiOperation": api_ops.ApiOperation,
+        "build_plugin": api_ops.build_plugin,
+    },
+}
 _CONSTRUCTORS = {
-    name: getattr(api_plugin, name)
-    for name in (
-        "ApiPlugin",
-        "ApiRoute",
-        "ApiField",
-        "ApiSchema",
-        "ApiError",
-        "AuthScope",
-        "Idempotency",
-        "Pagination",
-        "RateLimit",
-        "Audit",
-        "Deprecation",
-        "OAuthProvider",
-    )
+    name: value for table in _SDK_CONSTRUCTORS.values() for name, value in table.items()
 }
 _SDK_MODULE = "scitex_sdk.app.api_plugin"
+
+
+def _sdk_constructor(module, name):
+    return _SDK_CONSTRUCTORS.get(module, {}).get(name)
 
 
 class UnprovenApi(ValueError):
@@ -132,7 +149,7 @@ class SourceReader:
             and node.handlers
             and all(
                 isinstance(n, ast.ImportFrom)
-                and n.module == _SDK_MODULE
+                and n.module in _SDK_CONSTRUCTORS
                 and n.level == 0
                 for n in node.body
             )
@@ -205,8 +222,9 @@ class SourceReader:
         if depth > 40 or self.steps > 20_000:
             raise UnprovenApi("declaration evaluation budget exceeded")
         if isinstance(node, Binding):
-            if node.module == _SDK_MODULE and node.name in _CONSTRUCTORS:
-                return _CONSTRUCTORS[node.name]
+            constructor = _sdk_constructor(node.module, node.name)
+            if constructor is not None:
+                return constructor
             if node.name:
                 return self.binding(node.module, node.name, depth + 1)
             return node
@@ -220,10 +238,11 @@ class SourceReader:
             owner = self.value(module, node.value, depth + 1)
             if isinstance(owner, Binding):
                 target = owner.module + ("." + owner.name if owner.name else "")
-                if target == _SDK_MODULE and node.attr in _CONSTRUCTORS:
-                    return _CONSTRUCTORS[node.attr]
+                constructor = _sdk_constructor(target, node.attr)
+                if constructor is not None:
+                    return constructor
                 # A dotted import may name intermediate modules, not values.
-                if _SDK_MODULE.startswith(target + "."):
+                if any(m.startswith(target + ".") for m in _SDK_CONSTRUCTORS):
                     return Binding(target + "." + node.attr)
                 return self.binding(target, node.attr, depth + 1)
         if isinstance(node, (ast.Tuple, ast.List)):
