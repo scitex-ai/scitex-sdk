@@ -54,10 +54,11 @@ def list_command(
     @click.option(
         "--strict", is_flag=True, help="Exit 1 when any entry violates a rule."
     )
-    def _list(fmt: str, output: str | None, strict: bool) -> None:
+    @click.option("--json", "as_json", is_flag=True, help="Same as --format json.")
+    def _list(fmt: str, output: str | None, strict: bool, as_json: bool) -> None:
         spec = PackageSpec(package, import_name=import_name, mcp_server=mcp_server)
         doc = aggregate([spec])
-        _emit(doc, fmt, output)
+        _emit(doc, "json" if as_json else fmt, output)
         _fail_on(doc, strict)
 
     _list.help = (
