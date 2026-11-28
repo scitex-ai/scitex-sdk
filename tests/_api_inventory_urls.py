@@ -67,5 +67,6 @@ urlpatterns = [
     path("api/me/check/", inline_checked, name="me-check"),
     path("apps/dash/api/summary/", Dashboard.as_view(), name="dash-summary"),
     path("api/", include(nested)),
+    path("apps/demo/<path:endpoint>", public_status, name="demo-dispatch"),
     *api_urlpatterns([REF]),
 ]

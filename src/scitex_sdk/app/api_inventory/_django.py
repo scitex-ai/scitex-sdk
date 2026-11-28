@@ -66,6 +66,20 @@ def is_api_path(path: str, drf: bool) -> bool:
     return any("webhook" in s for s in segs)
 
 
+#: Path parameters that make a route a catch-all dispatcher (API-D005).
+DISPATCH_PARAMS = frozenset({"{endpoint}", "{path}", "{rest}", "{subpath}", "{function}"})
+
+
+def is_dispatcher(path: str) -> bool:
+    """A catch-all route (``.../<path:endpoint>``) serving many handlers.
+
+    Leaf apps mounted by a hub dispatch their programmatic API this way, so
+    the route is an API surface even without an ``api`` segment.
+    """
+    segs = [s for s in path.strip("/").split("/") if s]
+    return bool(segs) and segs[-1] in DISPATCH_PARAMS
+
+
 def contract_plugin_of(path: str) -> str | None:
     prefix = "/" + API_PREFIX + "/"
     if path.startswith(prefix):
@@ -128,7 +142,9 @@ def urlconf_entries(
             app_module = ".".join(module.split(".")[:3])
         rows.append(
             {
-                "kind": "rest" if contract or is_api_path(path, drf) else "page",
+                "kind": "rest"
+                if contract or is_api_path(path, drf) or is_dispatcher(path)
+                else "page",
                 "surface": "hub-urlconf",
                 "path": path,
                 "raw_pattern": raw,

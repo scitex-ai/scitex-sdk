@@ -127,3 +127,12 @@ def test_html_pages_are_kept_but_not_judged(rows):
     verdict = (home["kind"], home["violations"])
     # Assert
     assert verdict == ("page", [])
+
+
+def test_a_catch_all_dispatcher_is_an_api_route_flagged_d005(by_key):
+    # Arrange
+    key = ("/apps/demo/{endpoint}", ("ANY",))
+    # Act
+    row = by_key[key]
+    # Assert
+    assert (row["kind"], "API-D005" in row["violations"]) == ("rest", True)
