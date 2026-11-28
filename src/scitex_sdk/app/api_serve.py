@@ -113,15 +113,9 @@ class CacheIdempotencyStore:
 
 
 def _hook(name: str, *, required: bool = False):
-    from django.conf import settings
-    from django.utils.module_loading import import_string
+    from .api_tier._profiles import hook
 
-    value = getattr(settings, name, None)
-    if value is None:
-        return None
-    if isinstance(value, str):
-        value = import_string(value)
-    return value() if isinstance(value, type) else value
+    return hook(name)
 
 
 def _response(result: ApiResult):
@@ -453,7 +447,11 @@ def api_urlpatterns(refs=None, *, catch_all: bool = True) -> list:
         by_path: dict = {}
         for route in plugin.routes:
             by_path.setdefault(route.path, []).append(route)
-        for route_path, routes in by_path.items():
+        # A literal segment must win over a parameter in the same position
+        # (``tests/recommend`` before ``tests/{test_id}``): Django takes the
+        # first match, so mount the paths with fewer parameters first.
+        ordered = sorted(by_path.items(), key=lambda item: item[0].count("{"))
+        for route_path, routes in ordered:
             views = {r.methods[0]: operation_view(plugin, r) for r in routes}
             names = "+".join(operation_of(plugin, r).mcp_name for r in routes)
             patterns.append(

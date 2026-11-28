@@ -142,7 +142,7 @@ operation's normal limits):
 | `light` | request ≤ 256 KiB | ≤ 1 CPU-s / 256 MiB | 5 s | ≤ 1 MiB | API-K002 |
 | `stats-inline` | inline data ≤ 100 k values | ≤ 2 CPU-s / 512 MiB | 10 s | ≤ 1 MiB | sync |
 | `stats-bootstrap` | ≤ 100 k values, `n_boot` ≤ 10 000 | 1 core / 1 GiB | 30 s | ≤ 1 MiB | Job; public pool |
-| `figure-inline` | inline data ≤ 100 k points, ≤ 12 panels | 1 core / 1 GiB | 20 s | PNG/SVG/PDF ≤ 5 MB, ephemeral URL 24 h | Job; no storage write |
+| `figure-inline` | inline data ≤ 100 k points, ≤ 12 panels | 1 core / 1 GiB | 20 s | PNG/SVG/PDF ≤ 5 MB, returned inline (base64) | synchronous (W4: `figrecipe.figures.render`); no storage write |
 | `pdf-compile-public` | source bundle ≤ 20 MB, ≤ 200 files, no shell-escape | 2 cores / 2 GiB | 120 s | PDF ≤ 50 pages, ≤ 20 MB, ephemeral URL 24 h | Job; **out-of-process** sandbox (below); dedicated small pool |
 
 The sandbox for public PDF compilation:

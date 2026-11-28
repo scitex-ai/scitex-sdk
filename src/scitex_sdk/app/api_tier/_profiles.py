@@ -30,6 +30,32 @@ def setting(name: str, default=None):
     return getattr(settings, name, default)
 
 
+_HOOKS: dict = {}
+
+
+def hook(name: str):
+    """The host hook ``name``: an object, or a dotted path / class built ONCE.
+
+    A dotted path or a class is resolved and instantiated once per distinct
+    setting value, so a stateful hook (an in-memory idempotency store, a
+    limiter) keeps its state across requests.
+    """
+    value = setting(name)
+    if value is None:
+        return None
+    if not isinstance(value, (str, type)):
+        return value
+    key = (name, value)
+    if key not in _HOOKS:
+        resolved = value
+        if isinstance(value, str):
+            from django.utils.module_loading import import_string
+
+            resolved = import_string(value)
+        _HOOKS[key] = resolved() if isinstance(resolved, type) else resolved
+    return _HOOKS[key]
+
+
 @dataclass(frozen=True)
 class LimitsProfile:
     """Per-call (or per-job) limits of one class of work.
@@ -159,6 +185,7 @@ __all__ = [
     "PROFILES",
     "SPONSORED_USAGE_KIND",
     "LimitsProfile",
+    "hook",
     "profile_for",
     "profiles",
     "setting",

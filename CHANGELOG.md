@@ -40,6 +40,13 @@ Public light compute tier (API contract v1 §12, workstream W4).
 - `ApiCaller.tier`; `ApiCall.tier`, `.priority_class` and `.limits` (the
   public profile a handler must enforce).
 - `scitex_sdk.testing.api_examples.assert_examples_within_limits` (API-K004).
+- Host hooks given as a dotted path or a class are built once per setting
+  value, not per request, so a dotted `InMemoryIdempotencyStore` keeps its
+  keys (replays used to be silently lost).
+- Literal paths mount before parameterised ones (`tests/recommend` before
+  `tests/{test_id}`), so declaration order no longer decides which wins.
+- The served contract suite runs with no public tier and no admission hook,
+  so a leaf whose test settings enable a tier still gets the 401 probes.
 - Anonymous callers are keyed by client IP, so idempotency keys of different
   anonymous clients never collide.
 

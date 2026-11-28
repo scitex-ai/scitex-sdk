@@ -427,3 +427,35 @@ def test_the_tier_over_real_http():
         server.shutdown()
     # Assert
     assert (body["data"]["total"], klass) == (5, "public")
+
+
+def test_a_dotted_idempotency_store_keeps_its_state_across_requests():
+    # Arrange
+    tier = {**leaf.TIER, "calc.renders.create": {"public": True, "limits": "light"}}
+    with override_settings(SCITEX_API_PUBLIC_TIER=tier):
+        _post("/api/v1/calc/renders", {"values": [1]}, key="replay-me")
+        # Act
+        again = _post("/api/v1/calc/renders", {"values": [1]}, key="replay-me")
+    # Assert
+    assert again["Idempotent-Replayed"] == "true"
+
+
+def test_a_literal_action_path_wins_over_an_item_path():
+    # Arrange
+    from scitex_sdk.app.api_ops import build_plugin
+    from scitex_sdk.app.api_plugin import ApiPluginRef
+    from scitex_sdk.app.api_serve import api_urlpatterns
+
+    ops = (
+        ApiOperation("lit", "tests", "get", "tests._api_ops_tier:create_note"),
+        ApiOperation(
+            "lit", "tests", "recommend", "tests._api_ops_tier:create_note",
+            item=False, read_only=True,
+        ),
+    )
+    leaf.LITERAL_PLUGIN = build_plugin("lit", "Lit", "1", ops)
+    ref = ApiPluginRef(name="lit", target="tests._api_ops_tier:LITERAL_PLUGIN")
+    # Act
+    paths = [str(p.pattern) for p in api_urlpatterns([ref], catch_all=False)]
+    # Assert
+    assert paths == ["api/v1/lit/tests/recommend", "api/v1/lit/tests/<str:test_id>"]

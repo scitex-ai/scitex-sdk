@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from ._capacity import SlotPools
 from ._decision import TierDecision, anonymous_allowed, client_key, decide
 from ._measure import Measurement, measured
-from ._profiles import setting
+from ._profiles import hook
 
 PRIORITY_HEADER = "SciTeX-Priority-Class"
 
@@ -77,14 +77,7 @@ def anonymous_caller(op, request):
 
 
 def _hook(name: str):
-    value = setting(name)
-    if value is None:
-        return None
-    if isinstance(value, str):
-        from django.utils.module_loading import import_string
-
-        value = import_string(value)
-    return value() if isinstance(value, type) else value
+    return hook(name)
 
 
 @dataclass
