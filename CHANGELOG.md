@@ -32,6 +32,56 @@ All notable changes to `scitex-sdk`.
   (`contract`, `routes[].operation_id`), which an SDK older than 0.5.0 refuses
   as unknown fields. Hosts that read leaf descriptors upgrade first.
 
+Public light compute tier (API contract v1 §12, workstream W4).
+
+- `ApiOperation(exposure=...)` and `AuthScope.exposure`: the public-tier
+  ceiling `public_eligible | member | privileged` (API-K001). The default is
+  `member`; `public=True` implies `public_eligible`; a project-scoped
+  operation can never be `public_eligible`. Carried in the inert descriptor
+  and in OpenAPI as `x-scitex-exposure`.
+- `scitex_sdk.app.api_tier`: the host side of the tier.
+  - `SCITEX_API_PUBLIC_TIER` (API-K008) enables `public_eligible` operations
+    for anonymous callers (or for any key, `requires: "key"`) under a limits
+    profile (`light`, `stats-inline`, `stats-bootstrap`, `figure-inline`,
+    `pdf-compile-public`). Configuration can narrow, never widen past the
+    ceiling.
+  - Priority classes `paid > member > public` from `ApiCaller.tier`
+    (API-Q001); every response carries `SciTeX-Priority-Class` (API-Q002).
+  - Concurrency slots per pool with a reserved paid share (>= 60 %) and a
+    capped public share (<= 20 %); a full pool is 503
+    `api.capacity_deferred` with `Retry-After` (API-Q003).
+  - `TierRateLimiter`: per-class per-minute and per-day buckets keyed by
+    token, or by client IP (IPv6 /64) for anonymous callers (API-H002).
+  - Per-call measurement: wall time, thread CPU time, sampled peak memory,
+    exact `storage_write` flag; `cost_class_exceeded` in the meter event
+    (API-K002/K003). The meter event also carries `priority_class`,
+    `sponsored`, `payer`, `usage_kind` (`public_compute`), `limits_profile`
+    and `user_id`.
+  - `SCITEX_API_ADMISSION.admit(decision, op, caller, request)`: the host's
+    credit gate and promotion-budget check before the handler runs; it may
+    refuse, or degrade the priority class.
+  - A public-class request above its profile's input cap is 413
+    `api.request_too_large`; a tier operation that needs a key answers 401
+    `api.key_required` to anonymous callers.
+- Hosted MCP applies the same public tier as REST: an anonymous session
+  lists and calls exactly the operations the tier opens to anonymous
+  callers (per-operation anonymous caller keyed by client IP), any key may
+  call a tier operation whatever its account tier, every call runs through
+  `run_tiered` (admission, limits, slots, measurement), and `_meta.priority_class`
+  and the meter event carry the tier fields and `user_id`.
+- `ApiCaller.tier`; `ApiCall.tier`, `.priority_class` and `.limits` (the
+  public profile a handler must enforce).
+- `scitex_sdk.testing.api_examples.assert_examples_within_limits` (API-K004).
+- Host hooks given as a dotted path or a class are built once per setting
+  value, not per request, so a dotted `InMemoryIdempotencyStore` keeps its
+  keys (replays used to be silently lost).
+- Literal paths mount before parameterised ones (`tests/recommend` before
+  `tests/{test_id}`), so declaration order no longer decides which wins.
+- The served contract suite runs with no public tier and no admission hook,
+  so a leaf whose test settings enable a tier still gets the 401 probes.
+- Anonymous callers are keyed by client IP, so idempotency keys of different
+  anonymous clients never collide.
+
 ## [0.4.2] - 2026-11-29
 
 - Add HOSTED MCP (`scitex_sdk.app.api_mcp_http`, API contract v1 §11): the

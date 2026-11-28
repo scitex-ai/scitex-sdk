@@ -231,6 +231,10 @@ def require_storage_write(
     sizes = [int(size) for size in incoming_sizes]
     if any(size < 0 for size in sizes):
         raise ValueError("incoming sizes must be non-negative")
+    from scitex_sdk.app.api_tier import flag_call
+
+    # API-K003: an API call that writes project storage is flagged exactly.
+    flag_call("storage_write")
     gate = _storage_gate()
     try:
         gate.require_storage_write(project.id, request, incoming_sizes=sizes)

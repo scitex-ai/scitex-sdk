@@ -344,6 +344,9 @@ def run_contract_suite(plugin: ApiPlugin, *, target: str | None = None) -> list:
         SCITEX_API_IDEMPOTENCY_STORE=InMemoryIdempotencyStore(),
         SCITEX_API_RATE_LIMITER=None,
         SCITEX_API_METER=None,
+        # The probes expect 401 without a credential: no host public tier.
+        SCITEX_API_PUBLIC_TIER={},
+        SCITEX_API_ADMISSION=None,
     ):
         client = Client()
         for op in operations(plugin):

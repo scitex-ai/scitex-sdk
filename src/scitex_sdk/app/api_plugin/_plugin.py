@@ -377,6 +377,7 @@ class ApiPlugin:
             operation["x-scitex-oauth-scopes"] = list(route.auth.scopes)
         if route.auth.session:
             operation["x-scitex-session"] = True
+        operation["x-scitex-exposure"] = route.auth.exposure
         if route.read_only:
             operation["x-scitex-read-only"] = True
         if route.idempotency.required:
