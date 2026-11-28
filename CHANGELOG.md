@@ -4,6 +4,8 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-29
+
 - Add HOSTED MCP (`scitex_sdk.app.api_mcp_http`, API contract v1 §11): the
   declared operations of the admitted plugins served over MCP Streamable
   HTTP, for agents that know a URL and a key. It is stateless, answers JSON,
