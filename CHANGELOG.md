@@ -4,6 +4,35 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-28
+
+- Add the API INVENTORY (`scitex_sdk.app.api_inventory`): one deterministic
+  listing of every API endpoint and MCP tool, tagged with the API contract v1
+  rule ids it violates (`docs/design/api-contract-v1/01-rules.md`): D001
+  not generated from an operation, D005 dynamic dispatcher, R001-R004 URL
+  grammar / casing / plural / trailing slash, V002 verb in path, A001 no
+  Bearer credential, A004 anonymous write, E001 not problem+json, E003 HTML
+  or login redirect on an API path, T001-T003 tool name / REST<->MCP 1:1 /
+  re-namespaced tool, plus the inventory-only X001 (hub view calls leaf
+  logic).
+  - Per package: `api_click_group(package=...)` gives any leaf CLI
+    `<pkg> api list [--format json|csv|md] [--strict]`: its declared
+    `scitex.apis` operations (checked with `scitex_sdk.testing.api_contract.check_plugin`,
+    the same static rules as the contract test) plus its FastMCP tools.
+  - Global: `aggregate()` composes the per-package listings with a host's
+    Django URLconf (every pattern via `get_resolver()`: methods, credential
+    modes, permission, CSRF exemption, owner hub/leaf, leaf modules a hub view
+    calls), ASGI mounts (`/mcp`, websockets), the hosted MCP aggregate
+    (namespace and owner per tool) and an optional GET-only live probe. Front
+    end: `scitex-sdk api inventory [--django-settings ... --asgi ...
+    --hosted-mcp ... --probe-base ...] --output-dir DIR` writes
+    `inventory.json`, `inventory.csv` and `index.md`.
+- `scitex-sdk api list` lists the SDK's own declaration (`sdk.skills.list`).
+- Contract findings for declared operations come from
+  `scitex_sdk.testing.api_contract.declaration_violations` (the static subset
+  of the contract test and the Dev `PS-SDK-API` audit), so a hand-written
+  plugin is reported as API-D001 exactly as the contract test reports it.
+
 ## [0.4.0] - 2026-11-28
 
 API contract v1 enforcement (docs/design/api-contract-v1/, workstream W1).

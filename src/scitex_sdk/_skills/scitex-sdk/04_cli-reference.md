@@ -17,6 +17,16 @@ accepts `-h/--help`; `--json` propagates to subcommands that honour it.
 - `docs`, `skills` — package documentation and agent-facing skills
   (`skills list` / `skills get <name>`).
 - `mcp list-tools` — every MCP tool from both the app and ui servers.
+- `api list` — the SDK's own declared operations + MCP tools with API
+  contract rule findings (`--format json|csv|md`, `--json`, `--strict`).
+  Any leaf gets the same command with
+  `main.add_command(api_click_group(package="scitex-<pkg>"))`
+  (`scitex_sdk.app.api_inventory`).
+- `api inventory` — every endpoint and MCP tool of the installed ecosystem;
+  with `--django-root/--django-settings/--asgi/--hosted-mcp` also a host's
+  URLconf, ASGI mounts and hosted MCP, and with `--probe-base` a GET-only
+  live probe. `--output-dir DIR` writes `inventory.json`, `inventory.csv`,
+  `index.md`.
 - `list-python-apis` — public API tree for both components (`--json`).
 - `install-shell-completion`, `print-shell-completion` — TAB completion.
 
