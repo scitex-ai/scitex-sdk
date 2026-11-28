@@ -98,3 +98,13 @@ def test_a_hosted_aggregate_attributes_tools_to_their_namespace():
         "notes_notes_list",
         True,
     )
+
+
+def test_a_hand_written_plugin_carries_the_contract_tests_d001():
+    # Arrange
+    from tests._api_inventory_handwritten import REF as LEGACY
+
+    # Act
+    listing = list_package(PackageSpec("scitex-legacy", import_name="tests"), refs=[LEGACY])
+    # Assert
+    assert "API-D001" in listing.operations[0]["violations"]

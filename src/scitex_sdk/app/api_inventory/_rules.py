@@ -18,8 +18,8 @@ from __future__ import annotations
 import re
 
 from ..api_ops import API_PREFIX, CRUD_VERBS
-
-CONTRACT_DOC = "docs/design/api-contract-v1/01-rules.md"
+from ..api_rules import RULES as CONTRACT_RULES
+from ..api_rules import RULES_DOC as CONTRACT_DOC
 
 #: id -> (short title, what the inventory checks)
 RULES: dict[str, tuple[str, str]] = {
@@ -205,15 +205,24 @@ def mcp_name_rules(name: str, namespace: str | None, derived: bool) -> list[str]
 
 
 def rule_table() -> list[dict]:
-    return [
+    """Every rule an inventory row can carry: the inventory's route/tool checks
+    plus the contract rules the SDK enforces on declarations (which reach the
+    inventory through the contract test's own ``declaration_violations``)."""
+    rows = [
         {
             "id": rid,
             "title": title,
             "check": check,
-            "source": CONTRACT_DOC if not rid.startswith("API-X") else "inventory",
+            "source": "inventory" if rid.startswith("API-X") else CONTRACT_DOC,
         }
         for rid, (title, check) in RULES.items()
     ]
+    rows += [
+        {"id": rid, "title": rid, "check": text, "source": f"{CONTRACT_DOC} (layer {layer})"}
+        for rid, (layer, text) in CONTRACT_RULES.items()
+        if rid not in RULES
+    ]
+    return rows
 
 
 __all__ = [

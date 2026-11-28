@@ -26,28 +26,27 @@ def notes_doc():
     return aggregate([NOTES])
 
 
-def test_scitex_sdk_api_list_reports_its_own_off_grammar_route():
+def test_scitex_sdk_api_list_shows_its_own_conformant_operation():
     # Arrange
     runner = CliRunner()
     # Act
-    result = runner.invoke(main, ["api", "list", "--format", "json"])
+    result = runner.invoke(main, ["api", "list", "--json"])
     # Assert
     skills = next(
         e
         for e in json.loads(result.output)["entries"]
-        if e.get("path") == "/api/v1/scitex-sdk/skills"
+        if e.get("path") == "/api/v1/sdk/skills"
     )
-    assert (bool(skills["off_grammar"]), "API-T002" in skills["violations"]) == (
-        True,
-        True,
-    )
+    assert (skills["operation_id"], skills["violations"]) == ("sdk.skills.list", [])
 
 
 def test_strict_list_fails_when_a_rule_is_violated():
     # Arrange
-    runner = CliRunner()
+    group = api_click_group(
+        "scitex-notes", import_name="tests", mcp_server="tests._api_inventory_mcp:mcp"
+    )
     # Act
-    result = runner.invoke(main, ["api", "list", "--strict", "--format", "md"])
+    result = CliRunner().invoke(group, ["list", "--strict", "--format", "md"])
     # Assert
     assert (result.exit_code, "violate API rules" in result.output) == (1, True)
 

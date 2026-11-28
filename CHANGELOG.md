@@ -4,7 +4,7 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
-## [0.3.27] - 2026-11-28
+## [0.4.1] - 2026-11-28
 
 - Add the API INVENTORY (`scitex_sdk.app.api_inventory`): one deterministic
   listing of every API endpoint and MCP tool, tagged with the API contract v1
@@ -17,8 +17,8 @@ All notable changes to `scitex-sdk`.
   logic).
   - Per package: `api_click_group(package=...)` gives any leaf CLI
     `<pkg> api list [--format json|csv|md] [--strict]`: its declared
-    `scitex.apis` operations (read back through `api_ops.operation_of`, the
-    same path host admission uses) plus its FastMCP tools.
+    `scitex.apis` operations (checked with `scitex_sdk.testing.api_contract.check_plugin`,
+    the same static rules as the contract test) plus its FastMCP tools.
   - Global: `aggregate()` composes the per-package listings with a host's
     Django URLconf (every pattern via `get_resolver()`: methods, credential
     modes, permission, CSRF exemption, owner hub/leaf, leaf modules a hub view
@@ -27,9 +27,49 @@ All notable changes to `scitex-sdk`.
     end: `scitex-sdk api inventory [--django-settings ... --asgi ...
     --hosted-mcp ... --probe-base ...] --output-dir DIR` writes
     `inventory.json`, `inventory.csv` and `index.md`.
-- `scitex-sdk api list` lists the SDK's own declaration. It reports that the
-  `scitex-sdk` plugin route `skills` is off the operation grammar (the host
-  refuses to mount it).
+- `scitex-sdk api list` lists the SDK's own declaration (`sdk.skills.list`).
+- Contract findings for declared operations come from
+  `scitex_sdk.testing.api_contract.declaration_violations` (the static subset
+  of the contract test and the Dev `PS-SDK-API` audit), so a hand-written
+  plugin is reported as API-D001 exactly as the contract test reports it.
+
+## [0.4.0] - 2026-11-28
+
+API contract v1 enforcement (docs/design/api-contract-v1/, workstream W1).
+
+- **Rule ids on every declaration-time refusal.** `scitex_sdk.app.api_rules`
+  registers the contract rules; the operation layer raises
+  `ApiContractViolation` (an `ApiPluginContractError`) with `.rule`, and the
+  message starts with the id: `[API-R003] clew.data.list: resource 'data' must
+  be a plural noun`. New declaration checks: reserved package names
+  (API-R006), snake_case fields and enum values (API-F001), `<package>.<snake>`
+  error codes (API-E002), page limits ≤ 200 and every `list` paginated
+  (API-G001), a Job schema with `id` and `state` (API-J001), closed rate-class
+  and compute-cost sets (API-H002, API-K001), `module:function` handlers
+  (API-D006), contract major (`build_plugin(..., contract="1")`, API-D003),
+  duplicate tool names (API-T001).
+- **Breaking:** `compute_cost` must be `light|standard|heavy` and `rate_class`
+  `anonymous|standard|search|bulk|interactive` for operation-built plugins; a
+  `list` operation must be paginated.
+- **Public operations** (API-A004): `ApiOperation(public=True)` for a
+  side-effect-free read that is not project-scoped. Served without a
+  credential; a presented-but-invalid bearer is still 401.
+- **Contract test** `scitex_sdk.testing.api_contract`: `assert_contract(PLUGIN)`
+  runs the static rules, MCP 1:1 (API-T002), OpenAPI validity (API-O002), and
+  probes every operation over the real SDK serving path (401/403/405/400
+  problem+json, `X-Request-Id`); `compare(previous, current)` enforces
+  additive-only change (API-C001).
+- **Dev audit rule `PS-SDK-API`**: the same static rules over source
+  declarations (no consumer import); a hand-written plugin reports API-D001.
+- **Legacy-route deprecation headers** (API-H003):
+  `scitex_sdk.app.api_deprecation.LegacyApiDeprecationMiddleware` adds
+  `Deprecation` (RFC 9745), `Sunset` (RFC 8594, beta launch + N months; omitted
+  while `SCITEX_API_BETA_LAUNCH_DATE` is unset) and `Link` headers.
+- A trailing-slash `/api/v1/` path answers a 404 problem naming the canonical
+  path (API-R004); refusals of off-grammar plugins log at ERROR.
+- The SDK's own API is now an operation plugin: entry point `sdk`,
+  `GET /api/v1/sdk/skills` (public, paginated, MCP `sdk_skills_list`). It was
+  previously a hand-written route that the generic host mount refused.
 
 ## [0.3.26] - 2026-11-27
 

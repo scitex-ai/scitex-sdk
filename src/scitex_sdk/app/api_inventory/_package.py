@@ -148,6 +148,21 @@ def python_api_for(
     return None
 
 
+def contract_findings(plugin) -> dict:
+    """operation_id (or plugin id) -> rule ids, from the contract test's own checks.
+
+    This is :func:`scitex_sdk.testing.api_contract.declaration_violations`, the
+    static subset the contract test and the Dev ``PS-SDK-API`` audit run, so a
+    listing, a CI audit and a leaf's contract test can never disagree.
+    """
+    from scitex_sdk.testing.api_contract import declaration_violations
+
+    out: dict = {}
+    for item in declaration_violations(plugin):
+        out.setdefault(item.operation_id, set()).add(item.rule)
+    return out
+
+
 def operation_entries(distribution: str, refs=None) -> tuple[list[dict], list[str]]:
     """Rows for every declared operation of ``distribution`` (contract)."""
     rows, errors = [], []
@@ -159,6 +174,8 @@ def operation_entries(distribution: str, refs=None) -> tuple[list[dict], list[st
         except Exception as exc:
             errors.append(f"{ref.name}: cannot load {ref.target}: {exc}")
             continue
+        by_operation = contract_findings(plugin)
+        plugin_wide = by_operation.pop(plugin.id, set())
         for route in plugin.routes:
             path = f"/{API_PREFIX}/{plugin.id}/{route.path}"
             row = {
@@ -185,7 +202,7 @@ def operation_entries(distribution: str, refs=None) -> tuple[list[dict], list[st
                     operation_id=None,
                     mcp_twin=None,
                     off_grammar=str(exc),
-                    violations=sorted(set(path_rules(path)) | {"API-T002"}),
+                    violations=sorted(set(path_rules(path)) | plugin_wide),
                 )
             else:
                 row.update(
@@ -193,7 +210,11 @@ def operation_entries(distribution: str, refs=None) -> tuple[list[dict], list[st
                     mcp_twin=op.mcp_name,
                     scope=op.scope,
                     off_grammar=None,
-                    violations=path_rules(path),
+                    violations=sorted(
+                        set(path_rules(path))
+                        | plugin_wide
+                        | by_operation.get(op.operation_id, set())
+                    ),
                 )
             rows.append(row)
     return rows, errors
