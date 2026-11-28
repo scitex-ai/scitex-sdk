@@ -127,7 +127,7 @@ def test_an_action_must_say_item_or_collection():
 
 def test_operations_of_another_package_are_refused():
     # Arrange
-    foreign = ApiOperation("other", "notes", "list", "m:f")
+    foreign = ApiOperation("other", "notes", "list", "m:f", paginated=True)
     # Act
     raised = _raised(lambda: build_plugin("notes", "N", "1", [foreign]))
     # Assert

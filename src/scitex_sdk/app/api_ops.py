@@ -44,6 +44,13 @@ from .api_plugin import (
     Pagination,
     RateLimit,
 )
+from .api_rules import (
+    CONTRACT_MAJOR,
+    RESERVED_PACKAGES,
+    SUPPORTED_CONTRACTS,
+    operation_violations,
+    violation,
+)
 
 API_PREFIX = "api/v1"
 #: Verbs with fixed semantics; anything else is an ACTION verb.
@@ -68,10 +75,12 @@ DEFAULT_OAUTH_BASE = "https://scitex.ai/oauth"
 _NAME_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
 
 
-def _name(value: str, what: str) -> str:
+def _name(value: str, what: str, operation_id: str | None = None) -> str:
     if not isinstance(value, str) or not _NAME_RE.match(value):
-        raise ApiPluginContractError(
-            f"{what} {value!r} must be lowercase kebab-case ([a-z][a-z0-9-]*)"
+        raise violation(
+            "API-R002",
+            f"{what} {value!r} must be lowercase kebab-case ([a-z][a-z0-9-]*)",
+            operation_id,
         )
     return value
 
@@ -114,28 +123,48 @@ class ApiOperation:
     max_limit: int = 100
     rate_class: str = "standard"
     compute_cost: str = "light"
+    #: Callable without a credential (API-A004). Only a side-effect-free read
+    #: that is not project-scoped may be public; it carries no scope.
+    public: bool = False
 
     def __post_init__(self) -> None:
-        _name(self.package, "package")
-        _name(self.resource, "resource")
-        _name(self.verb, "verb")
+        oid = f"{self.package}.{self.resource}.{self.verb}"
+        _name(self.package, "package", oid)
+        _name(self.resource, "resource", oid)
+        _name(self.verb, "verb", oid)
         if not self.resource.endswith("s"):
-            raise ApiPluginContractError(
-                f"resource {self.resource!r} must be a plural noun"
+            raise violation(
+                "API-R003", f"resource {self.resource!r} must be a plural noun", oid
             )
         if self.verb in CRUD_VERBS:
             if self.item is not None and self.item != CRUD_VERBS[self.verb][1]:
-                raise ApiPluginContractError(
-                    f"verb {self.verb!r} fixes item={CRUD_VERBS[self.verb][1]}"
+                raise violation(
+                    "API-V001",
+                    f"verb {self.verb!r} fixes item={CRUD_VERBS[self.verb][1]}",
+                    oid,
                 )
             if self.read_only:
-                raise ApiPluginContractError("read_only applies to action verbs only")
+                raise violation(
+                    "API-V004", "read_only applies to action verbs only", oid
+                )
         elif self.item is None:
-            raise ApiPluginContractError(
-                f"action {self.verb!r} must state item=True or item=False"
+            raise violation(
+                "API-V002",
+                f"action {self.verb!r} must state item=True or item=False",
+                oid,
             )
         if self.paginated and self.verb != "list":
-            raise ApiPluginContractError("only a list operation is paginated")
+            raise violation("API-G001", "only a list operation is paginated", oid)
+        if self.verb == "list" and not self.paginated:
+            raise violation("API-G001", "a list operation must be paginated", oid)
+        if self.public and (self.access != "read" or self.project_scoped):
+            raise violation(
+                "API-A004",
+                "only a read that is not project-scoped may be public",
+                oid,
+            )
+        for rule, message in operation_violations(self):
+            raise violation(rule, message, oid)
 
     # ---------------------------------------------------------------- derived
     @property
@@ -211,9 +240,13 @@ class ApiOperation:
             request=request,
             response=self.response,
             errors=tuple(self.errors),
-            auth=AuthScope(
-                project_scope="project" if self.project_scoped else "user",
-                scopes=(self.scope,),
+            auth=(
+                AuthScope(project_scope="none", public=True)
+                if self.public
+                else AuthScope(
+                    project_scope="project" if self.project_scoped else "user",
+                    scopes=(self.scope,),
+                )
             ),
             idempotency=Idempotency(required=self.access == "write"),
             pagination=(
@@ -239,14 +272,24 @@ def build_plugin(
     operations: Sequence[ApiOperation],
     *,
     oauth_base: str = DEFAULT_OAUTH_BASE,
+    contract: str = CONTRACT_MAJOR,
 ) -> ApiPlugin:
     """The :class:`ApiPlugin` of ``operations`` (all of one ``package``).
 
     The OAuth provider is derived too: every operation's scope is declared
     with a description, so the plugin's scope catalogue is complete by
-    construction.
+    construction. ``contract`` is the API contract major the declaration
+    follows (API-D003); this SDK refuses one it does not support.
     """
     _name(package, "package")
+    if package in RESERVED_PACKAGES:
+        raise violation("API-R006", f"package {package!r} is a reserved /api/v1 name")
+    if contract not in SUPPORTED_CONTRACTS:
+        raise violation(
+            "API-D003",
+            f"package {package!r} declares contract {contract!r}; this SDK "
+            f"supports {sorted(SUPPORTED_CONTRACTS)}",
+        )
     operations = tuple(operations)
     if not operations:
         raise ApiPluginContractError(f"package {package!r} declares no operations")
@@ -257,19 +300,29 @@ def build_plugin(
             )
     names = [op.mcp_name for op in operations]
     if len(set(names)) != len(names):
-        raise ApiPluginContractError(f"package {package!r} declares an operation twice")
+        dupes = sorted({n for n in names if names.count(n) > 1})
+        raise violation(
+            "API-T001",
+            f"package {package!r} declares an operation twice (MCP name(s) {dupes})",
+        )
     scopes = {}
     for op in operations:
-        scopes[op.scope] = f"{op.access.title()} {op.resource} of {package}"
+        if not op.public:
+            scopes[op.scope] = f"{op.access.title()} {op.resource} of {package}"
     return ApiPlugin(
         id=package,
         title=title,
         api_version=api_version,
         routes=tuple(op.route() for op in operations),
-        oauth=OAuthProvider(
-            authorization_url=f"{oauth_base}/authorize/",
-            token_url=f"{oauth_base}/token/",
-            scopes=scopes,
+        # An all-public plugin declares no scope, so it has no OAuth scheme.
+        oauth=(
+            OAuthProvider(
+                authorization_url=f"{oauth_base}/authorize/",
+                token_url=f"{oauth_base}/token/",
+                scopes=scopes,
+            )
+            if scopes
+            else None
         ),
     )
 
@@ -320,8 +373,10 @@ def operation_of(plugin: ApiPlugin, route: ApiRoute) -> ApiOperation:
         max_limit=route.pagination.max_limit or 100,
         rate_class=route.rate.rate_class,
         compute_cost=route.rate.compute_cost,
+        public=bool(route.auth.public),
     )
-    if op.path != route.path or (op.scope,) != tuple(route.auth.scopes):
+    expected_scopes = () if op.public else (op.scope,)
+    if op.path != route.path or expected_scopes != tuple(route.auth.scopes):
         raise ApiPluginContractError(
             f"route {route.path!r} does not match its derived operation "
             f"({op.path!r}, scope {op.scope!r})"

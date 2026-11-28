@@ -49,14 +49,23 @@ import time
 import uuid
 from collections import OrderedDict
 
-import logging
+import scitex_logging as slogging
 
 from .api_exec import ApiCaller, ApiProblem, ApiResult, execute, params_digest
-from .api_plugin import ApiPluginContractError
 from .api_ops import API_PREFIX, operation_of
+from .api_plugin import ApiPluginContractError
 
 PROBLEM_JSON = "application/problem+json"
-_LOG = logging.getLogger(__name__)
+_LOG = slogging.getLogger(__name__)
+
+
+class _Anonymous:
+    is_authenticated = False
+    username = ""
+    pk = None
+
+
+_ANONYMOUS = _Anonymous()
 #: Plugins discovered but not mounted, with the reason (for host diagnostics).
 REFUSED: dict = {}
 
@@ -206,6 +215,11 @@ def operation_view(plugin, route):
                     503, "api.unavailable", "API authentication is not configured"
                 )
             caller = caller_hook(request)
+            presented = bool(request.headers.get("Authorization", "").strip())
+            if caller is None and op.public and not presented:
+                # API-A004: a public read needs no credential. A credential
+                # that IS presented but does not resolve stays a 401 (A002).
+                caller = ApiCaller(user=_ANONYMOUS, scopes=(), via="anonymous")
             if caller is None:
                 raise ApiProblem(
                     401,
@@ -297,8 +311,12 @@ def _dispatch(views: dict):
             request_id = uuid.uuid4().hex
             allowed = ", ".join(sorted(views))
             response = _problem(
-                ApiProblem(405, "api.method_not_allowed", f"use {allowed}",
-                           headers={"Allow": allowed}),
+                ApiProblem(
+                    405,
+                    "api.method_not_allowed",
+                    f"use {allowed}",
+                    headers={"Allow": allowed},
+                ),
                 request_id,
             )
             response["X-Request-Id"] = request_id
@@ -345,9 +363,10 @@ def admitted_plugins(refs=None) -> list:
             operations(plugin)
         except ApiPluginContractError as exc:
             # Refused, not mounted: a plugin off the operation grammar would be
-            # served with a shape no client was promised. Logged loudly; the
-            # rest of the host keeps serving.
-            _LOG.warning("scitex.apis %s not mounted: %s", ref.name, exc)
+            # served with a shape no client was promised. Logged loudly (the
+            # message carries the rule id); the rest of the host keeps serving,
+            # and a host's CI asserts REFUSED is empty for its trusted set.
+            _LOG.error("scitex.apis %s not mounted: %s", ref.name, exc)
             REFUSED[ref.name] = str(exc)
             continue
         admission = admit(
@@ -369,9 +388,21 @@ def admitted_plugins(refs=None) -> list:
 
 
 def _not_found(request, *args, **kwargs):
-    """Any other ``api/v1/`` path: a problem, never the host's HTML 404 page."""
+    """Any other ``api/v1/`` path: a problem, never the host's HTML 404 page.
+
+    A path with a trailing slash is named with its canonical spelling
+    (API-R004): v1 paths never end in ``/``, and saying so is cheaper for a
+    client than a bare 404.
+    """
     request_id = uuid.uuid4().hex
-    response = _problem(ApiProblem(404, "api.not_found", "no such API operation"), request_id)
+    path = request.path
+    detail = "no such API operation"
+    if path.endswith("/") and path.rstrip("/") != f"/{API_PREFIX}":
+        detail = (
+            f"no such API operation; v1 paths have no trailing slash "
+            f"(API-R004): try {path.rstrip('/')}"
+        )
+    response = _problem(ApiProblem(404, "api.not_found", detail), request_id)
     response["X-Request-Id"] = request_id
     return response
 
@@ -416,9 +447,9 @@ def api_not_found_pattern():
 
 __all__ = [
     "PROBLEM_JSON",
+    "REFUSED",
     "CacheIdempotencyStore",
     "InMemoryIdempotencyStore",
-    "REFUSED",
     "admitted_plugins",
     "api_not_found_pattern",
     "api_urlpatterns",

@@ -108,20 +108,41 @@ RECORD row, then read it from an installed wheel. This proves a declaration is
 available to hosts; it still does not enable its routes or verify handlers.
 
 
+## API contract v1: rule ids, contract test, audit
+
+Declare operations with `scitex_sdk.app.api_ops.ApiOperation` and
+`build_plugin`; a declaration that breaks a contract rule raises
+`ApiContractViolation` naming the rule (`[API-R003] clew.data.list: resource
+'data' must be a plural noun`). The registry is `scitex_sdk.app.api_rules.RULES`
+and `docs/design/api-contract-v1/01-rules.md`.
+
+Run the contract test in the leaf's CI (needs `openapi-spec-validator`):
+
+```python
+from scitex_sdk.testing.api_contract import assert_contract
+from my_leaf._rest import PLUGIN
+
+def test_api_contract():
+    assert_contract(PLUGIN)   # previous=<last released plugin> adds API-C001
+```
+
+`scitex-dev ecosystem audit-project <pkg> --rule PS-SDK-API` reports the same
+static rules from source without importing the package; a hand-written
+(non-operation) plugin is API-D001.
+
 ## SDK-owned bundled catalog
 
-The SDK itself declares `scitex.apis` name `scitex-sdk`, targeting
-`scitex_sdk._web._api:plugin`. Its relative `GET skills` operation returns
-`package="scitex-sdk"` and actual bundled skill IDs grouped by `scitex-sdk`,
-`scitex-app` and `scitex-ui`. No request path or user selection controls which
-filesystem location is read. It does not list installed user/global-provider
-skills, run scaffolding, or expose host paths.
+The SDK itself declares `scitex.apis` name `sdk`, targeting
+`scitex_sdk._web._api:plugin`: one public operation, `GET /api/v1/sdk/skills`
+(MCP `sdk_skills_list`), a paginated list of bundled skill ids
+(`{id, namespace, skill_id}`) from `scitex-sdk`, `scitex-app` and `scitex-ui`.
+No request path or user selection controls which filesystem location is read.
+It does not list installed user/global-provider skills, run scaffolding, or
+expose host paths.
 
-The Python reader is `scitex_sdk.list_bundled_skills()`. The optional Django
-adapter imports Django only when invoked (`scitex-sdk[gui]`); non-GET methods
-return JSON 405 with `Allow: GET`. Missing or invalid bundled resources return
-a typed JSON 503 without internal filenames. Hosts still use explicit admission;
-there is no auto-mounted live endpoint or added permission/enablement flow.
+The Python reader is `scitex_sdk.list_bundled_skills()`. Missing or invalid
+bundled resources answer a 503 problem `sdk.skills_unavailable`. Hosts still
+use explicit admission.
 
 ## GUI links to this contract
 
