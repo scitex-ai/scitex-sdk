@@ -139,7 +139,7 @@ In v1 there is **one dock record per distribution, with two optional facets**:
 - **Hub-native platform resources** become the `hub` dock: a plugin in Hub source, passed as
   `api_urlpatterns(refs=[hub_ref, …])`. Explicit refs are already supported. It gets the same
   grammar, the same `api list` and the same contract test.
-- **Third-party API facets** dock out-of-process only (decision 5).
+- **Third-party API facets** dock out-of-process only (decision 4).
 
 ### 3.8 Mode per current leaf (recommendation)
 

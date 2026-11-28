@@ -194,6 +194,10 @@ a mapping are one row, which states how many members it has.
 | E13 | Hub legacy allowlist test (`test_api_surface.py`) | API-D004 | hub | S | P |
 | E14 | The `hub` dock plugin (rows #3–#55) | all | hub | L | P |
 | E15 | Fold `scitex_hub.apps`/`app_config` into `scitex.apps`; one dock record with UI + API facets | 02 §3.7 | hub + sdk | M | F |
+| E16 | `exposure` ceiling + privileged scope suffix; per-call cost measurement and `cost_class_exceeded` flags; `SCITEX_API_PUBLIC_TIER` config; priority classes (`SciTeX-Priority-Class`, Job `priority_class`/`queued_seconds`) | API-K001–K008, Q001–Q003, M002 | sdk + hub | M | P |
+| E17 | `public_compute` sponsored usage kind on the #1256 promotion account (budget, 50/80/100 % alerts, backstop, degradation), in shadow mode | API-K005–K007 | hub (spend_app) | M | P (shadow) |
+| E18 | Public sandboxed compile pool (no network, read-only, 2 slots) for `writer.manuscripts.compile` | 06 §12.4 | writer + infra | M | P |
+| E19 | Hosted MCP fixes: problem object in `isError` results, `_meta.request_id`, `tools/list` scope filtering, `/.well-known/mcp.json`, OAuth protected-resource metadata | API-M001–M006 | sdk + hub | M | P |
 
 ## 8.6 Counts
 

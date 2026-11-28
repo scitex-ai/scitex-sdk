@@ -14,6 +14,12 @@ Every rule has a stable id. The same id appears in:
 
 Ids are never reused. A retired rule keeps its id, marked `retired`.
 
+Families defined in other parts:
+
+- `API-M001`–`M006`, hosted MCP: [05-hosted-mcp.md](05-hosted-mcp.md).
+- `API-K001`–`K008` (cost class, exposure ceiling, sponsorship) and `API-Q001`–`Q003` (priority
+  classes): [06-public-light.md](06-public-light.md).
+
 **Layer** is where the rule is enforced: **D** = declaration time (the SDK constructor raises),
 **C** = CI (the contract test and the `scitex-dev` audit), **R** = runtime (the host refuses or
 answers with a problem). **State** is the state on `develop` on 2026-11-28.
@@ -80,7 +86,7 @@ answers with a problem). **State** is the state on `develop` on 2026-11-28.
 | API-A001 | A program sends exactly one credential form: `Authorization: Bearer <token>`. The token is a personal access token, a project token or an OAuth access token. A session cookie is accepted only from first-party UI, with CSRF on writes. There is no `X-SCITEX-API-KEY` and no `?api_key=`. | R | shipped in Hub caller; scholar legacy violates it |
 | API-A002 | A bearer that is presented but invalid gets 401 with `WWW-Authenticate: Bearer`. It never falls back to anonymous or to the session. | R | shipped |
 | API-A003 | Scopes are derived: `<package>:<resource>:<read\|write>`. Wildcards are `*`, `*:read`, `*:write`, `<package>:*`, `<package>:*:<access>` and `<package>:<resource>:*`, and `write` implies `read`. A leaf cannot declare its own scope string. | D, R | shipped (`scope_granted`) |
-| API-A004 | Anonymous calls reach only operations declared `public=True`, in the `anonymous` rate class. | D, R | **new** (`ApiOperation` has no `public` yet) |
+| API-A004 | Anonymous calls reach only operations that the host's public-tier configuration enables and whose declared `exposure` ceiling is `public_eligible` (API-K001, K008). These calls use the `anonymous` rate class and the `public` priority class. | D, R | **new** |
 | API-A005 | Legacy key scopes map as follows: `*` stays `*`; `api` and `mcp` become `*` for operators only; `publish` becomes `live-paper:papers:write`. New UI keys default to `*:read`. | R | **new** |
 
 ### 1.7 Lists, filters, sorting — `API-G`
