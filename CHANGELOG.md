@@ -26,6 +26,8 @@ All notable changes to `scitex-sdk`.
   `verb_exceptions:` entry with an inline `# why` in the package's
   `.scitex/dev/cli-audit-dict.yaml` (the key the scitex-dev CLI audit reads).
   Reported by the contract test, the `PS-SDK-API` audit and `api list`.
+- API-V001: a `create` whose result has an `id` answers 201 with
+  `Location: /api/v1/<package>/<resource>/<id>`.
 - Compatibility: descriptors written by this version carry two new keys
   (`contract`, `routes[].operation_id`), which an SDK older than 0.5.0 refuses
   as unknown fields. Hosts that read leaf descriptors upgrade first.

@@ -388,6 +388,12 @@ def _shape(op: ApiOperation, call: ApiCall, result: Any) -> ApiResult:
         return ApiResult(200, body)
     if op.verb == "delete" and result is None:
         return ApiResult(204, None)
+    if op.verb == "create" and isinstance(result, Mapping) and result.get("id"):
+        # API-V001: a created object is addressed by its item URL.
+        from urllib.parse import quote
+
+        location = f"{op.url}/{quote(str(result['id']), safe='')}"
+        return ApiResult(201, {"data": result}, {"Location": location})
     return ApiResult(op.success_status, {"data": result})
 
 

@@ -54,7 +54,7 @@ answers with a problem). **State** is the state on `develop` on 2026-11-28.
 
 | Id | Rule | Layer | State |
 |---|---|---|---|
-| API-V001 | CRUD verbs fix the method, the item-ness and the success status: `list` GET 200 · `get` GET 200 · `create` POST 201 + `Location` · `update` PATCH 200 · `delete` DELETE 204. | D, R | shipped except `Location` |
+| API-V001 | CRUD verbs fix the method, the item-ness and the success status: `list` GET 200 · `get` GET 200 · `create` POST 201 + `Location` · `update` PATCH 200 · `delete` DELETE 204. | D, R | shipped (`Location` since 0.5.0) |
 | API-V002 | Every other verb is an action: POST, declared `item=True` (`…/{id}/<verb>`) or `item=False` (`…/<verb>`). The response is 200, or 202 + Job (API-J001). | D | shipped |
 | API-V003 | Action verbs come from the canonical verb catalogue (scitex-dev §1d). Anything else needs a justified entry in the package's `.scitex/dev/cli-audit-dict.yaml`. Search is `list` with `q`, never a `search` action. | C | shipped (0.5.0: `api_verbs`, `verb_exceptions:` with `# why`) |
 | API-V004 | An action without side effects declares `read_only=True`. It then needs the `read` scope and no idempotency key. | D | shipped |
