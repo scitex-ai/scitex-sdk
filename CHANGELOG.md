@@ -4,6 +4,29 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+- Add HOSTED MCP (`scitex_sdk.app.api_mcp_http`, API contract v1 §11): the
+  declared operations of the admitted plugins served over MCP Streamable
+  HTTP, for agents that know a URL and a key. It is stateless, answers JSON,
+  handles `initialize`, `ping`, `tools/list` and `tools/call`, and accepts
+  protocol revisions 2025-11-25, 2025-06-18 and 2025-03-26.
+  - Every `tools/call` runs `api_exec.execute`, the REST core. A success
+    carries the REST body as `structuredContent` and `_meta.request_id`. A
+    failure is an `isError` result whose `structuredContent` is the full
+    problem object (API-M003/M004).
+  - `tools/list` is filtered by the caller's scopes and tier (`public` <
+    `member` < `paid`, new `ApiCaller.tier`). A host may raise a tool's tier
+    but not lower it (API-M002).
+  - Authentication goes through a pluggable authenticator with the
+    `SCITEX_API_CALLER` contract. Only Bearer is accepted. A missing or
+    invalid bearer gets a 401 with `WWW-Authenticate` (optionally naming the
+    RFC 9728 resource metadata). Other checks: `Origin` (403), method (405)
+    and `MCP-Protocol-Version` (400).
+  - Django: `mcp_urlpattern()` mounts `api/v1/mcp` with the REST hooks.
+    `protected_resource_metadata()` builds the RFC 9728 document.
+- MCP tools derived from operations now carry `outputSchema` (the REST
+  envelope around the declared response), `title` and behaviour
+  `annotations`.
+
 ## [0.4.1] - 2026-11-28
 
 - Add the API INVENTORY (`scitex_sdk.app.api_inventory`): one deterministic
