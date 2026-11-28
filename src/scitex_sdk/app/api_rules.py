@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 
-from .api_plugin import ApiPluginContractError
+from .api_plugin import EXPOSURES, ApiPluginContractError
 from .api_plugin._base import DEFAULT_CONTRACT
 
 RULES_DOC = "docs/design/api-contract-v1/01-rules.md"
@@ -44,7 +44,8 @@ RULES = {
     "API-G001": ("D", "only list is paginated; 1 <= default <= max <= 200"),
     "API-J001": ("D", "an async operation's Job schema carries id and state"),
     "API-H002": ("D", "rate class from the closed set"),
-    "API-K001": ("D", "compute cost from the closed set"),
+    "API-K001": ("D", "compute cost and exposure ceiling from the closed sets"),
+    "API-K004": ("C", "public_eligible examples stay within their limits profile"),
     "API-T001": ("D", "MCP tool name derived and unique"),
     "API-T002": ("C", "MCP tools and operations map 1:1"),
     "API-O001": ("C", "OpenAPI generated and operationIds derived"),
@@ -129,6 +130,25 @@ def _field_violations(fields, where: str):
                 )
 
 
+def _exposure_violations(op):
+    """API-K001: the exposure ceiling is from the closed set and consistent."""
+    exposure = getattr(op, "exposure", "member")
+    if exposure not in EXPOSURES:
+        yield "API-K001", f"exposure {exposure!r} must be one of {EXPOSURES}"
+        return
+    if op.public and exposure != "public_eligible":
+        yield (
+            "API-K001",
+            f"a public operation is public_eligible, not {exposure!r}",
+        )
+    if exposure == "public_eligible" and op.project_scoped:
+        yield (
+            "API-K001",
+            "a project-scoped operation reaches project data; its ceiling is "
+            "'member', never 'public_eligible'",
+        )
+
+
 def operation_violations(op) -> list:
     """Every contract violation of one operation, as ``(rule, message)``.
 
@@ -147,6 +167,7 @@ def operation_violations(op) -> list:
                 f"compute_cost {op.compute_cost!r} must be one of {COMPUTE_COSTS}",
             )
         )
+    out.extend(_exposure_violations(op))
     if op.rate_class not in RATE_CLASSES:
         out.append(
             ("API-H002", f"rate_class {op.rate_class!r} must be one of {RATE_CLASSES}")

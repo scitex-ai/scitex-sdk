@@ -41,6 +41,9 @@ FIELD_TYPES = ("string", "integer", "number", "boolean", "object", "array")
 #: not scoped to an actor at all (a public listing).
 PROJECT_SCOPES = ("none", "user", "project")
 
+#: API-K001: a route's ceiling for a host's public tier (closed set).
+EXPOSURES = ("public_eligible", "member", "privileged")
+
 #: Whether and how much of a call is recorded. The minimal honest vocabulary:
 #: an endpoint either is not audited, records that a call happened, or records
 #: the call and its actor-visible arguments.

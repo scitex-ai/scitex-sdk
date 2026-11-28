@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 from ._base import (
     AUDIT_LEVELS,
+    EXPOSURES,
     FIELD_TYPES,
     IDEMPOTENCY_KEY_HEADER,
     PAGINATION_STYLES,
@@ -136,6 +137,24 @@ class ApiError:
             )
 
 
+def _check_exposure(auth) -> None:
+    """Resolve and validate ``AuthScope.exposure`` (API-K001)."""
+    if auth.exposure is None:
+        default = "public_eligible" if auth.public else "member"
+        object.__setattr__(auth, "exposure", default)
+    _require_choice(auth.exposure, EXPOSURES, "auth exposure")
+    if auth.public and auth.exposure != "public_eligible":
+        raise ApiPluginContractError(
+            f"auth declares public=True with exposure={auth.exposure!r}; an "
+            "always-public route is public_eligible by definition"
+        )
+    if auth.exposure == "public_eligible" and auth.project_scope == "project":
+        raise ApiPluginContractError(
+            "auth declares exposure='public_eligible' on a project-scoped route; "
+            "a route that reaches project data has the ceiling 'member'"
+        )
+
+
 @dataclass(frozen=True)
 class AuthScope:
     """What a caller must present, and whose data the route touches.
@@ -149,12 +168,18 @@ class AuthScope:
     filtered by an actor when it is not. Native clients authenticate with
     authorization-code + PKCE against these scopes — the contract never carries
     a client secret, because nothing here can hold one.
+
+    ``exposure`` is the route's ceiling for a host's public tier (API-K001):
+    only ``public_eligible`` may be enabled for anonymous callers by host
+    configuration; ``member`` and ``privileged`` never. Omitted, it is
+    ``public_eligible`` for a ``public=True`` route and ``member`` otherwise.
     """
 
     project_scope: str = "user"
     scopes: Sequence[str] = field(default_factory=tuple)
     public: bool = False
     session: bool = False
+    exposure: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "project_scope", _require_choice(
@@ -198,6 +223,7 @@ class AuthScope:
                 "actor or a project at all, so declare project_scope='none' — "
                 "anything else advertises a listing as filtered when it is not"
             )
+        _check_exposure(self)
 
 
 @dataclass(frozen=True)

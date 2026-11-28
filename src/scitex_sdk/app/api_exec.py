@@ -83,7 +83,9 @@ class ApiCaller:
 
     ``via`` is ``token`` (a personal/project token or OAuth bearer) or
     ``session`` (a browser session cookie). ``project`` restricts a project
-    token to one ``owner/slug``.
+    token to one ``owner/slug``. ``tier`` is the account tier the host
+    assigned (``public`` < ``member`` < ``paid``, API-Q001); it is never
+    taken from a request parameter.
     """
 
     user: Any
@@ -91,6 +93,7 @@ class ApiCaller:
     via: str = "token"
     token_id: str | None = None
     project: str | None = None
+    tier: str = "member"
 
     @property
     def identity(self) -> str:
@@ -127,6 +130,23 @@ class ApiCall:
     offset: int = 0
     limit: int = 0
     request_id: str = ""
+    #: How the host classed this call (``scitex_sdk.app.api_tier.TierDecision``),
+    #: or ``None`` when no tier applies (local MCP, tests).
+    tier: Any = None
+
+    @property
+    def priority_class(self) -> str:
+        """``paid`` / ``member`` / ``public`` (API-Q001)."""
+        return self.tier.priority_class if self.tier is not None else "member"
+
+    @property
+    def limits(self):
+        """The public profile a handler must enforce, or ``None`` (§12.4).
+
+        Set only for a public-class call of an operation enabled in the public
+        tier; members and paid callers get the operation's normal limits.
+        """
+        return self.tier.enforced_limits if self.tier is not None else None
 
 
 @dataclass(frozen=True)
@@ -311,12 +331,14 @@ def execute(
     request: Any = None,
     request_id: str | None = None,
     handler: Callable | None = None,
+    tier: Any = None,
 ) -> ApiResult:
     """Run ``op`` for ``caller``; every failure becomes a problem result.
 
     ``handler`` defaults to importing ``op.handler``; ``resolve_project`` is
     the host's project authorization (required for project-scoped
-    operations).
+    operations); ``tier`` is the host's classification of the call
+    (:class:`scitex_sdk.app.api_tier.TierDecision`), handed to the handler.
     """
     request_id = request_id or uuid.uuid4().hex
     try:
@@ -335,6 +357,7 @@ def execute(
             id=item_id,
             request=request,
             request_id=request_id,
+            tier=tier,
         )
         if op.project_scoped:
             project_id = params.pop("project")

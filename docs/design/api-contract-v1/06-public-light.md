@@ -34,10 +34,10 @@ scope. No path, tool name or scope ever contains "free" or "public".
 
 | Id | Rule | Layer | State |
 |---|---|---|---|
-| API-K001 | Every operation declares `compute_cost ∈ {light, standard, heavy}` (closed set) and `exposure ∈ {public_eligible, member, privileged}`. `exposure` is a **ceiling**: `privileged` operations can never be made public by configuration, and `member` operations (anything that writes project storage or calls a paid external API with the caller's data) cannot either. | D | `compute_cost` shipped (recommended set only); `exposure` **new** |
+| API-K001 | Every operation declares `compute_cost ∈ {light, standard, heavy}` (closed set) and `exposure ∈ {public_eligible, member, privileged}`. `exposure` is a **ceiling**: `privileged` operations can never be made public by configuration, and `member` operations (anything that writes project storage or calls a paid external API with the caller's data) cannot either. | D | shipped (scitex-sdk 0.6.0) |
 | API-K002 | **Light** is concrete and measured per call by the host. Every one of these holds: CPU ≤ 1 CPU-second · peak memory above baseline ≤ 256 MiB · wall ≤ 5 s · response ≤ 1 MiB · no project storage write · no paid external API · synchronous (no Job). `standard` and `heavy` are bounded per call by the operation's limits profile (§12.4). | D, R | **new**; thresholds decided (decision 10) |
 | API-K003 | Measured usage above the declared class or profile is **flagged** in the meter event: `cost_class_exceeded: [cpu\|memory\|wall\|bytes\|storage_write\|external]`. If more than 1 % of a UTC day's calls are flagged, the operation is removed from the public tier automatically (it then needs a member token). This alerts the owning package (card) and shows in `GET /api/v1/operations` as `public: false, reason: cost_class_exceeded`. | R, C | **new** |
-| API-K004 | The contract test runs every `public_eligible` operation on its declared example inputs under its class or profile limits, and fails when the operation exceeds them. | C | **new** |
+| API-K004 | The contract test runs every `public_eligible` operation on its declared example inputs under its class or profile limits, and fails when the operation exceeds them. | C | shipped (`scitex_sdk.testing.api_examples`, 0.6.0) |
 | API-K005 | A sponsored call (an operation enabled in the public-tier config, called anonymously or with a trial key) is rated to the **SciTeX promotion billing account**, usage kind `public_compute`. The caller's credit balance is never drawn. A paying member's call is rated to that member as usual. | R | **new**; reuses #1256 |
 | API-K006 | Exhaustion of the budget never fails silently (§12.5). | R | **new** |
 | API-K007 | Shadow first. K003 and K005 record and report only. Enforcement starts after one clean production release cycle with no false blocks, the same as #1242. | R | **new** |
@@ -113,11 +113,26 @@ SCITEX_API_PUBLIC_TIER = {
     "stats.power-analyses.run":       {"public": True, "limits": "stats-inline"},
     "stats.corrections.run":          {"public": True, "limits": "stats-inline"},
     "stats.bootstrap-cis.run":        {"public": True, "limits": "stats-bootstrap"},
-    "figrecipe.figures.create":       {"public": True, "limits": "figure-inline"},
-    "writer.manuscripts.compile":     {"public": True, "limits": "pdf-compile-public",
+    "figrecipe.figures.render":       {"public": True, "limits": "figure-inline"},
+    "writer.compiles.create":         {"public": True, "limits": "pdf-compile-public",
                                        "requires": "key"},   # anonymous: no; any key: yes
+    "writer.compiles.get":            {"public": True, "limits": "light", "requires": "key"},
+    "writer.jobs.get":                {"public": True, "limits": "light", "requires": "key"},
 }
 ```
+
+**W4 implementation notes (2026-11-29).** Two names differ from the first draft, both additive:
+
+- `figrecipe.figures.render` (read-only action, synchronous, image returned inline as base64)
+  replaces `figrecipe.figures.create`: nothing is stored, so it is not a `create`, and a read-only
+  action needs no `Idempotency-Key`, which is what an agent expects of "plot this".
+- `writer.compiles.create` (202 Job) compiles an uploaded source bundle, with no project. The
+  project-scoped `writer.manuscripts.compile` (#91) stays `member`: it writes project storage.
+
+The SDK side is `scitex_sdk.app.api_tier` (configuration, classes, slots, rate buckets, measurement)
+and `scitex_sdk.testing.api_examples` (API-K004). The host hooks are `SCITEX_API_PUBLIC_TIER`,
+`SCITEX_API_LIMITS_PROFILES`, `SCITEX_API_POOLS`, `SCITEX_API_RATE_BUCKETS`, `SCITEX_API_ADMISSION`
+(credit gate and promotion-budget degradation) and `SCITEX_API_CLIENT_IP`.
 
 Recommended limits profiles (per call or per job, public class only; members and paid get the
 operation's normal limits):

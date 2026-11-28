@@ -126,9 +126,18 @@ class ApiOperation:
     #: Callable without a credential (API-A004). Only a side-effect-free read
     #: that is not project-scoped may be public; it carries no scope.
     public: bool = False
+    #: The ceiling for the host's public tier (API-K001): ``public_eligible``
+    #: may be enabled for anonymous callers by host configuration
+    #: (``SCITEX_API_PUBLIC_TIER``); ``member`` (the default: writes project
+    #: storage, or calls a paid external API with the caller's data) and
+    #: ``privileged`` never. ``public=True`` implies ``public_eligible``.
+    exposure: str | None = None
 
     def __post_init__(self) -> None:
         oid = f"{self.package}.{self.resource}.{self.verb}"
+        if self.exposure is None:
+            default = "public_eligible" if self.public else "member"
+            object.__setattr__(self, "exposure", default)
         _name(self.package, "package", oid)
         _name(self.resource, "resource", oid)
         _name(self.verb, "verb", oid)
@@ -246,6 +255,7 @@ class ApiOperation:
                 else AuthScope(
                     project_scope="project" if self.project_scoped else "user",
                     scopes=(self.scope,),
+                    exposure=self.exposure,
                 )
             ),
             idempotency=Idempotency(required=self.access == "write"),
@@ -376,6 +386,7 @@ def operation_of(plugin: ApiPlugin, route: ApiRoute) -> ApiOperation:
         rate_class=route.rate.rate_class,
         compute_cost=route.rate.compute_cost,
         public=bool(route.auth.public),
+        exposure=route.auth.exposure,
     )
     expected_scopes = () if op.public else (op.scope,)
     # A descriptor written before routes carried their operationId has none;

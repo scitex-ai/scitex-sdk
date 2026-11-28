@@ -54,18 +54,12 @@ import scitex_logging as slogging
 from .api_exec import ApiCaller, ApiProblem, ApiResult, execute, params_digest
 from .api_ops import API_PREFIX, operation_of
 from .api_plugin import ApiPluginContractError
+from .api_tier import PRIORITY_HEADER, TieredCall, anonymous_caller, decide, run_tiered
 
 PROBLEM_JSON = "application/problem+json"
 _LOG = slogging.getLogger(__name__)
 
 
-class _Anonymous:
-    is_authenticated = False
-    username = ""
-    pk = None
-
-
-_ANONYMOUS = _Anonymous()
 #: Plugins discovered but not mounted, with the reason (for host diagnostics).
 REFUSED: dict = {}
 
@@ -155,6 +149,21 @@ def _problem(problem: ApiProblem, request_id: str):
     )
 
 
+def _body_size(request) -> int:
+    """The body size; a body over the host's own cap is a 413 problem, not HTML."""
+    from django.core.exceptions import RequestDataTooBig
+
+    try:
+        return len(request.body or b"")
+    except RequestDataTooBig:
+        raise ApiProblem(
+            413,
+            "api.request_too_large",
+            "the request body exceeds this host's size limit",
+            extra={"limit": "max_request_bytes"},
+        ) from None
+
+
 def _raw_params(request) -> dict:
     if request.method == "GET":
         return {k: request.GET.get(k) for k in request.GET}
@@ -201,6 +210,7 @@ def operation_view(plugin, route):
         request_id = uuid.uuid4().hex
         started = time.monotonic()
         caller: ApiCaller | None = None
+        tiered: TieredCall | None = None
         try:
             if request.method != op.method:
                 raise ApiProblem(
@@ -216,10 +226,8 @@ def operation_view(plugin, route):
                 )
             caller = caller_hook(request)
             presented = bool(request.headers.get("Authorization", "").strip())
-            if caller is None and op.public and not presented:
-                # API-A004: a public read needs no credential. A credential
-                # that IS presented but does not resolve stays a 401 (A002).
-                caller = ApiCaller(user=_ANONYMOUS, scopes=(), via="anonymous")
+            if caller is None and not presented:
+                caller = anonymous_caller(op, request)
             if caller is None:
                 raise ApiProblem(
                     401,
@@ -227,6 +235,7 @@ def operation_view(plugin, route):
                     "a valid token is required",
                     headers={"WWW-Authenticate": 'Bearer realm="scitex"'},
                 )
+            tiered = TieredCall(decide(op, caller, request))
             if (
                 caller.via == "session"
                 and op.access == "write"
@@ -236,6 +245,7 @@ def operation_view(plugin, route):
             limiter = _hook("SCITEX_API_RATE_LIMITER")
             if limiter is not None:
                 limiter.check(caller, op, request)
+            request_bytes = _body_size(request)
             raw = _raw_params(request)
             idem_key = None
             store = None
@@ -267,14 +277,26 @@ def operation_view(plugin, route):
                             previous[1], previous[2], {"Idempotent-Replayed": "true"}
                         )
                     )
-            result = execute(
+
+            def run(decision):
+                return execute(
+                    op,
+                    caller,
+                    raw,
+                    item_id=kwargs.get(op.id_param) if op.id_param else None,
+                    resolve_project=_project_resolver(request),
+                    request=request,
+                    request_id=request_id,
+                    tier=decision,
+                )
+
+            result, tiered = run_tiered(
                 op,
                 caller,
-                raw,
-                item_id=kwargs.get(op.id_param) if op.id_param else None,
-                resolve_project=_project_resolver(request),
-                request=request,
-                request_id=request_id,
+                request,
+                run,
+                request_bytes=request_bytes,
+                tiered=tiered,
             )
             if store is not None and result.status < 500:
                 store.put(idem_key, digest, result.status, result.body)
@@ -282,20 +304,27 @@ def operation_view(plugin, route):
         except ApiProblem as problem:
             response = _problem(problem, request_id)
         response["X-Request-Id"] = request_id
+        # API-Q002: every response names the class the host assigned.
+        response[PRIORITY_HEADER] = (
+            tiered.decision.priority_class if tiered else "public"
+        )
         meter = _hook("SCITEX_API_METER")
         if meter is not None:
-            meter.record(
-                {
-                    "request_id": request_id,
-                    "operation_id": op.operation_id,
-                    "package": op.package,
-                    "status": response.status_code,
-                    "duration_seconds": round(time.monotonic() - started, 6),
-                    "egress_bytes": len(getattr(response, "content", b"") or b""),
-                    "caller": caller.identity if caller else None,
-                    "token_id": caller.token_id if caller else None,
-                }
-            )
+            egress = len(getattr(response, "content", b"") or b"")
+            event = {
+                "request_id": request_id,
+                "operation_id": op.operation_id,
+                "package": op.package,
+                "status": response.status_code,
+                "duration_seconds": round(time.monotonic() - started, 6),
+                "egress_bytes": egress,
+                "caller": caller.identity if caller else None,
+                "token_id": caller.token_id if caller else None,
+                "user_id": getattr(getattr(caller, "user", None), "pk", None),
+            }
+            if tiered is not None:
+                event.update(tiered.meter_fields(egress))
+            meter.record(event)
         return response
 
     view.__name__ = op.mcp_name

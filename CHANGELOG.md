@@ -4,6 +4,45 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-29
+
+Public light compute tier (API contract v1 §12, workstream W4).
+
+- `ApiOperation(exposure=...)` and `AuthScope.exposure`: the public-tier
+  ceiling `public_eligible | member | privileged` (API-K001). The default is
+  `member`; `public=True` implies `public_eligible`; a project-scoped
+  operation can never be `public_eligible`. Carried in the inert descriptor
+  and in OpenAPI as `x-scitex-exposure`.
+- `scitex_sdk.app.api_tier`: the host side of the tier.
+  - `SCITEX_API_PUBLIC_TIER` (API-K008) enables `public_eligible` operations
+    for anonymous callers (or for any key, `requires: "key"`) under a limits
+    profile (`light`, `stats-inline`, `stats-bootstrap`, `figure-inline`,
+    `pdf-compile-public`). Configuration can narrow, never widen past the
+    ceiling.
+  - Priority classes `paid > member > public` from `ApiCaller.tier`
+    (API-Q001); every response carries `SciTeX-Priority-Class` (API-Q002).
+  - Concurrency slots per pool with a reserved paid share (>= 60 %) and a
+    capped public share (<= 20 %); a full pool is 503
+    `api.capacity_deferred` with `Retry-After` (API-Q003).
+  - `TierRateLimiter`: per-class per-minute and per-day buckets keyed by
+    token, or by client IP (IPv6 /64) for anonymous callers (API-H002).
+  - Per-call measurement: wall time, thread CPU time, sampled peak memory,
+    exact `storage_write` flag; `cost_class_exceeded` in the meter event
+    (API-K002/K003). The meter event also carries `priority_class`,
+    `sponsored`, `payer`, `usage_kind` (`public_compute`), `limits_profile`
+    and `user_id`.
+  - `SCITEX_API_ADMISSION.admit(decision, op, caller, request)`: the host's
+    credit gate and promotion-budget check before the handler runs; it may
+    refuse, or degrade the priority class.
+  - A public-class request above its profile's input cap is 413
+    `api.request_too_large`; a tier operation that needs a key answers 401
+    `api.key_required` to anonymous callers.
+- `ApiCaller.tier`; `ApiCall.tier`, `.priority_class` and `.limits` (the
+  public profile a handler must enforce).
+- `scitex_sdk.testing.api_examples.assert_examples_within_limits` (API-K004).
+- Anonymous callers are keyed by client IP, so idempotency keys of different
+  anonymous clients never collide.
+
 ## [0.5.0] - 2026-11-29
 
 - `scitex_sdk.app.api_plugin` is now a package of cohesive modules
