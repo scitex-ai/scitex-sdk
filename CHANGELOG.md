@@ -4,7 +4,33 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-11-29
+## [0.5.0] - 2026-11-29
+
+- `scitex_sdk.app.api_plugin` is now a package of cohesive modules
+  (`_base`, `_validators`, `_descriptors`, `_route`, `_plugin`, `_openapi`,
+  `_discovery`); every public name is re-exported, so imports are unchanged.
+- API-D003: `ApiPlugin.contract` stores the declared contract major, so the
+  installed inert descriptor (`scitex_api.json`) carries it. A host re-checks
+  it at load time (`api_rules.check_contract`, called by
+  `api_serve.admitted_plugins`) and refuses an unsupported major into
+  `REFUSED` with the rule id. A descriptor without the field reads as
+  contract 1. The contract test reports it too.
+- API-O001: OpenAPI `operationId` is `<package>.<resource>.<verb>` for every
+  operation-grammar route (`ApiRoute.operation_id`, set by
+  `ApiOperation.route()`); hand-written routes keep the injective
+  `<id>.<method>.<path>` id. A stored id naming another package, covering two
+  methods, or disagreeing with the derived operation is refused.
+- API-V003: action verbs come from the canonical verb catalogue
+  (`scitex_sdk.app.api_verbs`); synonyms (`verify`, `check`, `search`, ...)
+  are refused with the canonical verb, and any other verb needs a
+  `verb_exceptions:` entry with an inline `# why` in the package's
+  `.scitex/dev/cli-audit-dict.yaml` (the key the scitex-dev CLI audit reads).
+  Reported by the contract test, the `PS-SDK-API` audit and `api list`.
+- API-V001: a `create` whose result has an `id` answers 201 with
+  `Location: /api/v1/<package>/<resource>/<id>`.
+- Compatibility: descriptors written by this version carry two new keys
+  (`contract`, `routes[].operation_id`), which an SDK older than 0.5.0 refuses
+  as unknown fields. Hosts that read leaf descriptors upgrade first.
 
 Public light compute tier (API contract v1 §12, workstream W4).
 
@@ -49,34 +75,6 @@ Public light compute tier (API contract v1 §12, workstream W4).
   so a leaf whose test settings enable a tier still gets the 401 probes.
 - Anonymous callers are keyed by client IP, so idempotency keys of different
   anonymous clients never collide.
-
-## [0.5.0] - 2026-11-29
-
-- `scitex_sdk.app.api_plugin` is now a package of cohesive modules
-  (`_base`, `_validators`, `_descriptors`, `_route`, `_plugin`, `_openapi`,
-  `_discovery`); every public name is re-exported, so imports are unchanged.
-- API-D003: `ApiPlugin.contract` stores the declared contract major, so the
-  installed inert descriptor (`scitex_api.json`) carries it. A host re-checks
-  it at load time (`api_rules.check_contract`, called by
-  `api_serve.admitted_plugins`) and refuses an unsupported major into
-  `REFUSED` with the rule id. A descriptor without the field reads as
-  contract 1. The contract test reports it too.
-- API-O001: OpenAPI `operationId` is `<package>.<resource>.<verb>` for every
-  operation-grammar route (`ApiRoute.operation_id`, set by
-  `ApiOperation.route()`); hand-written routes keep the injective
-  `<id>.<method>.<path>` id. A stored id naming another package, covering two
-  methods, or disagreeing with the derived operation is refused.
-- API-V003: action verbs come from the canonical verb catalogue
-  (`scitex_sdk.app.api_verbs`); synonyms (`verify`, `check`, `search`, ...)
-  are refused with the canonical verb, and any other verb needs a
-  `verb_exceptions:` entry with an inline `# why` in the package's
-  `.scitex/dev/cli-audit-dict.yaml` (the key the scitex-dev CLI audit reads).
-  Reported by the contract test, the `PS-SDK-API` audit and `api list`.
-- API-V001: a `create` whose result has an `id` answers 201 with
-  `Location: /api/v1/<package>/<resource>/<id>`.
-- Compatibility: descriptors written by this version carry two new keys
-  (`contract`, `routes[].operation_id`), which an SDK older than 0.5.0 refuses
-  as unknown fields. Hosts that read leaf descriptors upgrade first.
 
 ## [0.4.1] - 2026-11-28
 
