@@ -6,7 +6,7 @@ Part of [api-contract-v1.md](../api-contract-v1.md).
 read on 2026-11-28 (`config/urls_api.py`, `public_app/urls/api.py`, `platform_app/urls/api.py`,
 `workspace_api/urls.py`).
 
-**Regeneration.** When the generated inventory (`scitex-sdk api inventory`,
+**Regeneration.** As of 2026-11-28 the generated inventory snapshot does not exist yet, so this table comes from the hand audit. When the generated inventory (`scitex-sdk api inventory`,
 [02-docking §4](02-docking.md)) lands, this table is regenerated from its JSON. Any row the
 inventory finds that is missing here is added with the same columns. Paths in one family that share
 a mapping are one row, which states how many members it has.

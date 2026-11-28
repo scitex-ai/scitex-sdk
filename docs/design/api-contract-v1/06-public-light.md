@@ -35,7 +35,7 @@ scope. No path, tool name or scope ever contains "free" or "public".
 | Id | Rule | Layer | State |
 |---|---|---|---|
 | API-K001 | Every operation declares `compute_cost ∈ {light, standard, heavy}` (closed set) and `exposure ∈ {public_eligible, member, privileged}`. `exposure` is a **ceiling**: `privileged` operations can never be made public by configuration, and `member` operations (anything that writes project storage or calls a paid external API with the caller's data) cannot either. | D | `compute_cost` shipped (recommended set only); `exposure` **new** |
-| API-K002 | **Light** is concrete and measured per call by the host. Every one of these holds: CPU ≤ 1 CPU-second · peak memory above baseline ≤ 256 MiB · wall ≤ 5 s · response ≤ 1 MiB · no project storage write · no paid external API · synchronous (no Job). `standard` and `heavy` are bounded per call by the operation's limits profile (§12.4). | D, R | **new**; thresholds are decision 10 |
+| API-K002 | **Light** is concrete and measured per call by the host. Every one of these holds: CPU ≤ 1 CPU-second · peak memory above baseline ≤ 256 MiB · wall ≤ 5 s · response ≤ 1 MiB · no project storage write · no paid external API · synchronous (no Job). `standard` and `heavy` are bounded per call by the operation's limits profile (§12.4). | D, R | **new**; thresholds decided (decision 10) |
 | API-K003 | Measured usage above the declared class or profile is **flagged** in the meter event: `cost_class_exceeded: [cpu\|memory\|wall\|bytes\|storage_write\|external]`. If more than 1 % of a UTC day's calls are flagged, the operation is removed from the public tier automatically (it then needs a member token). This alerts the owning package (card) and shows in `GET /api/v1/operations` as `public: false, reason: cost_class_exceeded`. | R, C | **new** |
 | API-K004 | The contract test runs every `public_eligible` operation on its declared example inputs under its class or profile limits, and fails when the operation exceeds them. | C | **new** |
 | API-K005 | A sponsored call (an operation enabled in the public-tier config, called anonymously or with a trial key) is rated to the **SciTeX promotion billing account**, usage kind `public_compute`. The caller's credit balance is never drawn. A paying member's call is rated to that member as usual. | R | **new**; reuses #1256 |
@@ -91,7 +91,7 @@ Low-trust keys ([05 §11.4](05-hosted-mcp.md)) are treated as anonymous.
 
 The operator asked for a broad first phase: figure plotting, statistical tests, PDF compilation,
 and search/describe. All of it is configuration under `SCITEX_API_PUBLIC_TIER`, and each entry must
-pass API-K004 before it is enabled. Decision 11 confirms the list; decision 10 confirms the limits.
+pass API-K004 before it is enabled. The list is decision 11 and the limits are decision 10, both decided (a) on 2026-11-28.
 
 ```python
 # Hub settings (deploy config; not contract). Keys are operation ids.
@@ -153,7 +153,7 @@ Never public (`exposure` ceiling `member` or `privileged`):
 
 These reuse the #1242 machinery, with the promotion account as the payer.
 
-- **Monthly internal budget** for `public_compute`. Decision 9 recommends **USD 40/month** to start,
+- **Monthly internal budget** for `public_compute`. **USD 40/month** to start (decision 9, decided),
   revisited monthly against funnel data.
 - **Alerts** at 50 %, 80 % and 100 % go to dev@ (ops alerts) through #1242's alert path.
 - **Global backstop.** A hard ceiling over all sponsored kinds (download egress plus public compute)

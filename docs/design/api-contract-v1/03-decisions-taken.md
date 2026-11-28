@@ -1,4 +1,4 @@
-# API contract v1 — 6. Decisions taken here, 7. How legacy endpoints move
+# API contract v1 — 6. Decisions taken, 6b. Operator decisions, 7. How legacy endpoints move
 
 Part of [api-contract-v1.md](../api-contract-v1.md).
 
@@ -28,6 +28,111 @@ come from the 2026-11-27 inventory.
 | Reserved v1 paths | `operations`, `openapi.json`, `mcp`, `health` (API-R006). | Discovery points that sit outside the package grammar. | `/mcp` → `/api/v1/mcp`; (new) `GET /api/v1/operations` |
 | Standards-defined paths | `/.well-known/*`, `/oauth/*`, Git HTTP/SSH and inbound webhooks stay where their standards put them. | Clients find them by standard. | `/.well-known/agent.json` → `/.well-known/agent-card.json` |
 | Hub-native endpoints | Declared through the SDK as the `hub` dock, with the same grammar (operator 2026-11-28). | One grammar, with no platform exception. | `/api/me/tokens/` → `GET /api/v1/hub/tokens` |
+
+## 6b. Operator decisions — all DECIDED (a) (operator, 2026-11-28: "all (a)")
+
+These were §9 of the draft. The alternatives are kept as the record of what was considered.
+
+
+
+1. **MCP tool name order.** — **DECIDED (a)** (operator, 2026-11-28)
+   - Current state: the SDK derives `<package>_<resource>_<verb>` (`dataset_datasets_list`,
+     `clew_claims_verify`), and the dataset pilot ships it. scitex-dev §2, which you confirmed, says
+     `<pkg>_<verb>_<noun>` (`clew_verify_claim`).
+   - **(a) DECIDED:** keep the SDK order for every SDK-derived (public) tool, and amend §2 so the
+     auditor checks derived tools by their operation metadata (API-T001). §2 already accepts the
+     noun-group form (`dev_ecosystem_list`). This order groups tools by resource and mirrors CLI
+     `<noun> <verb>` groups.
+   - (b) Change the SDK to `<package>_<verb>_<resource>` (`dataset_list_datasets`). This renames
+     the 9 dataset tools now (S), before anything depends on them.
+2. **Canonical project id.** — **DECIDED (a)** (operator, 2026-11-28)
+   - **(a) DECIDED:** the public id is the handle `owner/slug`.
+     - It is already the SDK's `project` parameter, written `owner~slug` inside a path segment.
+     - Responses also carry an immutable `uid` (`prj_…`).
+     - After a rename, an alias table keeps old handles resolving for the deprecation window.
+   - (b) An opaque `prj_…` id is canonical everywhere, and the handle is accepted as an alias. This
+     is more stable, but humans and agents must look ids up first, and the shipped dataset contract
+     changes.
+3. **Deprecation window and v1 freeze.** — **DECIDED (a)** (operator, 2026-11-28)
+   - **(a) DECIDED:**
+     - v1 is frozen (additive-only) from beta launch.
+     - Legacy routes get `Deprecation` now and `Sunset` = beta + 6 months.
+     - `/api/v1/scholar/search/`, which has live users, stays as a frozen alias for at least 12 months.
+   - (b) A "v1-beta" period until GA, with breaking changes allowed on 30 days' notice.
+   - (c) A 3-month legacy sunset.
+4. **Third-party (user-published) apps that expose APIs.** — **DECIDED (a)** (operator, 2026-11-28)
+   - **(a) DECIDED:** out-of-process only (API-D009), admitted by the existing AppsModule
+     approval with a pinned commit. They follow the same grammar, scopes and metering as
+     first-party apps.
+   - (b) No third-party APIs at beta; UI facet only.
+   - (c) In-process after review.
+5. **Path prefix for Hub platform resources.** — **DECIDED (a)** (operator, 2026-11-28)
+   - **(a) DECIDED:** `/api/v1/hub/<resource>`. The Hub is a package like any other, so there is
+     no grammar exception.
+   - (b) Top-level `/api/v1/projects`, `/api/v1/tokens`. URLs are shorter, but this adds special
+     cases in the SDK, in scopes and in MCP names.
+6. **Hosted MCP endpoint path.** — **DECIDED (a)** (operator, 2026-11-28)
+   - **(a) DECIDED:** `https://scitex.ai/api/v1/mcp`. It sits behind the same gateway, rate
+     limits and nginx rules as REST, and is versioned with the contract that its tools derive from.
+     The OAuth protected-resource URL is unambiguous. Today's `/mcp` stays operator-only until it
+     is retired.
+   - (b) `https://scitex.ai/mcp`. Shorter, and the current location, but unversioned, outside the
+     `/api/v1` gateway, and it collides with the operator umbrella during migration.
+   - (c) A separate host, `https://mcp.scitex.ai/`.
+7. **Hosted MCP tool set and public listing at beta.** — **DECIDED (a)** (operator, 2026-11-28)
+   - **(a) DECIDED:** serve every SDK-derived operation of admitted docks, filtered by token
+     scope and tier (public / member / privileged; shell, exec and RPC are never served). List the
+     server on the official MCP registry and lobehub **after** the DEV acceptance run, together
+     with the product A2A card.
+   - (b) A lifecycle-only subset (about 25 operations), widened one at a time.
+   - (c) List on registries at beta launch, before the acceptance run.
+8. **OAuth client registration for agents and MCP clients.** — **DECIDED (a)** (operator, 2026-11-28)
+   - **(a) DECIDED:** Dynamic Client Registration (RFC 7591) for public clients only, with:
+     - PKCE required;
+     - scopes capped to read plus explicitly consented writes;
+     - registration rate-limited;
+     - unused clients expired after 90 days.
+
+     Claude and ChatGPT connectors need DCR.
+   - (b) Pre-registered clients only.
+9. **Monthly internal budget for sponsored public compute** — **DECIDED (a)** (operator, 2026-11-28) (`public_compute` kind on the #1256
+   promotion account).
+   - **(a) DECIDED:** **USD 40/month**, revisited monthly against funnel data.
+     - Alerts fire at 50/80/100 %.
+     - A global backstop sits at 1.25 × (download sponsorship + compute budgets).
+     - The system runs in shadow mode for the first cycle.
+   - (b) USD 30/month.
+   - (c) USD 50/month.
+   - (d) No sponsored compute; discovery and search only.
+10. **Limits for the light class and the public profiles** — **DECIDED (a)** (operator, 2026-11-28) ([06 §12.4](06-public-light.md)).
+    - **(a) DECIDED:**
+
+      | Profile | CPU | Memory | Wall | Input | Output |
+      |---|---|---|---|---|---|
+      | light | 1 CPU-s | 256 MiB | 5 s | — | 1 MiB |
+      | stats-inline | 2 CPU-s | 512 MiB | 10 s | 100 k values | — |
+      | stats-bootstrap | — | — | 30 s | 100 k values, ≤ 10 k resamples | — |
+      | figure-inline | — | 1 GiB | 20 s | 100 k points, 12 panels | 5 MB |
+      | pdf-compile-public | 2 cores | 2 GiB | 120 s | 20 MB | 50 pages |
+
+      PDF compile also runs with no network, no shell-escape, an out-of-process sandbox and a
+      2-slot pool.
+    - Priority shares: paid ≥ 60 % reserved, public ≤ 20 % per pool.
+    - (b) Half these limits.
+    - (c) Light only (1 CPU-s / 5 s) for every public operation, and no public PDF compile.
+11. **Initial public (sponsored) operation list for the first phase.** — **DECIDED (a)** (operator, 2026-11-28) This is config, not contract,
+    and can be narrowed later.
+    - **(a) DECIDED**, broad as you asked:
+      - dataset catalogue list/get and curated list/get;
+      - scholar papers/sources list;
+      - clew hash verify;
+      - published Live Paper get;
+      - stats tests list/get/recommend/run, plus descriptives, effect sizes, power, corrections and
+        bootstrap CIs on inline data;
+      - figrecipe figure create on inline data;
+      - writer manuscript compile, **key required** (any key, no anonymous compile).
+    - (b) (a) without PDF compile.
+    - (c) Search and describe only (dataset, scholar, clew hash, Live Paper get).
 
 ## 7. How existing non-conforming endpoints move behind the SDK
 

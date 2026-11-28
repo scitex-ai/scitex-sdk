@@ -17,7 +17,7 @@ Part of [api-contract-v1.md](../api-contract-v1.md).
 
 | Item | v1 |
 |---|---|
-| URL | **`https://scitex.ai/api/v1/mcp`** (recommended; decision 6), one endpoint on the Hub origin |
+| URL | **`https://scitex.ai/api/v1/mcp`** (decided: decision 6), one endpoint on the Hub origin |
 | Transport | MCP streamable HTTP, current specification revision (2025-06-18 or later, negotiated in `initialize`). The deprecated HTTP+SSE transport is not offered. |
 | Sessions | Stateless: no server-held session is required, so any worker can answer. `Mcp-Session-Id` is accepted and echoed but carries no state. Jobs (API-J001) carry long work instead of streams. |
 | Protocol surface | `initialize`, `tools/list`, `tools/call`, `ping`. No resources, prompts or sampling in v1 (additive later). |
