@@ -83,7 +83,9 @@ class ApiCaller:
 
     ``via`` is ``token`` (a personal/project token or OAuth bearer) or
     ``session`` (a browser session cookie). ``project`` restricts a project
-    token to one ``owner/slug``.
+    token to one ``owner/slug``. ``tier`` is the account tier the host
+    assigned (``public`` < ``member`` < ``paid``, API-Q001); it is never
+    taken from a request parameter.
     """
 
     user: Any
@@ -91,6 +93,7 @@ class ApiCaller:
     via: str = "token"
     token_id: str | None = None
     project: str | None = None
+    tier: str = "member"
 
     @property
     def identity(self) -> str:

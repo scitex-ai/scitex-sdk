@@ -27,9 +27,9 @@ Part of [api-contract-v1.md](../api-contract-v1.md).
 |---|---|---|---|
 | API-M001 | Hosted tools are exactly `tool_specs(plugin)` of admitted docks. There is no hand-written hosted tool and no umbrella re-export. | R, C | **new** (today `/mcp` serves the 617-tool umbrella) |
 | API-M002 | `tools/list` returns only the tools the caller's scopes grant (`scope_granted`), and only tools whose tier the caller's account has reached (§11.4). | R | **new** |
-| API-M003 | Authentication failures are transport-level HTTP 401/403 with `WWW-Authenticate` (MCP authorization spec). Tool failures are tool results with `isError: true` whose `structuredContent` is the full problem object (API-E001, including `request_id`). Unknown tool or malformed arguments: JSON-RPC `-32602`. | R | partial: `api_mcp` raises `ToolError` with `{status, code, detail}` only |
-| API-M004 | A successful tool result carries the REST body as `structuredContent` (`{data…}` / `{data, has_more, next_cursor}` / `{job}`) and the same JSON as text content. `_meta` carries `request_id` and `operation_id`. | R | **new** |
-| API-M005 | Every `tools/call` passes through the same rate limiter, meter (`transport: "mcp"`), idempotency and spend hooks as REST. For a write tool, `Idempotency-Key` = the JSON-RPC request id scoped to the token, unless the client sends `_meta.idempotency_key`. | R | **new** |
+| API-M003 | Authentication failures are transport-level HTTP 401/403 with `WWW-Authenticate` (MCP authorization spec). Tool failures, including argument validation, are tool results with `isError: true` whose `structuredContent` is the full problem object (API-E001, including `request_id`); the MCP 2025-11-25 tools chapter classes input validation as a tool execution error so the model can correct itself. Unknown tool, or `arguments` that is not an object: JSON-RPC `-32602`. | R | SDK shipped (`api_mcp_http`, §11.8) |
+| API-M004 | A successful tool result carries the REST body as `structuredContent` (`{data…}` / `{data, has_more, next_cursor}` / `{job}`) and the same JSON as text content. `_meta` carries `request_id` and `operation_id`. | R | SDK shipped |
+| API-M005 | Every `tools/call` passes through the same rate limiter, meter (`transport: "mcp"`), idempotency and spend hooks as REST. A write tool is idempotent when the client sends `_meta.idempotency_key` (scoped to the token and operation). The JSON-RPC request id is **not** used as a key: clients restart ids at 0 in every session, so it would replay one session's result into another. | R | SDK shipped (limiter, meter, client key); spend hook: W2 |
 | API-M006 | A synchronous tool call has a 30 s budget. Anything longer must be declared async and returns a Job. | D, R | **new** |
 
 ## 11.2 Authentication
@@ -166,3 +166,64 @@ The REST twin of step 3 returns the same body:
 
 This example becomes the hosted-MCP acceptance test. It runs in CI against the SDK standalone host
 and on DEV against the Hub (order of work, step 7).
+
+## 11.8 SDK side (W3-sdk, shipped)
+
+`scitex_sdk.app.api_mcp_http` is the endpoint; the Hub mounts it and supplies hooks.
+
+| Piece | Where | What it does |
+|---|---|---|
+| Tool generation | `api_mcp.tool_specs` | One tool per operation: name `<package>_<resource>_<verb>`; `inputSchema` from the request fields (plus the item id); `outputSchema` from the declared response wrapped in the REST envelope (`{data}`, `{data, has_more, next_cursor}`, `{job}`); `title` and `description` from the operation summary plus the REST twin and scope; `annotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`) from the verb. |
+| Output schemas are typed but open | `api_mcp._body_schema` | MCP clients validate `structuredContent` strictly. Declared field types and descriptions are published, but the item object has no `required` list and allows extra keys, so a leaf returning one more field than it documented does not turn a working REST call into a failed tool call. The envelope keys are exact. |
+| Endpoint core | `HostedMcp` (`_api_mcp_hosted/_endpoint.py`) | Streamable HTTP, stateless, JSON responses. Checks in order: `Origin` (403), method (`POST` only, `GET`/`DELETE` 405), `Accept` (406), bearer (401 + `WWW-Authenticate`), `MCP-Protocol-Version` (400), then one JSON-RPC message (notifications and responses get 202). Methods: `initialize` (negotiates 2025-11-25, 2025-06-18 or 2025-03-26), `ping`, `tools/list`, `tools/call`. |
+| Authenticator | `McpHooks.authenticate` | `authenticate(request) -> ApiCaller \| None`, the REST `SCITEX_API_CALLER` contract, so the Hub's existing caller plugs in unchanged. Only `Authorization: Bearer` is accepted; a caller with `via="session"` is refused with 401. |
+| Scope and tier filter | `_api_mcp_hosted/_policy.py` | `ApiCaller.tier` is `public` < `member` < `paid` (default `member`; the host sets it). A public operation's tool is `public` tier, every other tool `member`. The host may raise a tool's tier (`SCITEX_API_MCP_TOOL_TIERS = {"<op id or tool>": "paid"}`) but never lower it. `tools/list` shows a tool only when the tier and scope both pass. Calling a hidden tool is an `isError` result with `api.insufficient_scope` (+ `required_scope`) or `api.tier_required` (+ `required_tier`). |
+| Project tokens | `HostedMcp.tool_json`, `_call._run` | With `ApiCaller.project` set, `project` is optional in `tools/list` and defaults to the token's project. Any other value gets 403 from `execute`. |
+| Django mount | `mcp_urlpattern()` | `path("api/v1/mcp", …)`. Hooks are read from settings on every request (`SCITEX_API_CALLER`, `_RATE_LIMITER`, `_METER`, `_IDEMPOTENCY_STORE`), and plugins are the host's admitted set. Settings: `SCITEX_API_MCP_ANONYMOUS`, `SCITEX_API_MCP_RESOURCE_METADATA_URL`, `SCITEX_API_MCP_ALLOWED_ORIGINS`, `SCITEX_API_MCP_TOOL_TIERS`. |
+| RFC 9728 document | `protected_resource_metadata()` | Builds the metadata (`resource`, `authorization_servers`, `scopes_supported` derived from the admitted plugins, `bearer_methods_supported`). The SDK does not serve it; the Hub does (§11.9). |
+| Test | `tests/test_api_mcp_http.py` | The official MCP Python client connects over a real socket to a Django host serving two sample plugins. It lists tools per key, calls tools, validates outputs against the advertised schemas, and gets structured errors, tier and scope refusals, project-token defaults, metering, rate limiting and an idempotent replay. Plain HTTP covers 401, 405, Origin, `-32602`, the version header and 202. |
+
+**Hub wiring (no W2 dependency).** The Hub's `api_caller` already resolves personal keys and their
+scopes, so `/api/v1/mcp` can serve ordinary user keys now:
+
+```python
+# config/urls.py, next to api_urlpatterns(catch_all=False)
+from scitex_sdk.app.api_mcp_http import mcp_urlpattern
+urlpatterns[:0] = [mcp_urlpattern()] + api_urlpatterns(catch_all=False)
+```
+
+`/mcp` stays operator-only (§11.6 step 1) until it is retired. Every caller is `member` until W2
+sets `tier` from the account.
+
+## 11.9 Follow-up (depends on W2: the Hub token model)
+
+1. **Tier from the account (API-Q001).** The Hub caller sets `ApiCaller.tier`: `paid` for an active
+   paid plan or org billing account; `member` for a valid key without one; `public` for a
+   low-trust key (account < 7 days or unverified email). Responses then carry
+   `SciTeX-Priority-Class`, and `_meta.priority_class` is already emitted.
+2. **Protected-resource metadata.** Serve
+   `protected_resource_metadata("https://scitex.ai/api/v1/mcp", ["https://scitex.ai"], plugins)` at
+   `/.well-known/oauth-protected-resource/api/v1/mcp` (and the root form), then set
+   `SCITEX_API_MCP_RESOURCE_METADATA_URL` to it so every 401 names it.
+3. **Authorization server.** Publish `/.well-known/oauth-authorization-server` (RFC 8414) with
+   `code_challenge_methods_supported: ["S256"]` (MCP clients refuse to proceed without it). Enforce
+   PKCE S256 on the code grant. Offer scopes from the derived catalogue, not only
+   `openid profile email`.
+4. **Client registration (decision 8).** RFC 7591 dynamic registration for public clients, plus
+   Client ID Metadata Documents (`client_id_metadata_document_supported: true`). The 2025-11-25
+   revision makes CIMD the SHOULD and keeps DCR as a MAY for backward compatibility.
+5. **Audience binding (RFC 8707).** Accept the `resource` parameter. Mint MCP tokens with audience
+   `https://scitex.ai/api/v1/mcp`, and have the caller reject a bearer whose audience is another
+   resource (401 `invalid_token`). Never pass a received token through to an upstream service.
+6. **OAuth bearers in the caller.** `api_caller` resolves OAuth access tokens as well as `scitex_…`
+   keys, with scopes from the grant. The MCP endpoint needs no change.
+7. **Step-up.** When a call fails on `api.insufficient_scope`, the problem already carries
+   `required_scope`. Once OAuth exists, also answer an HTTP 403 with
+   `WWW-Authenticate: Bearer error="insufficient_scope", scope="…", resource_metadata="…"`, so that
+   interactive clients re-authorize.
+8. **Privileged exposure (E16).** Hide `exposure="privileged"` tools unless the scope is named and
+   the account flag holds. This adds a fourth tier input, not a new mechanism.
+9. **Spend cap.** Route the 402 `host.spend_cap_reached` check through the limiter hook. It already
+   becomes an `isError` problem with `link`.
+10. **Retire `/mcp`** (§11.6 steps 3–5) after DEV acceptance (§10 step 8). The server card
+    `/.well-known/mcp.json` and the registry listing (decision 7) come after that.
