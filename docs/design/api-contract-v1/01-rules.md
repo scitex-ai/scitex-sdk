@@ -30,7 +30,7 @@ answers with a problem). **State** is the state on `develop` on 2026-11-28.
 |---|---|---|---|
 | API-D001 | Every public HTTP route under `/api/` and every remote MCP tool is generated from an `ApiOperation` of an admitted plugin. Nothing else is public. | C, R | partial: legacy routes exist |
 | API-D002 | A plugin is advertised by entry point `scitex.apis`. Entry-point name = plugin id = package slug. One plugin per distribution. | D, C | shipped |
-| API-D003 | A plugin declares `contract="1"` (major). A host refuses to dock an unsupported major, loudly ([02-docking §3.6](02-docking.md)). | D, R | **new** |
+| API-D003 | A plugin declares `contract="1"` (major). A host refuses to dock an unsupported major, loudly ([02-docking §3.6](02-docking.md)). | D, R | shipped (0.5.0: stored in the descriptor, re-checked at admission) |
 | API-D004 | No hand-written JSON route under `/api/` outside the frozen legacy allowlist. The allowlist only shrinks. | C | **new** (Hub test) |
 | API-D005 | No catch-all or dynamic dispatcher in a declaration (`<path:endpoint>`, generic `module/function` RPC). | D, C | shipped for `scitex.apis`; legacy dispatchers remain |
 | API-D006 | Handlers are `module:function` strings owned by the declaring distribution. They are resolved only after admission. | D, R | shipped |
@@ -54,9 +54,9 @@ answers with a problem). **State** is the state on `develop` on 2026-11-28.
 
 | Id | Rule | Layer | State |
 |---|---|---|---|
-| API-V001 | CRUD verbs fix the method, the item-ness and the success status: `list` GET 200 · `get` GET 200 · `create` POST 201 + `Location` · `update` PATCH 200 · `delete` DELETE 204. | D, R | shipped except `Location` |
+| API-V001 | CRUD verbs fix the method, the item-ness and the success status: `list` GET 200 · `get` GET 200 · `create` POST 201 + `Location` · `update` PATCH 200 · `delete` DELETE 204. | D, R | shipped (`Location` since 0.5.0) |
 | API-V002 | Every other verb is an action: POST, declared `item=True` (`…/{id}/<verb>`) or `item=False` (`…/<verb>`). The response is 200, or 202 + Job (API-J001). | D | shipped |
-| API-V003 | Action verbs come from the canonical verb catalogue (scitex-dev §1d). Anything else needs a justified entry in the package's `.scitex/dev/cli-audit-dict.yaml`. Search is `list` with `q`, never a `search` action. | C | **new** check |
+| API-V003 | Action verbs come from the canonical verb catalogue (scitex-dev §1d). Anything else needs a justified entry in the package's `.scitex/dev/cli-audit-dict.yaml`. Search is `list` with `q`, never a `search` action. | C | shipped (0.5.0: `api_verbs`, `verb_exceptions:` with `# why`) |
 | API-V004 | An action without side effects declares `read_only=True`. It then needs the `read` scope and no idempotency key. | D | shipped |
 | API-V005 | Status vocabulary: 400 validation · 401 no or invalid credential · 402 spend cap · 403 scope or CSRF · 404 absent or not yours · 405 method · 409 conflict or idempotency mismatch · 422 domain refusal · 429 rate · 503 dependency or unconfigured. | R | shipped except 422/429 codes |
 
@@ -132,7 +132,7 @@ answers with a problem). **State** is the state on `develop` on 2026-11-28.
 
 | Id | Rule | Layer | State |
 |---|---|---|---|
-| API-O001 | OpenAPI 3.1 is generated from the declarations (`ApiPlugin.openapi_fragment()`) and merged at `/api/v1/openapi.json`. `operationId` = `<package>.<resource>.<verb>`. | R | fragment shipped; merged document **new** |
+| API-O001 | OpenAPI 3.1 is generated from the declarations (`ApiPlugin.openapi_fragment()`) and merged at `/api/v1/openapi.json`. `operationId` = `<package>.<resource>.<verb>`. | R | fragment and operationId shipped (0.5.0); merged document **new** |
 | API-O002 | The merged document validates (openapi-spec-validator) in the Hub's CI and in each leaf's CI. | C | **new** |
 
 ---

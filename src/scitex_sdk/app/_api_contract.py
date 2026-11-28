@@ -27,13 +27,16 @@ def scan_api_contract(repo_root, *, overlays=None):
     and the leaf's own contract test cannot disagree.
     """
     from ..testing.api_contract import declaration_violations
+    from .api_verbs import DICT_RELPATH, read_verb_exceptions
 
     plugins: list = []
     scan_web_contract(repo_root, overlays=overlays, collect=plugins)
+    # API-V003 exceptions are the audited repo's own, not the auditor's cwd.
+    exceptions = read_verb_exceptions(Path(repo_root).resolve() / DICT_RELPATH)
     return [
         ApiFinding(location, 1, f"{name}: {found}")
         for name, location, plugin in plugins
-        for found in declaration_violations(plugin)
+        for found in declaration_violations(plugin, verb_exceptions=exceptions)
     ]
 
 

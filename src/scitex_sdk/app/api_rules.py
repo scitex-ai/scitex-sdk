@@ -18,6 +18,7 @@ from __future__ import annotations
 import re
 
 from .api_plugin import ApiPluginContractError
+from .api_plugin._base import DEFAULT_CONTRACT
 
 RULES_DOC = "docs/design/api-contract-v1/01-rules.md"
 
@@ -36,6 +37,7 @@ RULES = {
     "API-R006": ("D", "reserved top-level names are not packages"),
     "API-V001": ("D", "CRUD verbs fix method, item-ness and status"),
     "API-V002": ("D", "actions state item=True or item=False"),
+    "API-V003": ("C", "action verbs come from the canonical verb catalogue"),
     "API-V004": ("D", "read_only applies to actions only"),
     "API-F001": ("D", "snake_case fields, parameters and enum values"),
     "API-E002": ("D", "leaf error codes are <package>.<snake>"),
@@ -56,7 +58,7 @@ RULES = {
 }
 
 #: Contract majors this SDK can build and serve.
-CONTRACT_MAJOR = "1"
+CONTRACT_MAJOR = DEFAULT_CONTRACT
 SUPPORTED_CONTRACTS = frozenset({CONTRACT_MAJOR})
 #: Top-level ``/api/v1/`` names that are not packages (API-R006).
 RESERVED_PACKAGES = frozenset({"operations", "openapi", "mcp", "health"})
@@ -89,6 +91,23 @@ def violation(rule: str, message: str, operation_id: str | None = None):
     if rule not in RULES:  # pragma: no cover - a typo in the SDK itself
         raise KeyError(f"unknown API rule id {rule!r}")
     return ApiContractViolation(rule, message, operation_id)
+
+
+def check_contract(plugin) -> None:
+    """Refuse a plugin whose declared contract major this SDK cannot serve.
+
+    A host calls this at load time on the declaration it is about to dock,
+    including one read back from an installed inert descriptor, so a leaf
+    built for another major is refused by rule id (API-D003) rather than
+    served with a shape no client was promised.
+    """
+    contract = getattr(plugin, "contract", CONTRACT_MAJOR)
+    if contract not in SUPPORTED_CONTRACTS:
+        raise violation(
+            "API-D003",
+            f"{plugin.id} contract {contract} not supported (host supports "
+            f"{', '.join(sorted(SUPPORTED_CONTRACTS))})",
+        )
 
 
 def _field_violations(fields, where: str):
@@ -172,6 +191,7 @@ __all__ = [
     "RULES_DOC",
     "SUPPORTED_CONTRACTS",
     "ApiContractViolation",
+    "check_contract",
     "operation_violations",
     "violation",
 ]

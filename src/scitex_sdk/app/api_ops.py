@@ -257,6 +257,7 @@ class ApiOperation:
             handler=self.handler,
             read_only=self.read_only,
             summary=self.summary,
+            operation_id=self.operation_id,
         )
 
     def _schema_name(self, suffix: str) -> str:
@@ -314,6 +315,7 @@ def build_plugin(
         title=title,
         api_version=api_version,
         routes=tuple(op.route() for op in operations),
+        contract=contract,
         # An all-public plugin declares no scope, so it has no OAuth scheme.
         oauth=(
             OAuthProvider(
@@ -376,6 +378,13 @@ def operation_of(plugin: ApiPlugin, route: ApiRoute) -> ApiOperation:
         public=bool(route.auth.public),
     )
     expected_scopes = () if op.public else (op.scope,)
+    # A descriptor written before routes carried their operationId has none;
+    # one that carries an id must carry the derived one.
+    if route.operation_id not in ("", op.operation_id):
+        raise ApiPluginContractError(
+            f"route {route.path!r} declares operation_id {route.operation_id!r}; "
+            f"its operation derives {op.operation_id!r}"
+        )
     if op.path != route.path or expected_scopes != tuple(route.auth.scopes):
         raise ApiPluginContractError(
             f"route {route.path!r} does not match its derived operation "
