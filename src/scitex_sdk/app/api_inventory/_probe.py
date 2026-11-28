@@ -155,20 +155,51 @@ def probe_rows(
     timeout: float = 15.0,
     retries: int = 3,
     pause: float = 0.05,
+    outage_after: int = 5,
+    outage_wait: float = 300.0,
 ) -> dict:
-    """Probe every safe row in place (``row['live']``); return run metadata."""
+    """Probe every safe row in place (``row['live']``); return run metadata.
+
+    A server that stops answering (a redeploy, a dropped tunnel) is not
+    hammered: after ``outage_after`` consecutive unreachable paths the probe
+    waits up to ``outage_wait`` seconds for the base to answer again,
+    re-probes the paths that hit the outage, and otherwise stops, reporting
+    ``aborted`` and leaving the remaining rows unprobed.
+    """
     headers = {"User-Agent": "scitex-sdk-api-inventory", "Accept": "application/json"}
     if host_header:
         headers["Host"] = host_header
     token = os.environ.get(token_env) if token_env else None
     started = datetime.now(timezone.utc).isoformat(timespec="seconds")
     probed = 0
-    for row in rows:
-        if not probe_safe(row):
-            continue
+    outages = []
+    aborted = None
+    pending = [row for row in rows if probe_safe(row)]
+    streak = []
+    i = 0
+    while i < len(pending):
+        row = pending[i]
         row["live"] = probe_one(
             base, row["path"], headers=headers, timeout=timeout, retries=retries
         )
+        if row["live"]["behaviour"] == "unreachable":
+            streak.append(i)
+            if len(streak) >= outage_after:
+                outage = {"at": row["live"]["attempts"][-1]["at"], "paths": len(streak)}
+                if not _wait_for(base, headers, timeout, outage_wait):
+                    outage["recovered"] = False
+                    outages.append(outage)
+                    aborted = f"server unreachable for {outage_wait:.0f}s at {outage['at']}"
+                    for row_left in pending[streak[0] :]:
+                        row_left.pop("live", None)
+                    break
+                outage["recovered"] = True
+                outages.append(outage)
+                i = streak[0]
+                streak = []
+                continue
+        else:
+            streak = []
         if token:
             auth = dict(headers, Authorization=f"Bearer {token}")
             with_token = probe_one(
@@ -178,7 +209,9 @@ def probe_rows(
                 k: with_token[k] for k in ("status", "content_type", "behaviour")
             }
         probed += 1
+        i += 1
         time.sleep(pause)
+    probed = sum(1 for row in pending if "live" in row)
     return {
         "base": base,
         "host_header": host_header,
@@ -186,7 +219,21 @@ def probe_rows(
         "started": started,
         "finished": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "probed": probed,
+        "outages": outages,
+        "aborted": aborted,
     }
+
+
+def _wait_for(base: str, headers: dict, timeout: float, budget: float) -> bool:
+    """Whether ``base`` answers anything (any HTTP status) within ``budget``."""
+    deadline = time.monotonic() + budget
+    while time.monotonic() < deadline:
+        try:
+            _get(base.rstrip("/") + "/", headers, timeout)
+            return True
+        except (urllib.error.URLError, OSError, TimeoutError):
+            time.sleep(max(0.0, min(10.0, deadline - time.monotonic())))
+    return False
 
 
 __all__ = ["UNSAFE_WORDS", "classify", "probe_one", "probe_rows", "probe_safe"]

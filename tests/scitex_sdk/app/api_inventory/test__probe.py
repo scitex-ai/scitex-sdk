@@ -130,3 +130,17 @@ def test_the_token_is_sent_but_never_recorded(probed, token):
     sent = ("GET", "/api/ok", f"Bearer {token}") in SEEN
     # Assert
     assert (sent, token in repr(rows) + repr(meta)) == (True, False)
+
+
+def test_an_unreachable_server_aborts_the_probe_instead_of_hammering_it():
+    # Arrange
+    import socket
+
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        dead = f"http://127.0.0.1:{sock.getsockname()[1]}"
+    rows = [_row(f"/api/p{i}") for i in range(4)]
+    # Act
+    meta = probe_rows(rows, dead, retries=0, pause=0, outage_after=2, outage_wait=0.1)
+    # Assert
+    assert (bool(meta["aborted"]), meta["probed"], any("live" in r for r in rows)) == (True, 0, False)
