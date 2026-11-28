@@ -37,7 +37,7 @@ def test_scitex_sdk_api_list_reports_its_own_off_grammar_route():
         for e in json.loads(result.output)["entries"]
         if e.get("path") == "/api/v1/scitex-sdk/skills"
     )
-    assert (bool(skills["off_grammar"]), "API-N08" in skills["violations"]) == (
+    assert (bool(skills["off_grammar"]), "API-T002" in skills["violations"]) == (
         True,
         True,
     )

@@ -185,7 +185,7 @@ def operation_entries(distribution: str, refs=None) -> tuple[list[dict], list[st
                     operation_id=None,
                     mcp_twin=None,
                     off_grammar=str(exc),
-                    violations=sorted(set(path_rules(path)) | {"API-N08"}),
+                    violations=sorted(set(path_rules(path)) | {"API-T002"}),
                 )
             else:
                 row.update(
@@ -249,7 +249,7 @@ def list_package(spec: PackageSpec | str, refs=None) -> PackageListing:
         twin = row.get("mcp_twin")
         row["mcp_twin_served"] = bool(twin) and (server is None or twin in names)
         if twin and server is not None and twin not in names:
-            row["violations"] = sorted(set(row["violations"]) | {"API-N08"})
+            row["violations"] = sorted(set(row["violations"]) | {"API-T002"})
     return listing
 
 

@@ -69,7 +69,7 @@ def test_a_hand_written_tool_is_flagged(listing):
     # Assert
     assert (
         legacy["input"],
-        {"API-N08", "API-N09", "API-N10"} <= set(legacy["violations"]),
+        {"API-T002", "API-T003", "API-T001"} <= set(legacy["violations"]),
     ) == ("limit", True)
 
 
@@ -93,7 +93,7 @@ def test_a_hosted_aggregate_attributes_tools_to_their_namespace():
     }
     # Assert
     row = rows["notes_notes_notes_list"]
-    assert (row["namespace"], row["raw_name"], "API-N09" in row["violations"]) == (
+    assert (row["namespace"], row["raw_name"], "API-T003" in row["violations"]) == (
         "notes",
         "notes_notes_list",
         True,

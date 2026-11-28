@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Normalization rules every inventoried endpoint and MCP tool is checked against.
+"""Contract rules every inventoried endpoint and MCP tool is checked against.
 
-The rules restate the operation grammar of :mod:`scitex_sdk.app.api_ops`
-(the contract every leaf already builds on) as checks over ANY route — a
-legacy Django view as well as a declared operation — so the distance from
-today's surface to the contract is measurable per entry.
+Rule ids are the stable ids of the API contract v1 rule registry
+(``docs/design/api-contract-v1/01-rules.md``): the same id appears in the
+declaration-time exception, the contract test, the scitex-dev audit and
+here. The inventory checks the subset that can be judged from a route, a
+tool name and a live response; ``API-X*`` are inventory-only findings the
+registry does not (yet) carry.
 
-Rule ids are stable (``API-N<nn>``); a row lists the ids it violates. When
-the v1 contract design publishes its own ids, :data:`RULES` gains an
-``alias`` per rule rather than renumbering.
+A legacy Django view is judged by the same grammar as a declared
+operation, so the distance from today's surface to the contract is
+measurable per entry.
 """
 
 from __future__ import annotations
@@ -17,217 +19,205 @@ import re
 
 from ..api_ops import API_PREFIX, CRUD_VERBS
 
-#: id -> (short title, what is checked)
+CONTRACT_DOC = "docs/design/api-contract-v1/01-rules.md"
+
+#: id -> (short title, what the inventory checks)
 RULES: dict[str, tuple[str, str]] = {
-    "API-N01": ("unversioned", "API path is not under /api/v1/<package>/"),
-    "API-N02": (
-        "non-plural-resource",
-        "the resource segment after /api/v1/<package>/ is not a plural noun",
+    "API-D001": (
+        "not-generated",
+        "public API route not generated from an ApiOperation of an admitted plugin",
     ),
-    "API-N03": (
+    "API-D005": (
+        "dynamic-dispatcher",
+        "catch-all or generic dispatcher (<path:...>, {module}/{function}) in the route",
+    ),
+    "API-R001": (
+        "off-url-grammar",
+        "path is not /api/v1/<package>/<resource>[/{id}][/<action>]",
+    ),
+    "API-R002": ("casing", "a literal path segment is not lowercase kebab-case"),
+    "API-R003": ("non-plural-resource", "the resource segment is not a plural noun"),
+    "API-R004": ("trailing-slash", "the API path ends with '/'"),
+    "API-V002": (
         "verb-in-path",
-        "a CRUD verb (list/create/get/update/delete/...) appears in the path, "
-        "or an action verb is not the final segment",
+        "a CRUD verb in the path (the method carries it), or an action verb that is not the final segment",
     ),
-    "API-N04": (
-        "casing",
-        "a literal path segment is not lowercase kebab-case",
+    "API-A001": (
+        "no-bearer",
+        "programs cannot use 'Authorization: Bearer <token>' (session/JWT-only, custom key "
+        "header, or a CSRF-exempt session endpoint)",
     ),
-    "API-N05": (
-        "trailing-slash",
-        "the API path ends with '/' (operations are slash-less)",
+    "API-A004": (
+        "anonymous-write",
+        "a declared write method (POST/PUT/PATCH/DELETE) with no authentication found in code "
+        "and none observed live",
     ),
-    "API-N06": (
-        "no-bearer-key",
-        "the endpoint does not accept a SciTeX API key / OAuth token as "
-        "'Authorization: Bearer' (session- or JWT-only, or a custom header)",
-    ),
-    "API-N07": (
+    "API-E001": (
         "no-problem-json",
-        "errors are not declared as RFC 9457 problem+json (not served by the "
-        "contract, or a live error response was not application/problem+json)",
+        "errors are not RFC 9457 problem+json (not served by the contract, or a live error "
+        "response was another content type)",
     ),
-    "API-N08": (
-        "no-rest-mcp-twin",
-        "REST and MCP are not 1:1: a REST operation without its derived MCP "
-        "tool, or an MCP tool not derived from a declared operation",
+    "API-E003": (
+        "html-or-login-on-api",
+        "an API path answered HTML or redirected to a login page",
     ),
-    "API-N09": (
-        "double-prefixed-mcp",
-        "MCP tool name repeats its namespace (e.g. clew_clew_add_claim)",
-    ),
-    "API-N10": (
-        "mcp-name-grammar",
+    "API-T001": (
+        "tool-name-grammar",
         "MCP tool name is not <package>_<resource>_<verb>",
     ),
-    "API-N11": (
+    "API-T002": (
+        "no-rest-mcp-twin",
+        "REST and MCP are not 1:1: an operation without its derived tool, or a tool not "
+        "derived from an operation",
+    ),
+    "API-T003": (
+        "re-namespaced-tool",
+        "MCP tool name repeats its namespace (clew_clew_add_claim)",
+    ),
+    "API-X001": (
         "hub-hosts-leaf-logic",
-        "a hub-owned view imports leaf-package logic (the leaf should declare "
-        "the operation; the hub only mounts it)",
-    ),
-    "API-N12": (
-        "csrf-exempt-session",
-        "CSRF-exempt endpoint without a non-session credential",
-    ),
-    "API-N13": (
-        "unauthenticated-write",
-        "state-changing method reachable with no authentication at all",
+        "inventory-only: a hub-owned view calls leaf-package logic (the leaf should declare "
+        "the operation; the hub only docks it)",
     ),
 }
 
-#: Words that are CRUD verbs (never allowed anywhere in a contract path).
-CRUD_WORDS = frozenset(CRUD_VERBS) | {"add", "remove", "edit", "new", "save", "set", "put"}
+#: CRUD verbs, which the HTTP method carries: never a path segment.
+CRUD_WORDS = frozenset(CRUD_VERBS) | {
+    "add",
+    "remove",
+    "edit",
+    "new",
+    "save",
+    "set",
+    "put",
+}
 #: Action-like words: allowed only as the final segment (POST <resource>/<verb>).
 ACTION_WORDS = frozenset(
-    {
-        "submit",
-        "cancel",
-        "run",
-        "execute",
-        "compile",
-        "verify",
-        "publish",
-        "search",
-        "calculate",
-        "describe",
-        "recommend",
-        "refresh",
-        "register",
-        "sync",
-        "start",
-        "stop",
-        "restart",
-        "import",
-        "export",
-        "enrich",
-        "approve",
-        "reject",
-        "login",
-        "logout",
-        "chat",
-        "convert",
-        "render",
-        "preview",
-        "validate",
-        "send",
-        "mint",
-        "rotate",
-        "revoke",
-        "extract",
-        "concatenate",
-        "fetch",
-        "read",
-        "write",
-        "upload",
-        "download",
-        "rename",
-        "move",
-        "copy",
-        "mkdir",
-        "check",
-        "switch",
-        "toggle",
-    }
+    ["submit", "cancel", "run", "execute", "compile", "verify", "publish", "search", "calculate", "describe", "recommend", "refresh", "register", "sync", "start", "stop", "restart", "import", "export", "enrich", "approve", "reject", "login", "logout", "chat", "convert", "render", "preview", "validate", "send", "mint", "rotate", "revoke", "extract", "concatenate", "fetch", "read", "write", "upload", "download", "rename", "move", "copy", "mkdir", "check", "switch", "toggle"]
 )
 _KEBAB = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 _PARAM = re.compile(r"^(<[^>]+>|\{[^}]+\}|\(\?P<[^>]+>.*\)|\*.*)$")
+_DISPATCH_PARAMS = {
+    "{path}",
+    "{endpoint}",
+    "{rest}",
+    "{module}",
+    "{function}",
+    "{subpath}",
+}
 WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
-#: Credential modes that satisfy API-N06.
-BEARER_KEY_MODES = frozenset({"api-key", "oauth", "contract"})
-
-
-def literal_segments(path: str) -> list[str]:
-    """The literal (non-parameter) segments of a normalized ``/a/{b}/c`` path."""
-    return [s for s in path.strip("/").split("/") if s and not _PARAM.match(s)]
+#: Credential modes that satisfy API-A001 (a Bearer token programs can mint).
+BEARER_MODES = frozenset({"api-key", "oauth", "contract"})
 
 
 def segments(path: str) -> list[str]:
     return [s for s in path.strip("/").split("/") if s]
 
 
+def literal_segments(path: str) -> list[str]:
+    """The literal (non-parameter) segments of a normalized ``/a/{b}/c`` path."""
+    return [s for s in segments(path) if not _PARAM.match(s)]
+
+
 def _words(segment: str) -> set[str]:
     return set(re.split(r"[-_.]", segment.lower()))
 
 
-def path_rules(path: str) -> list[str]:
-    """Grammar rules (N01-N05) for one API path (already normalized)."""
+def path_rules(path: str, raw_pattern: str = "") -> list[str]:
+    """URL-grammar rules (D005, R001-R004, V002) for one normalized API path."""
     found = []
     segs = segments(path)
     prefix = API_PREFIX.split("/")
-    versioned = segs[: len(prefix)] == prefix and len(segs) > len(prefix) + 1
-    if not versioned:
-        found.append("API-N01")
+    if not (segs[: len(prefix)] == prefix and len(segs) > len(prefix) + 1):
+        found.append("API-R001")
     else:
         resource = segs[len(prefix) + 1]
         if _PARAM.match(resource) or not resource.endswith("s"):
-            found.append("API-N02")
-    lits = literal_segments(path)
+            found.append("API-R003")
     for i, seg in enumerate(segs):
         if _PARAM.match(seg):
             continue
         words = _words(seg)
-        if words & CRUD_WORDS:
-            found.append("API-N03")
+        if words & CRUD_WORDS or (words & ACTION_WORDS and i != len(segs) - 1):
+            found.append("API-V002")
             break
-        if words & ACTION_WORDS and i != len(segs) - 1:
-            found.append("API-N03")
-            break
-    if any(not _KEBAB.match(s) for s in lits if s not in (".well-known",)):
-        found.append("API-N04")
+    if any(not _KEBAB.match(s) for s in literal_segments(path) if s != ".well-known"):
+        found.append("API-R002")
     if path.endswith("/") and path != "/":
-        found.append("API-N05")
+        found.append("API-R004")
+    if "<path:" in raw_pattern or set(segs) & _DISPATCH_PARAMS:
+        found.append("API-D005")
     return found
 
 
 def route_rules(entry: dict) -> list[str]:
-    """Every rule a REST/websocket/ASGI entry violates (``entry`` = inventory row)."""
-    found = path_rules(entry["path"])
+    """Every rule a REST/websocket/ASGI entry (an inventory row) violates."""
+    found = path_rules(entry["path"], entry.get("raw_pattern") or "")
     auth = set(entry.get("auth") or ())
-    if not entry.get("contract") and not (auth & (BEARER_KEY_MODES | {"signature"})):
-        if "none" not in auth or entry.get("custom_key_header"):
-            found.append("API-N06")
-    if not entry.get("contract") or (entry.get("live") or {}).get("error_problem_json") is False:
-        found.append("API-N07")
-    if not entry.get("mcp_twin"):
-        found.append("API-N08")
-    if entry.get("owner_kind") == "hub" and entry.get("delegates_to"):
-        found.append("API-N11")
-    # Auth-provider libraries (token/OAuth endpoints) take credentials in the
-    # body by design; N12/N13 judge application endpoints only.
+    contract = bool(entry.get("contract"))
     third_party = entry.get("owner_kind") == "third-party"
-    if entry.get("csrf_exempt") and not third_party and not (auth - {"session", "none"}):
-        found.append("API-N12")
+    live = entry.get("live") or {}
+    if not contract:
+        found += ["API-D001", "API-E001"]
+        if not auth & (BEARER_MODES | {"signature"}):
+            if "none" not in auth or entry.get("custom_key_header"):
+                found.append("API-A001")
+    elif live.get("error_problem_json") is False:
+        found.append("API-E001")
+    # A CSRF-exempt endpoint whose only credential is the session cookie.
+    if (
+        entry.get("csrf_exempt")
+        and not third_party
+        and not (auth - {"session", "none", "gated-in-body"})
+    ):
+        found.append("API-A001")
+    if (
+        live.get("behaviour") == "login-redirect"
+        or live.get("content_type") == "text/html"
+    ):
+        found.append("API-E003")
+    if not entry.get("mcp_twin"):
+        found.append("API-T002")
+    if entry.get("owner_kind") == "hub" and entry.get("delegates_to"):
+        found.append("API-X001")
     methods = set(entry.get("methods") or ())
-    if (methods & WRITE_METHODS or "ANY" in methods) and auth == {"none"} and not third_party:
-        found.append("API-N13")
+    # Only an explicitly declared write method counts: an unrestricted (ANY)
+    # view is usually a GET endpoint, and the live probe judges those.
+    if methods & WRITE_METHODS and auth == {"none"} and not third_party:
+        found.append("API-A004")
     return sorted(set(found))
 
 
 def mcp_name_rules(name: str, namespace: str | None, derived: bool) -> list[str]:
-    """Rules N08-N10 for one MCP tool name."""
+    """Rules T001-T003 for one MCP tool name."""
     found = []
     parts = name.split("_")
     if not derived and len(parts) >= 2 and parts[0] == parts[1]:
-        found.append("API-N09")
+        found.append("API-T003")
     if namespace:
         ns = namespace.replace("-", "_")
         rest = name[len(ns) + 1 :] if name.startswith(ns + "_") else ""
-        if rest.split("_")[:1] == [ns] or rest.startswith(ns + "_"):
-            found.append("API-N09")
+        if rest.startswith(ns + "_"):
+            found.append("API-T003")
     if not derived:
-        found.append("API-N08")
-        found.append("API-N10")
+        found += ["API-T001", "API-T002"]
     return sorted(set(found))
 
 
 def rule_table() -> list[dict]:
     return [
-        {"id": rid, "title": title, "check": check}
+        {
+            "id": rid,
+            "title": title,
+            "check": check,
+            "source": CONTRACT_DOC if not rid.startswith("API-X") else "inventory",
+        }
         for rid, (title, check) in RULES.items()
     ]
 
 
 __all__ = [
+    "CONTRACT_DOC",
     "RULES",
     "mcp_name_rules",
     "path_rules",

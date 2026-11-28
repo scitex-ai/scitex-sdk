@@ -110,6 +110,7 @@ def aggregate(
         probe_meta = probe_rows(entries, **probe)
         for row in entries:
             if row.get("live") and row["kind"] in ("rest", "asgi"):
+                reconcile_live_auth(row)
                 row["violations"] = route_rules(row)
     for row in entries:
         row["id"] = _entry_id(row)
@@ -130,6 +131,26 @@ def aggregate(
         "errors": errors,
         "entries": entries,
     }
+
+
+#: Anonymous behaviours that prove the server gates the endpoint.
+GATED_BEHAVIOURS = frozenset({"unauthorized", "forbidden", "login-redirect"})
+
+
+def reconcile_live_auth(row: dict) -> None:
+    """Correct a static ``none`` verdict when the live server refused anonymity.
+
+    Code analysis cannot see every in-body check (a helper that returns 403);
+    an anonymous GET that is refused is evidence the endpoint is gated.
+    """
+    behaviour = (row.get("live") or {}).get("behaviour")
+    if "none" in (row.get("auth") or ()) and behaviour in GATED_BEHAVIOURS:
+        row["auth"] = sorted((set(row["auth"]) - {"none"}) | {"gated-in-body"})
+        row.setdefault("auth_evidence", []).append(f"live:anonymous GET -> {behaviour}")
+    with_token = (row.get("live") or {}).get("with_token") or {}
+    if with_token.get("behaviour") == "open" and behaviour in GATED_BEHAVIOURS:
+        row["auth"] = sorted(set(row["auth"]) | {"probe-token"})
+        row.setdefault("auth_evidence", []).append("live:probe bearer token -> open")
 
 
 def programmatic(entries: list[dict]) -> list[dict]:

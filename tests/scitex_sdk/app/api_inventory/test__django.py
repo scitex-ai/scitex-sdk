@@ -53,7 +53,7 @@ def test_a_login_required_post_view_is_session_only(by_key):
         row["auth"],
         row["permission"],
         row["owner_kind"],
-        "API-N06" in row["violations"],
+        "API-A001" in row["violations"],
     ) == (
         ["session"],
         "login",
@@ -71,7 +71,7 @@ def test_a_csrf_exempt_anonymous_write_is_found(by_key):
     assert (
         row["auth"],
         row["csrf_exempt"],
-        {"API-N12", "API-N13"} <= set(row["violations"]),
+        {"API-A001", "API-A004"} <= set(row["violations"]),
     ) == (["none"], True, True)
 
 

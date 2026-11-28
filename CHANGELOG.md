@@ -7,11 +7,14 @@ All notable changes to `scitex-sdk`.
 ## [0.3.27] - 2026-11-28
 
 - Add the API INVENTORY (`scitex_sdk.app.api_inventory`): one deterministic
-  listing of every API endpoint and MCP tool, with the normalization rules
-  (`API-N01`..`API-N13`: versioned `/api/v1` prefix, plural resources, no verbs
-  in paths, casing, trailing slash, Bearer key, problem+json, REST<->MCP 1:1,
-  double-prefixed / off-grammar MCP names, hub-hosted leaf logic, CSRF-exempt
-  session endpoints, unauthenticated writes) each entry violates.
+  listing of every API endpoint and MCP tool, tagged with the API contract v1
+  rule ids it violates (`docs/design/api-contract-v1/01-rules.md`): D001
+  not generated from an operation, D005 dynamic dispatcher, R001-R004 URL
+  grammar / casing / plural / trailing slash, V002 verb in path, A001 no
+  Bearer credential, A004 anonymous write, E001 not problem+json, E003 HTML
+  or login redirect on an API path, T001-T003 tool name / REST<->MCP 1:1 /
+  re-namespaced tool, plus the inventory-only X001 (hub view calls leaf
+  logic).
   - Per package: `api_click_group(package=...)` gives any leaf CLI
     `<pkg> api list [--format json|csv|md] [--strict]`: its declared
     `scitex.apis` operations (read back through `api_ops.operation_of`, the
