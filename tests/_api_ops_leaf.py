@@ -34,7 +34,7 @@ OPERATIONS = (
         "archive",
         f"{__name__}:archive_note",
         item=True,
-        response=ApiSchema("Job", (ApiField("id"),)),
+        response=ApiSchema("Job", (ApiField("id"), ApiField("state"))),
     ),
 )
 PLUGIN = build_plugin("notes", "Notes API", "1", OPERATIONS)

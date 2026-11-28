@@ -18,12 +18,33 @@ class ApiFinding:
     detail: str
 
 
-def scan_web_contract(repo_root, *, overlays=None):
+def scan_api_contract(repo_root, *, overlays=None):
+    """API contract v1 rules (API-* ids) over the same source declarations.
+
+    Reported by Dev as ``PS-SDK-API``. A declaration that already fails the
+    structural ``PS-SDK-WEB`` scan is not re-reported here; every structurally
+    valid one is checked with the contract test's static rules, so the audit
+    and the leaf's own contract test cannot disagree.
+    """
+    from ..testing.api_contract import declaration_violations
+
+    plugins: list = []
+    scan_web_contract(repo_root, overlays=overlays, collect=plugins)
+    return [
+        ApiFinding(location, 1, f"{name}: {found}")
+        for name, location, plugin in plugins
+        for found in declaration_violations(plugin)
+    ]
+
+
+def scan_web_contract(repo_root, *, overlays=None, collect=None):
     """Validate declared scitex.apis objects; absent presence belongs to Dev.
 
     Only SDK constructors execute. Consumer modules and handlers never import
     or run. Dynamic declarations remain explicit failures, not guessed validity.
     Passing proves source structure, not host admission or live availability.
+    ``collect`` (a list) receives ``(name, location, plugin)`` for every
+    declaration that passed.
     """
     try:
         import tomllib
@@ -83,6 +104,8 @@ def scan_web_contract(repo_root, *, overlays=None):
             plugin.openapi_fragment()
             for route in plugin.routes:
                 reader.handler(route.handler)
+            if collect is not None:
+                collect.append((name, location, plugin))
         except (
             UnprovenApi,
             ApiPluginContractError,

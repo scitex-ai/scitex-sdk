@@ -1,50 +1,25 @@
-"""Literal SDK API declaration; resolving it does not start a server."""
+"""The SDK's own API, declared as contract operations (served at /api/v1/sdk/)."""
 
-from scitex_sdk.app.api_plugin import (
-    ApiError,
-    ApiField,
-    ApiPlugin,
-    ApiRoute,
-    ApiSchema,
-    AuthScope,
-    RateLimit,
-)
+from scitex_sdk.app.api_ops import ApiOperation, build_plugin
+from scitex_sdk.app.api_plugin import ApiError
 
-plugin = ApiPlugin(
-    id="scitex-sdk",
-    title="SciTeX SDK",
-    api_version="1",
-    routes=(
-        ApiRoute(
-            path="skills",
-            methods=("GET",),
-            rate=RateLimit(rate_class="free", compute_cost="low"),
-            response=ApiSchema(
-                name="BundledSdkSkills",
-                fields=(
-                    ApiField(name="package", enum=("scitex-sdk",)),
-                    ApiField(
-                        name="skills",
-                        type="object",
-                        description="Relative skill IDs grouped by scitex-sdk, scitex-app and scitex-ui.",
-                    ),
-                ),
+OPERATIONS = (
+    ApiOperation(
+        "sdk",
+        "skills",
+        "list",
+        "scitex_sdk._web._handlers:list_skills",
+        summary="Skills bundled with the installed scitex-sdk (ids only, no paths)",
+        errors=(
+            ApiError(
+                "sdk.skills_unavailable", 503, "Bundled skills are unavailable", True
             ),
-            errors=(
-                ApiError(
-                    code="method_not_allowed",
-                    status=405,
-                    message="Use GET for the bundled skills catalog.",
-                ),
-                ApiError(
-                    code="bundled_skills_unavailable",
-                    status=503,
-                    message="Bundled SDK skill resources are unavailable.",
-                ),
-            ),
-            auth=AuthScope(public=True, project_scope="none"),
-            handler="scitex_sdk._web._views:bundled_skills",
-            read_only=True,
         ),
+        paginated=True,
+        default_limit=100,
+        max_limit=200,
+        public=True,
     ),
 )
+
+plugin = build_plugin("sdk", "SciTeX SDK", "1", OPERATIONS)

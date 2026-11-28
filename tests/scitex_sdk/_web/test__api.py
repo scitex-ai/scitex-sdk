@@ -1,61 +1,66 @@
-"""The real installed SDK Web declaration is discoverable and opt-in only."""
+"""The SDK's own API is declared as contract operations and passes the contract."""
 
-import json
-
-import pytest
-from django.test import RequestFactory
+from pathlib import Path
 
 from scitex_sdk._web._api import plugin
-from scitex_sdk.app._api_contract import scan_web_contract
-from scitex_sdk.app.api_mount import AdmissionDenied, admit, resolve_handler
-from scitex_sdk.app.api_plugin import discover_api_plugins
+from scitex_sdk.app._api_contract import scan_api_contract, scan_web_contract
+from scitex_sdk.app.api_exec import ApiCaller, execute
+from scitex_sdk.app.api_ops import operations
+from scitex_sdk.testing.api_contract import assert_contract
+
+ROOT = Path(__file__).resolve().parents[3]
+TARGET = "scitex_sdk._web._api:plugin"
 
 
-def test_installed_reference_requires_explicit_host_admission():
+def _contract_error():
+    try:
+        assert_contract(plugin, target=TARGET)
+    except AssertionError as exc:
+        return str(exc)
+    return None
+
+
+def test_the_sdk_api_is_one_public_paginated_list():
     # Arrange
-    ref = next(ref for ref in discover_api_plugins() if ref.name == "scitex-sdk")
-    admission = admit(ref, review_ref="owned-test", enabled=())
+    (op,) = operations(plugin)
     # Act
+    shape = (op.url, op.method, op.public, op.paginated, op.mcp_name)
     # Assert
-    with pytest.raises(AdmissionDenied, match="not enabled"):
-        resolve_handler(ref, admission, "skills")
+    assert shape == ("/api/v1/sdk/skills", "GET", True, True, "sdk_skills_list")
 
 
-def test_admitted_read_route_calls_actual_sdk_view():
+def test_the_sdk_api_passes_its_own_contract_test():
     # Arrange
-    ref = next(ref for ref in discover_api_plugins() if ref.name == "scitex-sdk")
-    admission = admit(ref, review_ref="owned-test", enabled=("skills",))
+    expected = None
     # Act
-    handler = resolve_handler(ref, admission, "skills")
-    response = handler(RequestFactory().get("/unmounted/skills"))
+    error = _contract_error()
     # Assert
-    assert (response.status_code, json.loads(response.content)["package"]) == (
-        200,
-        "scitex-sdk",
-    )
+    assert error == expected
 
 
-def test_descriptor_exposes_one_public_read_only_operation():
+def test_listing_skills_returns_ids_without_paths():
     # Arrange
-    route = plugin.routes[0]
+    (op,) = operations(plugin)
+    anonymous = ApiCaller(user=None, scopes=(), via="anonymous")
     # Act
-    fragment = plugin.openapi_fragment()
+    result = execute(op, anonymous, {"limit": "200"})
     # Assert
-    assert (
-        len(plugin.routes),
-        route.read_only,
-        route.auth.public,
-        route.auth.project_scope,
-        set(fragment["paths"]["/skills"]),
-    ) == (1, True, True, "none", {"get"})
+    assert [r for r in result.body["data"] if r["skill_id"].startswith("/")] == []
 
 
 def test_sdk_source_passes_its_own_quality_rule():
     # Arrange
-    from pathlib import Path
-
-    root = Path(__file__).resolve().parents[3]
+    root = ROOT
     # Act
     findings = scan_web_contract(root)
+    # Assert
+    assert findings == []
+
+
+def test_sdk_source_passes_the_api_contract_audit():
+    # Arrange
+    root = ROOT
+    # Act
+    findings = scan_api_contract(root)
     # Assert
     assert findings == []

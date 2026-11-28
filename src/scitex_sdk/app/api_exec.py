@@ -320,7 +320,7 @@ def execute(
     """
     request_id = request_id or uuid.uuid4().hex
     try:
-        if not scope_granted(op.scope, caller.scopes):
+        if not op.public and not scope_granted(op.scope, caller.scopes):
             raise ApiProblem(
                 403,
                 "api.insufficient_scope",

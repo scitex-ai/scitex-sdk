@@ -49,6 +49,18 @@ def check_web_contract(repo_root, violation_class, violations):
         )
 
 
+def check_api_contract(repo_root, violation_class, violations):
+    """Report API contract v1 rule violations (API-* ids) of declarations."""
+    from .app._api_contract import scan_api_contract
+
+    for finding in scan_api_contract(repo_root):
+        violations.append(
+            violation_class(
+                "PS-SDK-API", f"{finding.path}:{finding.line}", finding.detail
+            )
+        )
+
+
 def get_plugin():
     """Load the scanner eagerly: an incomplete installation must not pass."""
     from .app._api_contract import scan_web_contract
@@ -69,6 +81,13 @@ def get_plugin():
                 "SDK Web API source contract",
                 "E",
                 "sdk-web-api-contract",
+            ),
+            (
+                "PS-SDK-API",
+                "API",
+                "SciTeX API contract v1 (API-* rule ids)",
+                "E",
+                "sdk-api-contract-v1",
             ),
             (
                 "PS-SDK-HEADER",
@@ -97,5 +116,6 @@ def get_plugin():
             check_filter_contract,
             check_shell_contract,
             check_web_contract,
+            check_api_contract,
         ],
     }

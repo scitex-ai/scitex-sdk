@@ -263,14 +263,14 @@ def test_a_plugin_off_the_operation_grammar_is_refused_not_mounted():
     from scitex_sdk.app.api_serve import REFUSED, admitted_plugins
 
     ref = ApiPluginRef(
-        name="scitex-sdk",
-        target="scitex_sdk._web._api:plugin",
-        distribution="scitex-sdk",
+        name="legacy",
+        target="tests._api_ops_offgrammar:PLUGIN",
+        distribution="scitex-legacy",
     )
     # Act
     admitted = admitted_plugins([ref])
     # Assert
-    assert (admitted, "scitex-sdk" in REFUSED) == ([], True)
+    assert (admitted, "legacy" in REFUSED) == ([], True)
 
 
 def test_the_cache_store_replays_through_the_django_cache():
