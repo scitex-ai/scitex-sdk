@@ -26,7 +26,7 @@ if not settings.configured:
         SECRET_KEY="sdk-owned-tests",
         ALLOWED_HOSTS=["*"],
         ROOT_URLCONF="scitex_sdk.creator.urls",
-        INSTALLED_APPS=["django.contrib.staticfiles", "scitex_sdk.app", "scitex_sdk.ui", "scitex_sdk.creator"],
+        INSTALLED_APPS=["django.contrib.contenttypes", "django.contrib.auth", "django.contrib.staticfiles", "scitex_sdk.app", "scitex_sdk.ui", "scitex_sdk.creator"],
         TEMPLATES=[{"BACKEND": "django.template.backends.django.DjangoTemplates", "APP_DIRS": True}],
         DATABASES=({"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}} if os.environ.get("SCITEX_ACCESS_STRICT") == "1" else {}),
         STATIC_URL="/static/",

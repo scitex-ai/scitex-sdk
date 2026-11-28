@@ -461,6 +461,10 @@ def _register_components() -> None:
     main.add_command(app_commands, "app")
     main.add_command(ui_commands, "ui")
 
+    from scitex_sdk.app.api_inventory import sdk_api_group
+
+    main.add_command(sdk_api_group(), "api")
+
     try:
         from scitex_dev._cli._completion import attach_shell_completion
 

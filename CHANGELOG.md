@@ -4,6 +4,30 @@ All notable changes to `scitex-sdk`.
 
 ## [Unreleased]
 
+## [0.3.27] - 2026-11-28
+
+- Add the API INVENTORY (`scitex_sdk.app.api_inventory`): one deterministic
+  listing of every API endpoint and MCP tool, with the normalization rules
+  (`API-N01`..`API-N13`: versioned `/api/v1` prefix, plural resources, no verbs
+  in paths, casing, trailing slash, Bearer key, problem+json, REST<->MCP 1:1,
+  double-prefixed / off-grammar MCP names, hub-hosted leaf logic, CSRF-exempt
+  session endpoints, unauthenticated writes) each entry violates.
+  - Per package: `api_click_group(package=...)` gives any leaf CLI
+    `<pkg> api list [--format json|csv|md] [--strict]`: its declared
+    `scitex.apis` operations (read back through `api_ops.operation_of`, the
+    same path host admission uses) plus its FastMCP tools.
+  - Global: `aggregate()` composes the per-package listings with a host's
+    Django URLconf (every pattern via `get_resolver()`: methods, credential
+    modes, permission, CSRF exemption, owner hub/leaf, leaf modules a hub view
+    calls), ASGI mounts (`/mcp`, websockets), the hosted MCP aggregate
+    (namespace and owner per tool) and an optional GET-only live probe. Front
+    end: `scitex-sdk api inventory [--django-settings ... --asgi ...
+    --hosted-mcp ... --probe-base ...] --output-dir DIR` writes
+    `inventory.json`, `inventory.csv` and `index.md`.
+- `scitex-sdk api list` lists the SDK's own declaration. It reports that the
+  `scitex-sdk` plugin route `skills` is off the operation grammar (the host
+  refuses to mount it).
+
 ## [0.3.26] - 2026-11-27
 
 - Add the host STORAGE GATE capability: `scitex_sdk.host.storage_budget(request,
