@@ -41,12 +41,85 @@ _PY_TYPES = {
 
 @dataclass(frozen=True)
 class McpToolSpec:
-    """One generated tool: its name, description, JSON input schema, operation."""
+    """One generated tool: its name, description, JSON schemas, operation.
+
+    ``output_schema`` describes the tool's ``structuredContent`` — the REST
+    body — or is ``None`` when the operation declares no body shape.
+    ``annotations`` are the MCP behaviour hints derived from the verb.
+    """
 
     name: str
     description: str
     input_schema: dict
     operation: ApiOperation
+    output_schema: dict | None = None
+    title: str = ""
+    annotations: dict | None = None
+
+
+def _property(f) -> dict:
+    prop = {"type": f.type}
+    if f.description:
+        prop["description"] = f.description
+    if f.enum:
+        prop["enum"] = list(f.enum)
+    return prop
+
+
+def _body_schema(schema) -> dict:
+    """A declared response schema as JSON Schema, typed but OPEN.
+
+    Field types and descriptions are the declaration; the object is left
+    open (no ``required``, extra keys allowed) because an MCP client
+    validates ``structuredContent`` strictly, and a leaf that returns one
+    field more than it documented must not turn a working REST call into a
+    failed tool call. The envelope keys around it are exact.
+    """
+    return {
+        "type": "object",
+        "title": schema.name,
+        "properties": {f.name: _property(f) for f in schema.fields},
+    }
+
+
+def output_schema(op: ApiOperation) -> dict | None:
+    """JSON Schema of the REST body an operation answers (its MCP output)."""
+    if op.is_async:
+        return {
+            "type": "object",
+            "properties": {"job": _body_schema(op.response)},
+            "required": ["job"],
+        }
+    item = _body_schema(op.response) if op.response is not None else {}
+    if op.paginated:
+        return {
+            "type": "object",
+            "properties": {
+                "data": {"type": "array", "items": item},
+                "has_more": {"type": "boolean"},
+                "next_cursor": {"type": ["string", "null"]},
+                "total": {"type": "integer"},
+            },
+            "required": ["data", "has_more", "next_cursor"],
+        }
+    if op.response is None:
+        return None
+    return {
+        "type": "object",
+        "properties": {"data": item},
+        "required": ["data"],
+    }
+
+
+def _annotations(op: ApiOperation) -> dict:
+    read = op.access == "read"
+    return {
+        "title": op.summary or op.operation_id,
+        "readOnlyHint": read,
+        "destructiveHint": op.verb == "delete",
+        "idempotentHint": read or op.verb in ("update", "delete"),
+        "openWorldHint": False,
+    }
 
 
 def _fields(op: ApiOperation) -> list:
@@ -68,18 +141,15 @@ def tool_specs(plugin) -> list:
         properties = {}
         required = []
         for f in _fields(op):
-            prop = {"type": f.type}
-            if f.description:
-                prop["description"] = f.description
-            if f.enum:
-                prop["enum"] = list(f.enum)
-            properties[f.name] = prop
+            properties[f.name] = _property(f)
             if f.required:
                 required.append(f.name)
+        access = "public, no credential needed" if op.public else f"scope {op.scope}"
         description = (
-            f"{op.summary or op.operation_id} "
-            f"(REST {op.method} {op.url}; scope {op.scope})"
+            f"{op.summary or op.operation_id} (REST {op.method} {op.url}; {access})"
         ).strip()
+        if op.is_async:
+            description += " Answers a job; poll it until it finishes."
         specs.append(
             McpToolSpec(
                 name=op.mcp_name,
@@ -91,6 +161,9 @@ def tool_specs(plugin) -> list:
                     "additionalProperties": False,
                 },
                 operation=op,
+                output_schema=output_schema(op),
+                title=op.summary or op.operation_id,
+                annotations=_annotations(op),
             )
         )
     return specs
@@ -203,6 +276,7 @@ __all__ = [
     "call_tool",
     "local_caller",
     "local_project",
+    "output_schema",
     "register_fastmcp",
     "tool_specs",
 ]
