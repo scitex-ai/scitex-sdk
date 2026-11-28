@@ -7,7 +7,12 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ._base import OAUTH_SECURITY_SCHEME, ApiPluginContractError
+from ._base import (
+    _CONTRACT_RE,
+    DEFAULT_CONTRACT,
+    OAUTH_SECURITY_SCHEME,
+    ApiPluginContractError,
+)
 from ._openapi import _media_type, _schema_fragment, _security_scheme_fragment
 from ._route import (
     ApiRoute,
@@ -107,6 +112,13 @@ class ApiPlugin:
     route declares a scope, construction refuses a missing (or non-covering)
     provider, so a scoped API cannot be published without saying which server
     issues its scopes.
+
+    ``contract`` is the API contract MAJOR the declaration follows (API-D003).
+    It is stored here, not only checked by :func:`~.api_ops.build_plugin`, so
+    the installed inert descriptor carries it and a host re-checks it at load
+    time against the majors it serves. Only its spelling is validated here: a
+    descriptor declaring a major this SDK does not serve must still PARSE, so
+    the host can refuse it by rule id instead of failing to read it.
     """
 
     id: str
@@ -114,6 +126,7 @@ class ApiPlugin:
     api_version: str
     routes: Sequence[ApiRoute] = field(default_factory=tuple)
     oauth: OAuthProvider | None = None
+    contract: str = DEFAULT_CONTRACT
 
     def __post_init__(self) -> None:
         # Stored in validated form: the id prefixes every operationId and names
@@ -129,6 +142,13 @@ class ApiPlugin:
         object.__setattr__(self, "routes", _require_elements(
             self.routes, ApiRoute, f"routes of api plugin {self.id!r}"
         ))
+        contract = _require_text(self.contract, f"contract of api plugin {self.id!r}")
+        if not _CONTRACT_RE.match(contract):
+            raise ApiPluginContractError(
+                f"api plugin {self.id!r} declares contract {self.contract!r}; a "
+                "contract is a major version such as '1'"
+            )
+        object.__setattr__(self, "contract", contract)
         if self.oauth is not None and not isinstance(self.oauth, OAuthProvider):
             raise ApiPluginContractError(
                 f"oauth of api plugin {self.id!r} is {self.oauth!r}, a "
@@ -143,6 +163,21 @@ class ApiPlugin:
         self._refuse_duplicate_route_keys()
         self._refuse_duplicate_schema_names()
         self._refuse_uncovered_oauth_scopes()
+        self._refuse_foreign_operation_ids()
+
+    def _refuse_foreign_operation_ids(self) -> None:
+        """A declared ``operationId`` begins with this plugin's id.
+
+        The merged document is keyed across every docked package, so an id
+        naming another package would collide there with that package's own.
+        """
+        for route in self.routes:
+            if route.operation_id and not route.operation_id.startswith(f"{self.id}."):
+                raise ApiPluginContractError(
+                    f"api plugin {self.id!r} route {route.path!r} declares "
+                    f"operation_id {route.operation_id!r}, which names another "
+                    "package"
+                )
 
     def _refuse_duplicate_route_keys(self) -> None:
         """Refuse two routes claiming the same canonical path AND method.
@@ -410,6 +445,8 @@ class ApiPlugin:
         and ``.`` is escaped on the way so the emitted id splits back into
         exactly ``id``/``method``/``path``.
         """
+        if route.operation_id:
+            return route.operation_id
         return (
             f"{_encode_operation_id(self.id)}."
             f"{method.lower()}."

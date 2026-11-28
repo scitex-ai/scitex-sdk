@@ -108,7 +108,17 @@ RECOMMENDED_RATE_CLASSES = ("interactive", "standard", "bulk")
 #: examples that make a declaration readable, quoted by the docs, not enforced.
 RECOMMENDED_COMPUTE_COSTS = ("light", "standard", "heavy")
 
+#: The contract major a declaration follows when it names none. Kept equal to
+#: :data:`~.api_rules.CONTRACT_MAJOR`; a descriptor written before the field
+#: existed therefore reads as contract 1, which is what it was built against.
+DEFAULT_CONTRACT = "1"
+
+_CONTRACT_RE = re.compile(r"^[1-9][0-9]*$")
 _METHOD_RE = re.compile(r"^[A-Z]+$")
+#: ``<package>.<resource>.<verb>``, each part lowercase kebab-case (API-O001).
+_OPERATION_ID_RE = re.compile(
+    r"^[a-z][a-z0-9]*(-[a-z0-9]+)*(\.[a-z][a-z0-9]*(-[a-z0-9]+)*){2}$"
+)
 _VERSION_RE = re.compile(r"^\d+(\.\d+)*$")
 _HANDLER_RE = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_][\w.]*$")
 _PATH_SEGMENT_RE = re.compile(r"^[A-Za-z0-9_.\-]+$")

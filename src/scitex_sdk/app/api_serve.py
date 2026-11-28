@@ -359,7 +359,9 @@ def admitted_plugins(refs=None) -> list:
         plugin = getattr(import_module(module), attr)
         try:
             from .api_ops import operations
+            from .api_rules import check_contract
 
+            check_contract(plugin)
             operations(plugin)
         except ApiPluginContractError as exc:
             # Refused, not mounted: a plugin off the operation grammar would be

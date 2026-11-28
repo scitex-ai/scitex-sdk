@@ -43,7 +43,12 @@ from scitex_sdk.app.api_plugin import (
     ApiPluginRef,
     discover_api_plugins,
 )
-from scitex_sdk.app.api_rules import operation_violations
+from scitex_sdk.app.api_rules import check_contract, operation_violations
+from scitex_sdk.app.api_verbs import (
+    find_dictionary,
+    read_verb_exceptions,
+    verb_violations,
+)
 
 PROBLEM_JSON = "application/problem+json"
 _PROBE_ID = "contract-probe-id"
@@ -66,17 +71,35 @@ class Violation:
 # ---------------------------------------------------------------- static
 
 
-def check_plugin(plugin: ApiPlugin) -> list:
+def check_plugin(plugin: ApiPlugin, *, verb_exceptions: dict | None = None) -> list:
     """Static violations of ``plugin`` (no Django needed)."""
-    return declaration_violations(plugin) + _openapi_violations(plugin)
+    return declaration_violations(
+        plugin, verb_exceptions=verb_exceptions
+    ) + _openapi_violations(plugin)
 
 
-def declaration_violations(plugin: ApiPlugin) -> list:
-    """Operation grammar and MCP 1:1 violations, from the declaration alone.
+def _verb_exceptions(given: dict | None) -> dict:
+    """The package's ``verb_exceptions:`` (API-V003), from the project at cwd."""
+    if given is not None:
+        return given
+    path = find_dictionary()
+    return read_verb_exceptions(path) if path is not None else {}
+
+
+def declaration_violations(
+    plugin: ApiPlugin, *, verb_exceptions: dict | None = None
+) -> list:
+    """Operation grammar, verb, contract and MCP 1:1 violations, from the declaration.
 
     This is the subset the source-only Dev audit (``PS-SDK-API``) reports. A
     plugin whose routes were not built from operations fails API-D001.
+    ``verb_exceptions`` (``{verb: has_why}``) defaults to the
+    ``.scitex/dev/cli-audit-dict.yaml`` of the project the test runs in.
     """
+    try:
+        check_contract(plugin)
+    except ApiPluginContractError as exc:
+        return [Violation("API-D003", plugin.id, getattr(exc, "detail", str(exc)))]
     try:
         ops = operations(plugin)
     except ApiPluginContractError as exc:
@@ -94,6 +117,10 @@ def declaration_violations(plugin: ApiPlugin) -> list:
         out.extend(
             Violation(r, op.operation_id, m) for r, m in operation_violations(op)
         )
+    out.extend(
+        Violation(r, oid, m)
+        for r, oid, m in verb_violations(ops, _verb_exceptions(verb_exceptions))
+    )
     specs = {spec.name: spec for spec in tool_specs(plugin)}
     if sorted(specs) != sorted(op.mcp_name for op in ops):
         out.append(Violation("API-T002", plugin.id, "MCP tools differ from operations"))
@@ -390,10 +417,14 @@ def run_contract_suite(plugin: ApiPlugin, *, target: str | None = None) -> list:
 
 
 def assert_contract(
-    plugin: ApiPlugin, *, target: str | None = None, previous: ApiPlugin | None = None
+    plugin: ApiPlugin,
+    *,
+    target: str | None = None,
+    previous: ApiPlugin | None = None,
+    verb_exceptions: dict | None = None,
 ) -> None:
     """Fail with every violation of ``plugin`` (static, served, compatibility)."""
-    found = check_plugin(plugin)
+    found = check_plugin(plugin, verb_exceptions=verb_exceptions)
     if not found:
         found = run_contract_suite(plugin, target=target)
     if previous is not None:

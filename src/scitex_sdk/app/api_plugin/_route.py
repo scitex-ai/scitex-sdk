@@ -9,6 +9,7 @@ from urllib.parse import quote
 
 from ._base import (
     _HANDLER_RE,
+    _OPERATION_ID_RE,
     _METHOD_RE,
     _PLACEHOLDER_RE,
     _TEMPLATE_RE,
@@ -63,6 +64,11 @@ class ApiRoute:
     deprecation: Deprecation | None = None
     read_only: bool = False
     summary: str = ""
+    #: The OpenAPI ``operationId`` of an operation-grammar route,
+    #: ``<package>.<resource>.<verb>`` (API-O001), set by
+    #: :meth:`~.api_ops.ApiOperation.route`. Empty for a hand-written route,
+    #: which keeps the injective ``<id>.<method>.<path>`` spelling.
+    operation_id: str = ""
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "path", _validate_path(self.path))
@@ -145,6 +151,34 @@ class ApiRoute:
         self._refuse_undeclared_mutation()
         self._refuse_duplicate_errors()
         self._refuse_undeclared_path_params()
+        self._refuse_malformed_operation_id()
+
+    def _refuse_malformed_operation_id(self) -> None:
+        """A declared ``operationId`` is three dotted names and one method.
+
+        One id names one operation, so a route carrying one may declare only
+        one method: a GET/POST pair under a single id is the duplicate the
+        OpenAPI validator refuses.
+        """
+        if not isinstance(self.operation_id, str):
+            raise ApiPluginContractError(
+                f"operation_id of route {self.path!r} must be a string "
+                f"(got {self.operation_id!r})"
+            )
+        if not self.operation_id:
+            return
+        if not _OPERATION_ID_RE.match(self.operation_id):
+            raise ApiPluginContractError(
+                f"route {self.path!r} declares operation_id "
+                f"{self.operation_id!r}; expected <package>.<resource>.<verb> "
+                "in lowercase kebab-case"
+            )
+        if len(self.methods) != 1:
+            raise ApiPluginContractError(
+                f"route {self.path!r} declares operation_id "
+                f"{self.operation_id!r} for {len(self.methods)} methods; one "
+                "operationId names exactly one operation"
+            )
 
     def _refuse_undeclared_path_params(self) -> None:
         """The declared ``path_params`` and the path's ``{placeholders}`` match.
