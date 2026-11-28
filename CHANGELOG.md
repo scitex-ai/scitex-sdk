@@ -63,6 +63,12 @@ Public light compute tier (API contract v1 §12, workstream W4).
   - A public-class request above its profile's input cap is 413
     `api.request_too_large`; a tier operation that needs a key answers 401
     `api.key_required` to anonymous callers.
+- Hosted MCP applies the same public tier as REST: an anonymous session
+  lists and calls exactly the operations the tier opens to anonymous
+  callers (per-operation anonymous caller keyed by client IP), any key may
+  call a tier operation whatever its account tier, every call runs through
+  `run_tiered` (admission, limits, slots, measurement), and `_meta.priority_class`
+  and the meter event carry the tier fields and `user_id`.
 - `ApiCaller.tier`; `ApiCall.tier`, `.priority_class` and `.limits` (the
   public profile a handler must enforce).
 - `scitex_sdk.testing.api_examples.assert_examples_within_limits` (API-K004).

@@ -13,6 +13,7 @@ from scitex_sdk.app.api_mcp_http import HostedMcp, McpHooks, mcp_urlpattern
 from scitex_sdk.app.api_serve import InMemoryIdempotencyStore
 from tests._api_ops_leaf import PLUGIN as NOTES
 from tests._api_ops_public import PLUGIN as CATALOG
+from tests._api_ops_tier import PLUGIN as CALC
 
 #: token -> (scopes, tier, project restriction)
 TOKENS = {
@@ -88,6 +89,8 @@ EXPLICIT_HOOKS = McpHooks(
 urlpatterns = [
     mcp_urlpattern(endpoint=SETTINGS_ENDPOINT),
     mcp_urlpattern("api/v1/mcp-open", endpoint=OPEN_ENDPOINT),
+    # The public light compute tier (contract §12) over hosted MCP.
+    mcp_urlpattern("api/v1/mcp-tier", endpoint=HostedMcp([CALC], anonymous=True)),
     mcp_urlpattern(
         "api/v1/mcp-explicit",
         endpoint=HostedMcp([NOTES], resource_metadata_url="https://h.example/prm"),

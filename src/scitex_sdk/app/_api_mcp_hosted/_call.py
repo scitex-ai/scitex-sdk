@@ -19,6 +19,13 @@ from collections.abc import Mapping
 from typing import Any
 
 from ..api_exec import ApiCaller, ApiProblem, execute, params_digest, problem_from
+from ..api_tier import (
+    TieredCall,
+    anonymous_allowed,
+    anonymous_caller,
+    decide,
+    run_tiered,
+)
 from ._policy import denial
 from ._wire import McpHooks
 
@@ -39,6 +46,11 @@ def call_hosted_tool(
     request_id = uuid.uuid4().hex
     started = time.monotonic()
     replayed = False
+    if caller.via == "anonymous" and not op.public and anonymous_allowed(op)[0]:
+        # The per-operation anonymous caller of the public tier: this
+        # operation's scope only, keyed by client IP (contract §12.3).
+        caller = anonymous_caller(op, native)
+    tiered = TieredCall(decide(op, caller, native))
     try:
         status, body, replayed = _run(
             spec,
@@ -49,6 +61,7 @@ def call_hosted_tool(
             native,
             request_id,
             idempotency_key,
+            tiered,
         )
     except Exception as exc:  # noqa: BLE001 - the one problem boundary
         problem = problem_from(exc)
@@ -59,12 +72,13 @@ def call_hosted_tool(
         "request_id": request_id,
         "operation_id": op.operation_id,
         "status": status,
-        "priority_class": caller.tier,
+        "priority_class": tiered.decision.priority_class,
     }
     if replayed:
         meta["idempotent_replayed"] = True
     text = json.dumps(body, default=str)
     if hooks.meter is not None:
+        egress = len(text.encode())
         hooks.meter.record(
             {
                 "request_id": request_id,
@@ -72,11 +86,13 @@ def call_hosted_tool(
                 "package": op.package,
                 "status": status,
                 "duration_seconds": round(time.monotonic() - started, 6),
-                "egress_bytes": len(text.encode()),
+                "egress_bytes": egress,
                 "caller": caller.identity,
                 "token_id": caller.token_id,
+                "user_id": getattr(caller.user, "pk", None),
                 "transport": "mcp",
                 "jsonrpc_id": rpc_id,
+                **tiered.meter_fields(egress),
             }
         )
     result = {
@@ -88,7 +104,9 @@ def call_hosted_tool(
     return result, request_id
 
 
-def _run(spec, tier, args, caller, hooks, native, request_id, idempotency_key):
+def _run(
+    spec, tier, args, caller, hooks, native, request_id, idempotency_key, tiered
+):
     """``(status, body, replayed)``; raises for a refusal before execution."""
     op = spec.operation
     refused = denial(caller, spec, tier)
@@ -120,14 +138,23 @@ def _run(spec, tier, args, caller, hooks, native, request_id, idempotency_key):
     resolver = (
         hooks.project_resolver(native) if hooks.project_resolver is not None else None
     )
-    result = execute(
+    body_bytes = len(json.dumps(args, default=str).encode())
+    result, _ = run_tiered(
         op,
         caller,
-        args,
-        item_id=item_id,
-        resolve_project=resolver,
-        request=native,
-        request_id=request_id,
+        native,
+        lambda decision: execute(
+            op,
+            caller,
+            args,
+            item_id=item_id,
+            resolve_project=resolver,
+            request=native,
+            request_id=request_id,
+            tier=decision,
+        ),
+        request_bytes=body_bytes,
+        tiered=tiered,
     )
     if idem is not None and result.status < 500:
         store.put(idem, digest, result.status, result.body)

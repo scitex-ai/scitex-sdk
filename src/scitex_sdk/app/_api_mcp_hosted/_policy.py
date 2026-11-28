@@ -62,9 +62,29 @@ def resolve_tiers(specs: Mapping, overrides: Mapping[str, str]) -> dict:
 
 
 def denial(caller: ApiCaller, spec, tier: str) -> ApiProblem | None:
-    """Why ``caller`` may not use ``spec`` (a problem), or ``None``."""
+    """Why ``caller`` may not use ``spec`` (a problem), or ``None``.
+
+    The host's public tier (``SCITEX_API_PUBLIC_TIER``, contract §12) opens an
+    operation to anonymous callers (``anonymous_allowed``) and to every key
+    whatever its account tier, exactly as on REST; the scope check still
+    applies to keys.
+    """
+    from ..api_tier import anonymous_allowed, public_tier
+
     op = spec.operation
-    if tier_rank(caller.tier) < tier_rank(tier):
+    if caller.via == "anonymous" and not op.public:
+        allowed, entry = anonymous_allowed(op)
+        if allowed:
+            return None
+        if entry is not None:
+            return ApiProblem(
+                401,
+                "api.key_required",
+                "this tool is free to call with any SciTeX API key, but not "
+                "anonymously; send one as Authorization: Bearer",
+            )
+    in_public_tier = public_tier().entry(op) is not None
+    if not in_public_tier and tier_rank(caller.tier) < tier_rank(tier):
         return ApiProblem(
             403,
             "api.tier_required",
